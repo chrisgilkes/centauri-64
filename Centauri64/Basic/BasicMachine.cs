@@ -46,6 +46,23 @@ public sealed class BasicMachine
                 return;
             }
 
+            if(source == "NEW")
+            {
+                NewProgram();
+                return;
+            }
+
+            if (source == "CLS")
+            {
+                ClearScreen();
+                return;
+            }
+
+            if (TryDeleteLine(source))
+            {
+                return;
+            }
+
             var tokens  = _tokenizer.Tokenize(source);
 
             var line    = _parser.ParseLine(tokens, source);
@@ -76,5 +93,31 @@ public sealed class BasicMachine
 
         _console.WriteLine("");
         _console.WriteLine("READY.");
+    }
+
+    private void NewProgram()
+    {
+        _program.Clear();
+
+        _console.WriteLine("");
+        _console.WriteLine("READY.");
+    }
+
+    private void ClearScreen()
+    {
+        _console.Clear();
+
+        _console.WriteLine("");
+        _console.WriteLine("READY.");
+    }
+
+    private bool TryDeleteLine(string source)
+    {
+        if (!int.TryParse(source, out var lineNumber))
+            return false;
+
+        _program.DeleteLine(lineNumber);
+
+        return true;
     }
 }

@@ -13,6 +13,16 @@ public sealed class BasicProgram
         _lines[line.LineNumber] = line;
     }
 
+    public void DeleteLine(int lineNumber)
+    {
+        _lines.Remove(lineNumber);
+    }
+
+    public void Clear()
+    {
+        _lines.Clear();
+    }
+
     public IEnumerable<ProgramLine> Lines => _lines.Values;
 
     public IEnumerable<string> SourceLines => _lines.Values.Select(line => line.Source);
