@@ -2,6 +2,8 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
+using Centauri64.Graphics;
+
 namespace Centauri64;
 
 public class Game1 : Game
@@ -9,9 +11,13 @@ public class Game1 : Game
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch;
 
-    private const int VIRTUAL_WIDTH  = 320;
-    private const int VIRTUAL_HEIGHT = 180;
-    private const int WINDOW_SCALE   = 4;
+    private const int VIRTUAL_WIDTH  = 640;
+    private const int VIRTUAL_HEIGHT = 400;
+    private const int WINDOW_SCALE   = 2;
+
+    private RenderTarget2D _renderTarget;
+
+    private BitmapFont _font = null!;
 
     public Game1()
     {
@@ -35,9 +41,13 @@ public class Game1 : Game
 
     protected override void LoadContent()
     {
-        _spriteBatch = new SpriteBatch(GraphicsDevice);
+        _spriteBatch    = new SpriteBatch(GraphicsDevice);
 
-        // TODO: use this.Content to load your game content here
+        _renderTarget   = new RenderTarget2D(GraphicsDevice,VIRTUAL_WIDTH,VIRTUAL_HEIGHT);
+
+        var fontTexture = Content.Load<Texture2D>("Fonts/centauri64-font");
+        _font           = new BitmapFont(fontTexture);
+
     }
 
     protected override void Update(GameTime gameTime)
@@ -52,9 +62,33 @@ public class Game1 : Game
 
     protected override void Draw(GameTime gameTime)
     {
+        GraphicsDevice.SetRenderTarget(_renderTarget);
+
         GraphicsDevice.Clear(new Color(40, 40, 160));
 
-        // TODO: Add your drawing code here
+        _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+
+        _font.Draw(_spriteBatch,"CENTAURI64",new Vector2(8, 8),Color.White);
+
+        _font.Draw(_spriteBatch,"READY.",new Vector2(8, 24),Color.White);
+
+        _spriteBatch.End();
+
+        GraphicsDevice.SetRenderTarget(null);
+
+        GraphicsDevice.Clear(Color.Black);
+
+        _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+
+        _spriteBatch.Draw(_renderTarget,
+                            new Rectangle(
+                                0,
+                                0,
+                                VIRTUAL_WIDTH * WINDOW_SCALE,
+                                VIRTUAL_HEIGHT * WINDOW_SCALE),
+                            Color.White);
+
+        _spriteBatch.End();
 
         base.Draw(gameTime);
     }
