@@ -25,6 +25,64 @@ public sealed class TextConsole
 
     private KeyboardState _previousKeyboardState;
 
+    private const double KEY_REPEAT_DELAY = 0.4;
+    private const double KEY_REPEAT_INTERVAL = 0.05;
+
+    private Keys? _repeatingKey;
+    private double _keyRepeatTimer;
+
+    private static readonly char[] ShiftedNumbers =
+    {
+        ')', '!', '"', '#', '$',
+        '%', '^', '&', '*', '('
+    };
+
+    private static char? GetPunctuation(Keys key, bool shift)
+    {
+        return key switch
+        {
+            Keys.OemPeriod => shift ? '>' : '.',
+            Keys.OemComma => shift ? '<' : ',',
+            Keys.OemQuestion => shift ? '?' : '/',
+            Keys.OemSemicolon => shift ? ':' : ';',
+            Keys.OemQuotes => shift ? '@' : '\'',
+            Keys.OemOpenBrackets => shift ? '{' : '[',
+            Keys.OemCloseBrackets => shift ? '}' : ']',
+            Keys.OemPipe => shift ? '|' : '\\',
+            Keys.OemMinus => shift ? '_' : '-',
+            Keys.OemPlus => shift ? '+' : '=',
+            _ => null
+        };
+    }
+
+
+    private static bool CanRepeat(Keys key)
+    {
+        if (key >= Keys.A && key <= Keys.Z)
+            return true;
+
+        if (key >= Keys.D0 && key <= Keys.D9)
+            return true;
+
+        return key == Keys.Space ||
+            key == Keys.Left ||
+            key == Keys.Right ||
+            key == Keys.Up ||
+            key == Keys.Down ||
+            key == Keys.Back ||
+            key == Keys.Delete ||
+            key == Keys.OemPeriod ||
+            key == Keys.OemComma ||
+            key == Keys.OemQuestion ||
+            key == Keys.OemSemicolon ||
+            key == Keys.OemQuotes ||
+            key == Keys.OemOpenBrackets ||
+            key == Keys.OemCloseBrackets ||
+            key == Keys.OemPipe ||
+            key == Keys.OemMinus ||
+            key == Keys.OemPlus;
+    }
+
     public TextConsole()
     {
         Clear();
@@ -41,25 +99,60 @@ public sealed class TextConsole
             _cursorVisible = !_cursorVisible;
         }
 
-        HandleKeyboard();
+        HandleKeyboard(gameTime);
     }
 
-    private void HandleKeyboard()
+    private void HandleKeyboard(GameTime gameTime)
     {
         var keyboardState = Keyboard.GetState();
+
+        var shift =
+            keyboardState.IsKeyDown(Keys.LeftShift) ||
+            keyboardState.IsKeyDown(Keys.RightShift);
 
         foreach (var key in keyboardState.GetPressedKeys())
         {
             if (_previousKeyboardState.IsKeyUp(key))
             {
-                HandleKey(key);
+                HandleKey(key, shift);
+
+                if (CanRepeat(key))
+                {
+                    _repeatingKey = key;
+                    _keyRepeatTimer = KEY_REPEAT_DELAY;
+                }
             }
         }
+
+        UpdateKeyRepeat(keyboardState,shift,gameTime.ElapsedGameTime.TotalSeconds);
 
         _previousKeyboardState = keyboardState;
     }
 
-    private void HandleKey(Keys key)
+    private void UpdateKeyRepeat(KeyboardState keyboardState,bool shift,double deltaTime)
+    {
+        if (!_repeatingKey.HasValue)
+            return;
+
+        var key = _repeatingKey.Value;
+
+        if (keyboardState.IsKeyUp(key))
+        {
+            _repeatingKey = null;
+            _keyRepeatTimer = 0.0;
+            return;
+        }
+
+        _keyRepeatTimer -= deltaTime;
+
+        if (_keyRepeatTimer <= 0.0)
+        {
+            HandleKey(key, shift);
+            _keyRepeatTimer += KEY_REPEAT_INTERVAL;
+        }
+    }
+
+    private void HandleKey(Keys key,  bool shift)
     {
         if (key >= Keys.A && key <= Keys.Z)
         {
@@ -71,8 +164,47 @@ public sealed class TextConsole
 
         if (key >= Keys.D0 && key <= Keys.D9)
         {
-            var character = (char)('0' + (key - Keys.D0));
+            var offset = key - Keys.D0;
+
+            var character = shift? ShiftedNumbers[offset]: (char)('0' + offset);
+
             PutCharacter(character);
+            ResetCursorFlash();
+            return;
+        }
+
+        var punctuation = GetPunctuation(key, shift);
+
+        if (punctuation.HasValue)
+        {
+            PutCharacter(punctuation.Value);
+            ResetCursorFlash();
+        }
+
+        if (key == Keys.Left)
+        {
+            MoveCursorLeft();
+            ResetCursorFlash();
+            return;
+        }
+
+        if (key == Keys.Right)
+        {
+            MoveCursorRight();
+            ResetCursorFlash();
+            return;
+        }
+
+        if (key == Keys.Up)
+        {
+            MoveCursorUp();
+            ResetCursorFlash();
+            return;
+        }
+
+        if (key == Keys.Down)
+        {
+            MoveCursorDown();
             ResetCursorFlash();
             return;
         }
@@ -84,11 +216,71 @@ public sealed class TextConsole
             return;
         }
 
+        if (key == Keys.Back)
+        {
+            Backspace();
+            ResetCursorFlash();
+            return;
+        }
+
+        if (key == Keys.Delete)
+        {
+            Delete();
+            ResetCursorFlash();
+            return;
+        }
+
         if (key == Keys.Enter)
         {
             NewLine();
             ResetCursorFlash();
         }
+    }
+
+    private void MoveCursorLeft()
+    {
+        if (_cursorColumn > 0)
+        {
+            _cursorColumn--;
+        }
+    }
+
+    private void MoveCursorRight()
+    {
+        if (_cursorColumn < COLUMNS - 1)
+        {
+            _cursorColumn++;
+        }
+    }
+
+    private void MoveCursorUp()
+    {
+        if (_cursorRow > 0)
+        {
+            _cursorRow--;
+        }
+    }
+
+    private void MoveCursorDown()
+    {
+        if (_cursorRow < ROWS - 1)
+        {
+            _cursorRow++;
+        }
+    }
+
+    private void Backspace()
+    {
+        if (_cursorColumn > 0)
+        {
+            _cursorColumn--;
+            _characters[_cursorRow, _cursorColumn] = ' ';
+        }
+    }
+
+    private void Delete()
+    {
+        _characters[_cursorRow, _cursorColumn] = ' ';
     }
 
     private void ResetCursorFlash()
