@@ -2,10 +2,10 @@ namespace Centauri64.Basic.Syntax;
 
 public sealed class PrintStatement : Statement
 {
-    public string Text { get; }
+    public Expression Expression { get; }
 
-    public PrintStatement(string text)
+    public PrintStatement(Expression expression)
     {
-        Text = text;
+        Expression = expression;
     }
 }

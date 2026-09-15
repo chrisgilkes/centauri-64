@@ -37,6 +37,24 @@ public sealed class Tokenizer
                 continue;
             }
 
+            if (character == '(')
+            {
+                tokens.Add(
+                    new Token(TokenType.LeftParenthesis, "("));
+
+                Advance();
+                continue;
+            }
+
+            if (character == ')')
+            {
+                tokens.Add(
+                    new Token(TokenType.RightParenthesis, ")"));
+
+                Advance();
+                continue;
+            }
+
             if (character == '"')
             {
                 tokens.Add(ReadString());
