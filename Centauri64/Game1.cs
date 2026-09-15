@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
 using Centauri64.Graphics;
+using Centauri64.Console;
 
 namespace Centauri64;
 
@@ -18,6 +19,10 @@ public class Game1 : Game
     private RenderTarget2D _renderTarget;
 
     private BitmapFont _font = null!;
+
+    private TextConsole _console = null!;
+
+    private Texture2D _pixel = null!;
 
     public Game1()
     {
@@ -45,8 +50,17 @@ public class Game1 : Game
 
         _renderTarget   = new RenderTarget2D(GraphicsDevice,VIRTUAL_WIDTH,VIRTUAL_HEIGHT);
 
+        _pixel = new Texture2D(GraphicsDevice, 1, 1);
+        _pixel.SetData(new[] { Color.White });
+
         var fontTexture = Content.Load<Texture2D>("Fonts/centauri64-font");
         _font           = new BitmapFont(fontTexture);
+
+        _console = new TextConsole();
+
+        _console.WriteLine("CENTAURI64");
+        _console.WriteLine("");
+        _console.WriteLine("READY.");
 
     }
 
@@ -55,7 +69,7 @@ public class Game1 : Game
         if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
             Exit();
 
-        // TODO: Add your update logic here
+        _console.Update(gameTime);
 
         base.Update(gameTime);
     }
@@ -68,9 +82,7 @@ public class Game1 : Game
 
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
-        _font.Draw(_spriteBatch,"CENTAURI64",new Vector2(8, 8),Color.White);
-
-        _font.Draw(_spriteBatch,"READY.",new Vector2(8, 24),Color.White);
+        _console.Draw(_spriteBatch,_font,_pixel,Color.White,new Color(40, 40, 160));
 
         _spriteBatch.End();
 

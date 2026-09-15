@@ -54,4 +54,19 @@ public sealed class BitmapFont
             x += CharacterWidth;
         }
     }
+
+    public void DrawCharacter(SpriteBatch spriteBatch,char character,Vector2 position,Color color)
+    {
+        var index = character - FirstCharacter;
+
+        if (index < 0 || index > 94)
+            return;
+
+        var column = index % CharactersPerRow;
+        var row = index / CharactersPerRow;
+
+        var source = new Rectangle(column * CharacterWidth,row * CharacterHeight,CharacterWidth,CharacterHeight);
+
+        spriteBatch.Draw(_texture,position,source,color);
+    }
 }
