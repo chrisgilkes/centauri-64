@@ -25,6 +25,8 @@ public class Game1 : Game
 
     private Texture2D _pixel = null!;
 
+    private BasicMachine _basicMachine = null!;
+
     public Game1()
     {
         _graphics = new GraphicsDeviceManager(this);
@@ -63,13 +65,7 @@ public class Game1 : Game
         _console.WriteLine("");
         _console.WriteLine("READY.");
 
-        var tokenizer = new Tokenizer();
-        var tokens = tokenizer.Tokenize("10 PLAYER1 = 100");
-
-        foreach (var token in tokens)
-        {
-            System.Diagnostics.Debug.WriteLine(token);
-        }
+        _basicMachine = new BasicMachine(_console);
 
     }
 

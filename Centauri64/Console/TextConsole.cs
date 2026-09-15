@@ -1,3 +1,4 @@
+using System;
 using Centauri64.Graphics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -82,6 +83,8 @@ public sealed class TextConsole
             key == Keys.OemMinus ||
             key == Keys.OemPlus;
     }
+
+    public event Action<string>? LineEntered;
 
     public TextConsole()
     {
@@ -232,7 +235,12 @@ public sealed class TextConsole
 
         if (key == Keys.Enter)
         {
+            var line = GetCurrentLine();
+
             NewLine();
+            
+            LineEntered?.Invoke(line);
+            
             ResetCursorFlash();
         }
     }
@@ -407,5 +415,18 @@ public sealed class TextConsole
                     backgroundColor);
             }
         }
+    }
+
+    private string GetCurrentLine()
+    {
+        var characters = new char[_cursorColumn];
+
+        for (var column = 0; column < _cursorColumn; column++)
+        {
+            characters[column] =
+                _characters[_cursorRow, column];
+        }
+
+        return new string(characters).TrimEnd();
     }
 }
