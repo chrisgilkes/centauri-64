@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 
 using Centauri64.Graphics;
 using Centauri64.Console;
+using Centauri64.Basic;
 
 namespace Centauri64;
 
@@ -61,6 +62,14 @@ public class Game1 : Game
         _console.WriteLine("CENTAURI64");
         _console.WriteLine("");
         _console.WriteLine("READY.");
+
+        var tokenizer = new Tokenizer();
+        var tokens = tokenizer.Tokenize("10 PLAYER1 = 100");
+
+        foreach (var token in tokens)
+        {
+            System.Diagnostics.Debug.WriteLine(token);
+        }
 
     }
 

@@ -1,0 +1,160 @@
+using System;
+using System.Collections.Generic;
+
+namespace Centauri64.Basic;
+
+public sealed class Tokenizer
+{
+    private string _source = string.Empty;
+    private int _position;
+
+    public List<Token> Tokenize(string source)
+    {
+        _source = source;
+        _position = 0;
+
+        var tokens = new List<Token>();
+
+        while (!IsAtEnd())
+        {
+            var character = Current();
+
+            if (char.IsWhiteSpace(character))
+            {
+                Advance();
+                continue;
+            }
+
+            if (char.IsDigit(character))
+            {
+                tokens.Add(ReadNumber());
+                continue;
+            }
+
+            if (char.IsLetter(character))
+            {
+                tokens.Add(ReadWord());
+                continue;
+            }
+
+            if (character == '"')
+            {
+                tokens.Add(ReadString());
+                continue;
+            }
+
+            if (character == '=')
+            {
+                tokens.Add(new Token(TokenType.Equals, "="));
+                Advance();
+                continue;
+            }
+
+            if (character == '+')
+            {
+                tokens.Add(new Token(TokenType.Plus, "+"));
+                Advance();
+                continue;
+            }
+
+            if (character == '-')
+            {
+                tokens.Add(new Token(TokenType.Minus, "-"));
+                Advance();
+                continue;
+            }
+
+            if (character == '*')
+            {
+                tokens.Add(new Token(TokenType.Multiply, "*"));
+                Advance();
+                continue;
+            }
+
+            if (character == '/')
+            {
+                tokens.Add(new Token(TokenType.Divide, "/"));
+                Advance();
+                continue;
+            }
+
+            throw new InvalidOperationException($"Unexpected character '{character}' at position {_position}.");
+        }
+
+        tokens.Add(new Token(TokenType.EndOfLine, string.Empty));
+
+        return tokens;
+    }
+
+    private Token ReadWord()
+    {
+        var start = _position;
+
+        while (!IsAtEnd() && char.IsLetterOrDigit(Current()))
+        {
+            Advance();
+        }
+
+        var text = _source[start.._position];
+
+        if (text == "PRINT")
+        {
+            return new Token(TokenType.Print, text);
+        }
+
+         return new Token(TokenType.Identifier, text);
+    }
+
+    private Token ReadString()
+    {
+        Advance();
+
+        var start = _position;
+
+        while (!IsAtEnd() && Current() != '"')
+        {
+            Advance();
+        }
+
+        if (IsAtEnd())
+        {
+            throw new InvalidOperationException(
+                "Unterminated string.");
+        }
+
+        var text = _source[start.._position];
+
+        Advance();
+
+        return new Token(TokenType.String, text);
+    }
+
+    private bool IsAtEnd()
+    {
+        return _position >= _source.Length;
+    }
+
+    private char Current()
+    {
+        return _source[_position];
+    }
+
+    private void Advance()
+    {
+        _position++;
+    }
+
+    private Token ReadNumber()
+    {
+        var start = _position;
+
+        while (!IsAtEnd() && char.IsDigit(Current()))
+        {
+            Advance();
+        }
+
+        var text = _source[start.._position];
+
+        return new Token(TokenType.Number, text);
+    }
+}
