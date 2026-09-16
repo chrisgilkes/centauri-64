@@ -58,6 +58,11 @@ public sealed class Parser
             return ParseGotoStatement();    
         }
 
+        if (token.Type == TokenType.If)
+        {
+            return ParseIfStatement();
+        }
+
         if (token.Type == TokenType.Identifier)
         {
             return ParseAssignmentStatement();
@@ -83,6 +88,21 @@ public sealed class Parser
         var lineNumberToken = Expect(TokenType.Number);
 
         return new GotoStatement(int.Parse(lineNumberToken.Text));
+    }
+
+    private IfStatement ParseIfStatement()
+    {
+        Expect(TokenType.If);
+
+        var condition = ParseExpression();
+
+        Expect(TokenType.Then);
+
+        var thenStatement = ParseStatement();
+
+        return new IfStatement(
+            condition,
+            thenStatement);
     }
 
     private Token Current()
@@ -139,7 +159,39 @@ public sealed class Parser
 
     private Expression ParseExpression()
     {
-        return ParseAdditiveExpression();
+        return ParseComparisonExpression();
+    }
+
+    private Expression ParseComparisonExpression()
+    {
+        var left = ParseAdditiveExpression();
+
+        var tokenType = Current().Type;
+
+        if (IsComparisonOperator(tokenType))
+        {
+            var operatorToken = Current();
+            Advance();
+
+            var right = ParseAdditiveExpression();
+
+            return new BinaryExpression(
+                left,
+                operatorToken.Type,
+                right);
+        }
+
+        return left;
+    }
+
+    private static bool IsComparisonOperator(TokenType type)
+    {
+        return type == TokenType.Equals ||
+            type == TokenType.NotEqual ||
+            type == TokenType.LessThan ||
+            type == TokenType.GreaterThan ||
+            type == TokenType.LessThanOrEqual ||
+            type == TokenType.GreaterThanOrEqual;
     }
 
     private Expression ParsePrimaryExpression()

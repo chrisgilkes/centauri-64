@@ -61,6 +61,56 @@ public sealed class Tokenizer
                 continue;
             }
 
+            if (character == '<')
+            {
+                if (Peek() == '=')
+                {
+                    tokens.Add(
+                        new Token(TokenType.LessThanOrEqual, "<="));
+
+                    Advance();
+                    Advance();
+                }
+                else if (Peek() == '>')
+                {
+                    tokens.Add(
+                        new Token(TokenType.NotEqual, "<>"));
+
+                    Advance();
+                    Advance();
+                }
+                else
+                {
+                    tokens.Add(
+                        new Token(TokenType.LessThan, "<"));
+
+                    Advance();
+                }
+
+                continue;
+            }
+
+            if (character == '>')
+            {
+                if (Peek() == '=')
+                {
+                    tokens.Add(
+                        new Token(TokenType.GreaterThanOrEqual, ">="));
+
+                    Advance();
+                    Advance();
+                }
+                else
+                {
+                    tokens.Add(
+                        new Token(TokenType.GreaterThan, ">"));
+
+                    Advance();
+                }
+
+                continue;
+            }
+
             if (character == '=')
             {
                 tokens.Add(new Token(TokenType.Equals, "="));
@@ -115,17 +165,24 @@ public sealed class Tokenizer
 
         var text = _source[start.._position];
 
-        if (text == "PRINT")
+        var type = text switch
         {
-            return new Token(TokenType.Print, text);
-        }
+            "PRINT" => TokenType.Print,
+            "GOTO"  => TokenType.Goto,
+            "IF" => TokenType.If,
+            "THEN" => TokenType.Then,
+            _ => TokenType.Identifier
+        };
 
-        if (text == "GOTO")
-        {
-            return new Token(TokenType.Goto, text);
-        }
+        return new Token(type, text);
+    }
 
-        return new Token(TokenType.Identifier, text);
+    private char Peek()
+    {
+        if (_position + 1 >= _source.Length)
+            return '\0';
+
+        return _source[_position + 1];
     }
 
     private Token ReadString()

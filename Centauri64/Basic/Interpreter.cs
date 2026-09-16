@@ -78,6 +78,25 @@ public sealed class Interpreter
             return ExecutionResult.Jump(gotoStatement.LineNumber);
         }
 
+        if (statement is IfStatement ifStatement)
+        {
+            var condition = Evaluate(ifStatement.Condition);
+
+            if (!condition.IsInteger)
+            {
+                throw new InvalidOperationException(
+                    "IF condition must be numeric.");
+            }
+
+            if (condition.Integer != 0)
+            {
+                return Execute(
+                    ifStatement.ThenStatement);
+            }
+
+            return ExecutionResult.Continue();
+        }
+
         if (statement is AssignmentStatement assignment)
         {
             var value = Evaluate(assignment.Value);
@@ -144,10 +163,28 @@ public sealed class Interpreter
             TokenType.Multiply =>
                 left.Integer * right.Integer,
 
-           TokenType.Divide =>
+            TokenType.Divide =>
                 right.Integer == 0
                 ? throw new InvalidOperationException("Division by zero.")
                 : left.Integer / right.Integer,
+
+            TokenType.Equals =>
+                left.Integer == right.Integer ? 1 : 0,
+
+            TokenType.NotEqual =>
+                left.Integer != right.Integer ? 1 : 0,
+
+            TokenType.LessThan =>
+                left.Integer < right.Integer ? 1 : 0,
+
+            TokenType.GreaterThan =>
+                left.Integer > right.Integer ? 1 : 0,
+
+            TokenType.LessThanOrEqual =>
+                left.Integer <= right.Integer ? 1 : 0,
+
+            TokenType.GreaterThanOrEqual =>
+                left.Integer >= right.Integer ? 1 : 0,
 
             _ => throw new InvalidOperationException(
                 $"Unsupported operator: {expression.Operator}")

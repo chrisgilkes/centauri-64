@@ -8,6 +8,13 @@ public enum TokenType
 
     Print,
     Goto,
+    If,
+    Then,
+    LessThan,
+    GreaterThan,
+    LessThanOrEqual,
+    GreaterThanOrEqual,
+    NotEqual,
     Equals,
     Plus,
     Minus,
