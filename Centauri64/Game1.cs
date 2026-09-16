@@ -77,12 +77,62 @@ public class Game1 : Game
 
     }
 
+    private void SetWindowScale(int scale)
+    {
+        if (_graphics.IsFullScreen)
+            _graphics.ToggleFullScreen();
+
+        _graphics.PreferredBackBufferWidth =
+            CentauriMachine.DISPLAY_WIDTH * scale;
+
+        _graphics.PreferredBackBufferHeight =
+            CentauriMachine.DISPLAY_HEIGHT * scale;
+
+        _graphics.ApplyChanges();
+    }
+
+    private void ToggleFullscreen()
+    {
+        _graphics.ToggleFullScreen();
+    }
+
+    private bool KeyPressed(KeyboardState current,Keys key)
+    {
+        return current.IsKeyDown(key) &&
+            _previousKeyboardState.IsKeyUp(key);
+    }
+
     protected override void Update(GameTime gameTime)
     {
         /*if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
             Exit();*/
 
         var keyboardState = Keyboard.GetState();
+
+        if (KeyPressed(keyboardState, Keys.F1))
+            SetWindowScale(1);
+
+        if (KeyPressed(keyboardState, Keys.F2))
+            SetWindowScale(2);
+
+        if (KeyPressed(keyboardState, Keys.F3))
+            SetWindowScale(3);
+
+        if (KeyPressed(keyboardState, Keys.F4))
+            SetWindowScale(4);
+
+        if (KeyPressed(keyboardState, Keys.F11))
+            ToggleFullscreen();
+
+        var altDown =
+            keyboardState.IsKeyDown(Keys.LeftAlt) ||
+            keyboardState.IsKeyDown(Keys.RightAlt);
+
+        if (altDown &&
+            KeyPressed(keyboardState, Keys.Enter))
+        {
+            ToggleFullscreen();
+        }
 
         if (_basicMachine.IsRunning)
         {
@@ -125,8 +175,8 @@ public class Game1 : Game
                             new Rectangle(
                                 0,
                                 0,
-                                CentauriMachine.DISPLAY_WIDTH * WINDOW_SCALE,
-                                CentauriMachine.DISPLAY_HEIGHT * WINDOW_SCALE),
+                                GraphicsDevice.Viewport.Width,
+                                GraphicsDevice.Viewport.Height),
                             Color.White);
 
         _spriteBatch.End();
