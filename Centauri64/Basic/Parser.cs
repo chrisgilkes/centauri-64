@@ -63,6 +63,11 @@ public sealed class Parser
             return ParseIfStatement();
         }
 
+        if (token.Type == TokenType.Yield)
+        {
+            return ParseYieldStatement();
+        }
+
         if (token.Type == TokenType.Identifier)
         {
             return ParseAssignmentStatement();
@@ -88,6 +93,13 @@ public sealed class Parser
         var lineNumberToken = Expect(TokenType.Number);
 
         return new GotoStatement(int.Parse(lineNumberToken.Text));
+    }
+
+    private YieldStatement ParseYieldStatement()
+    {
+        Expect(TokenType.Yield);
+
+        return new YieldStatement();
     }
 
     private IfStatement ParseIfStatement()

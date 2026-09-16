@@ -15,6 +15,8 @@ public sealed class BasicMachine
 
     private readonly Interpreter _interpreter;
 
+    private const int INSTRUCTIONS_PER_FRAME = 1000;
+
     public BasicMachine(TextConsole console)
     {
         _console = console;
@@ -78,8 +80,51 @@ public sealed class BasicMachine
 
     private void RunProgram()
     {
-        _interpreter.Run(_program);
+        _interpreter.Start(_program);
 
+        if (!_interpreter.IsRunning)
+        {
+            OnProgramFinished();
+        }
+    }
+
+    public void Update()
+    {
+        if (!_interpreter.IsRunning)
+            return;
+
+        try
+        {
+            for (var i = 0;
+                i < INSTRUCTIONS_PER_FRAME &&
+                _interpreter.IsRunning;
+                i++)
+            {
+                var yielded =
+                    _interpreter.ExecuteNextInstruction();
+
+                if (yielded)
+                    break;
+            }
+
+            if (!_interpreter.IsRunning)
+            {
+                OnProgramFinished();
+            }
+        }
+        catch (Exception exception)
+        {
+            _interpreter.Stop();
+
+            _console.WriteLine(
+                $"?{exception.Message.ToUpperInvariant()}");
+
+            OnProgramFinished();
+        }
+    }
+
+    private void OnProgramFinished()
+    {
         _console.WriteLine("");
         _console.WriteLine("READY.");
     }

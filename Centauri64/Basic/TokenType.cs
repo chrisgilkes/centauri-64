@@ -8,6 +8,7 @@ public enum TokenType
 
     Print,
     Goto,
+    Yield,
     If,
     Then,
     LessThan,

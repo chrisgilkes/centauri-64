@@ -12,11 +12,80 @@ public sealed class Interpreter
 
     private const int MAX_INSTRUCTIONS_PER_RUN = 100_000;
 
+    private IReadOnlyList<ProgramLine> _lines = [];
+    private int _programCounter;
+    private int _instructionCount;
+    private bool _isRunning;
+
+    public bool IsRunning => _isRunning;
+
     public Interpreter(TextConsole console)
     {
         _console = console;
     }
 
+    public void Start(BasicProgram program)
+    {
+        _variables.Clear();
+
+        _lines = program.GetLines();
+        _programCounter = 0;
+        _instructionCount = 0;
+
+        _isRunning = _lines.Count > 0;
+    }
+
+    public bool ExecuteNextInstruction()
+    {
+        if (!_isRunning)
+            return false;
+
+        if (_programCounter >= _lines.Count)
+        {
+            Stop();
+            return false;
+        }
+
+        if (++_instructionCount > MAX_INSTRUCTIONS_PER_RUN)
+        {
+            Stop();
+
+            throw new InvalidOperationException(
+                "Program execution limit exceeded.");
+        }
+
+        var line = _lines[_programCounter];
+        var result = Execute(line.Statement);
+
+        switch (result.Action)
+        {
+            case ExecutionAction.Continue:
+                _programCounter++;
+                break;
+
+            case ExecutionAction.Jump:
+                _programCounter = FindLine(
+                    _lines,
+                    result.JumpToLine!.Value);
+                break;
+
+            case ExecutionAction.Yield:
+                _programCounter++;
+                break;
+        }
+
+        if (_programCounter >= _lines.Count)
+        {
+            Stop();
+        }
+
+        return result.Action == ExecutionAction.Yield;
+    }
+
+    public void Stop()
+    {
+        _isRunning = false;
+    }
 
     public void Run(BasicProgram program)
     {
@@ -95,6 +164,11 @@ public sealed class Interpreter
             }
 
             return ExecutionResult.Continue();
+        }
+
+        if (statement is YieldStatement)
+        {
+            return ExecutionResult.Yield();
         }
 
         if (statement is AssignmentStatement assignment)

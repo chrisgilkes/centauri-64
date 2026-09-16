@@ -1,21 +1,32 @@
-namespace Centauri64.Basic;
-
 public readonly struct ExecutionResult
 {
+    public ExecutionAction Action { get; }
     public int? JumpToLine { get; }
 
-    private ExecutionResult(int? jumpToLine)
+    private ExecutionResult(
+        ExecutionAction action,
+        int? jumpToLine = null)
     {
+        Action = action;
         JumpToLine = jumpToLine;
     }
 
     public static ExecutionResult Continue()
     {
-        return new ExecutionResult(null);
+        return new ExecutionResult(
+            ExecutionAction.Continue);
     }
 
     public static ExecutionResult Jump(int lineNumber)
     {
-        return new ExecutionResult(lineNumber);
+        return new ExecutionResult(
+            ExecutionAction.Jump,
+            lineNumber);
+    }
+
+    public static ExecutionResult Yield()
+    {
+        return new ExecutionResult(
+            ExecutionAction.Yield);
     }
 }

@@ -171,6 +171,7 @@ public sealed class Tokenizer
             "GOTO"  => TokenType.Goto,
             "IF" => TokenType.If,
             "THEN" => TokenType.Then,
+            "YIELD" => TokenType.Yield,
             _ => TokenType.Identifier
         };
 

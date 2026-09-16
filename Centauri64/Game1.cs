@@ -76,6 +76,8 @@ public class Game1 : Game
 
         _console.Update(gameTime);
 
+        _basicMachine.Update();
+        
         base.Update(gameTime);
     }
 
