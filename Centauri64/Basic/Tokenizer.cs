@@ -120,7 +120,12 @@ public sealed class Tokenizer
             return new Token(TokenType.Print, text);
         }
 
-         return new Token(TokenType.Identifier, text);
+        if (text == "GOTO")
+        {
+            return new Token(TokenType.Goto, text);
+        }
+
+        return new Token(TokenType.Identifier, text);
     }
 
     private Token ReadString()

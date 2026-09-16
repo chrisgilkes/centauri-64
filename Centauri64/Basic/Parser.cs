@@ -53,6 +53,11 @@ public sealed class Parser
             return ParsePrintStatement();
         }
 
+        if (token.Type == TokenType.Goto)
+        {
+            return ParseGotoStatement();    
+        }
+
         if (token.Type == TokenType.Identifier)
         {
             return ParseAssignmentStatement();
@@ -69,6 +74,15 @@ public sealed class Parser
         var expression = ParseExpression();
 
         return new PrintStatement(expression);
+    }
+
+    private GotoStatement ParseGotoStatement()
+    {
+        Expect(TokenType.Goto);
+
+        var lineNumberToken = Expect(TokenType.Number);
+
+        return new GotoStatement(int.Parse(lineNumberToken.Text));
     }
 
     private Token Current()

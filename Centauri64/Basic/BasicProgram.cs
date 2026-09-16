@@ -23,6 +23,11 @@ public sealed class BasicProgram
         _lines.Clear();
     }
 
+    public IReadOnlyList<ProgramLine> GetLines()
+    {
+        return _lines.Values.ToList();
+    }
+
     public IEnumerable<ProgramLine> Lines => _lines.Values;
 
     public IEnumerable<string> SourceLines => _lines.Values.Select(line => line.Source);

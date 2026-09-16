@@ -7,7 +7,7 @@ public enum TokenType
     Identifier,
 
     Print,
-
+    Goto,
     Equals,
     Plus,
     Minus,

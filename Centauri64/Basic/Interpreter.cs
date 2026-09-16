@@ -10,6 +10,8 @@ public sealed class Interpreter
     private readonly TextConsole _console;
     private readonly Dictionary<string, int> _variables = new();
 
+    private const int MAX_INSTRUCTIONS_PER_RUN = 100_000;
+
     public Interpreter(TextConsole console)
     {
         _console = console;
@@ -18,15 +20,49 @@ public sealed class Interpreter
 
     public void Run(BasicProgram program)
     {
-         _variables.Clear();
+        _variables.Clear();
 
-        foreach(var line in program.Lines)
+        var lines = program.GetLines();
+
+        var programCounter = 0;
+        var instructionCount = 0;
+
+        while(programCounter < lines.Count)
         {
-            Execute(line.Statement);
+            if(++instructionCount > MAX_INSTRUCTIONS_PER_RUN)
+            {
+                throw new InvalidOperationException("Program execution limit exceeded.");    
+            }
+
+            var line   = lines[programCounter];
+
+            var result = Execute(line.Statement);
+
+            if (result.JumpToLine.HasValue)
+            {
+                programCounter = FindLine(lines,result.JumpToLine.Value);
+            }
+            else
+            {
+                programCounter++;
+            }
         }
     }
 
-    private void Execute(Statement statement)
+    public int FindLine(IReadOnlyList<ProgramLine> lines,int lineNumber)
+    {
+        for (var index = 0; index < lines.Count; index++)
+        {
+            if (lines[index].LineNumber == lineNumber)
+            {
+                return index;
+            }
+        }
+
+        throw new InvalidOperationException($"Undefined line {lineNumber}.");
+    }
+
+    private ExecutionResult Execute(Statement statement)
     {
         if(statement is PrintStatement print)
         {
@@ -34,7 +70,12 @@ public sealed class Interpreter
 
             _console.WriteLine(value.ToString());
 
-            return;
+            return ExecutionResult.Continue();
+        }
+
+        if (statement is GotoStatement gotoStatement)
+        {
+            return ExecutionResult.Jump(gotoStatement.LineNumber);
         }
 
         if (statement is AssignmentStatement assignment)
@@ -48,7 +89,7 @@ public sealed class Interpreter
 
             _variables[assignment.VariableName] = value.Integer;
 
-            return;
+            return ExecutionResult.Continue();
         }
 
         throw new InvalidOperationException($"Unsupported statement: {statement.GetType().Name}");
