@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Centauri64.Basic.Syntax;
 using Centauri64.Console;
+using Centauri64.Machine;
 
 namespace Centauri64.Basic;
 
@@ -19,9 +20,12 @@ public sealed class Interpreter
 
     public bool IsRunning => _isRunning;
 
-    public Interpreter(TextConsole console)
+    private readonly CentauriMachine _machine;
+
+    public Interpreter(TextConsole console, CentauriMachine machine)
     {
         _console = console;
+        _machine = machine;
     }
 
     public void Start(BasicProgram program)
@@ -171,6 +175,33 @@ public sealed class Interpreter
             return ExecutionResult.Yield();
         }
 
+        if (statement is TextAtStatement textAt)
+        {
+            var x = Evaluate(textAt.X);
+            var y = Evaluate(textAt.Y);
+            var text = Evaluate(textAt.Text);
+
+            if (!x.IsInteger || !y.IsInteger)
+            {
+                throw new InvalidOperationException(
+                    "TEXTAT coordinates must be numeric.");
+            }
+
+            _machine.WriteText(
+                x.Integer,
+                y.Integer,
+                text.ToString());
+
+            return ExecutionResult.Continue();
+        }
+
+        if (statement is ClsStatement)
+        {
+            _machine.ClearScreen();
+
+            return ExecutionResult.Continue();
+        }
+
         if (statement is AssignmentStatement assignment)
         {
             var value = Evaluate(assignment.Value);
@@ -211,8 +242,47 @@ public sealed class Interpreter
             return EvaluateBinary(binary);
         }
 
+        if (expression is FunctionCallExpression function)
+        {
+            return EvaluateFunction(function);
+        }
+
         throw new InvalidOperationException(
             $"Unsupported expression: {expression.GetType().Name}");
+    }
+
+    private BasicValue EvaluateFunction(FunctionCallExpression function)
+    {
+        return function.Name switch
+        {
+            "KEY" => EvaluateKeyFunction(function),
+
+            _ => throw new InvalidOperationException(
+                $"Unknown function {function.Name}.")
+        };
+    }
+
+    private BasicValue EvaluateKeyFunction(FunctionCallExpression function)
+    {
+        if (function.Arguments.Count != 1)
+        {
+            throw new InvalidOperationException(
+                "KEY expects one argument.");
+        }
+
+        var argument =
+            Evaluate(function.Arguments[0]);
+
+        if (!argument.IsString)
+        {
+            throw new InvalidOperationException(
+                "KEY expects a string.");
+        }
+
+        var pressed =
+            _machine.IsKeyDown(argument.String!);
+
+        return new BasicValue(pressed ? 1 : 0);
     }
 
     private BasicValue EvaluateBinary(BinaryExpression expression)

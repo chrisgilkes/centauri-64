@@ -68,6 +68,16 @@ public sealed class Parser
             return ParseYieldStatement();
         }
 
+        if (token.Type == TokenType.TextAt)
+        {
+            return ParseTextAtStatement();
+        }
+
+        if (token.Type == TokenType.Cls)
+        {
+            return ParseClsStatement();
+        }
+
         if (token.Type == TokenType.Identifier)
         {
             return ParseAssignmentStatement();
@@ -75,6 +85,33 @@ public sealed class Parser
 
         throw new InvalidOperationException(
             $"Unexpected token: {token.Type}");
+    }
+
+    private ClsStatement ParseClsStatement()
+    {
+        Expect(TokenType.Cls);
+
+        return new ClsStatement();
+    }
+
+    private TextAtStatement ParseTextAtStatement()
+    {
+        Expect(TokenType.TextAt);
+
+        var x = ParseExpression();
+
+        Expect(TokenType.Comma);
+
+        var y = ParseExpression();
+
+        Expect(TokenType.Comma);
+
+        var text = ParseExpression();
+
+        return new TextAtStatement(
+            x,
+            y,
+            text);
     }
 
     private PrintStatement ParsePrintStatement()
@@ -227,6 +264,11 @@ public sealed class Parser
 
         if (token.Type == TokenType.Identifier)
         {
+            if (Peek().Type == TokenType.LeftParenthesis)
+            {
+                return ParseFunctionCallExpression();
+            }
+
             Advance();
 
             return new VariableExpression(token.Text);
@@ -247,6 +289,34 @@ public sealed class Parser
             $"Expected expression, but found {token.Type}.");
     }
 
+    private FunctionCallExpression ParseFunctionCallExpression()
+    {
+        var name = Expect(TokenType.Identifier);
+
+        Expect(TokenType.LeftParenthesis);
+
+        var arguments = new List<Expression>();
+
+        if (Current().Type != TokenType.RightParenthesis)
+        {
+            while (true)
+            {
+                arguments.Add(ParseExpression());
+
+                if (Current().Type != TokenType.Comma)
+                    break;
+
+                Advance();
+            }
+        }
+
+        Expect(TokenType.RightParenthesis);
+
+        return new FunctionCallExpression(
+            name.Text,
+            arguments);
+    }
+
     private AssignmentStatement ParseAssignmentStatement()
     {
         var identifier =
@@ -259,5 +329,17 @@ public sealed class Parser
         return new AssignmentStatement(
             identifier.Text,
             value);
+    }
+
+    private Token Peek()
+    {
+        var nextPosition = _position + 1;
+
+        if (nextPosition >= _tokens.Count)
+        {
+            return _tokens[^1];
+        }
+
+        return _tokens[nextPosition];
     }
 }

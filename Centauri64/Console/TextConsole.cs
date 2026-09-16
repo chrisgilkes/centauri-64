@@ -325,6 +325,22 @@ public sealed class TextConsole
         NewLine();
     }
 
+    public void WriteAt(int x,int y,string text)
+    {
+        for (var i = 0; i < text.Length; i++)
+        {
+            var column = x + i;
+
+            if (column < 0 || column >= COLUMNS ||
+                y < 0 || y >= ROWS)
+            {
+                continue;
+            }
+
+            _characters[y, column] = text[i];
+        }
+    }
+
     private void PutCharacter(char character)
     {
         _characters[_cursorRow, _cursorColumn] = character;

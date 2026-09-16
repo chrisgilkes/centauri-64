@@ -1,5 +1,6 @@
 using System;
 using Centauri64.Console;
+using Centauri64.Machine;
 
 namespace Centauri64.Basic;
 
@@ -17,11 +18,13 @@ public sealed class BasicMachine
 
     private const int INSTRUCTIONS_PER_FRAME = 1000;
 
-    public BasicMachine(TextConsole console)
+    public bool IsRunning =>_interpreter.IsRunning;
+
+    public BasicMachine(TextConsole console, CentauriMachine machine)
     {
         _console = console;
 
-        _interpreter = new Interpreter(console);
+        _interpreter = new Interpreter(console, machine);
 
         _console.LineEntered += OnLineEntered;
     }
@@ -86,6 +89,18 @@ public sealed class BasicMachine
         {
             OnProgramFinished();
         }
+    }
+
+    public void Stop()
+    {
+        if (!_interpreter.IsRunning)
+            return;
+
+        _interpreter.Stop();
+
+        _console.WriteLine("");
+        _console.WriteLine("BREAK");
+        _console.WriteLine("READY.");
     }
 
     public void Update()

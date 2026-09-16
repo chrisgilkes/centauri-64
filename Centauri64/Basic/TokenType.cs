@@ -23,5 +23,8 @@ public enum TokenType
     Divide,
     LeftParenthesis,
     RightParenthesis,
+    Comma,
+    TextAt,
+    Cls,
     EndOfLine
 }

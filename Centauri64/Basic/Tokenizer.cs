@@ -146,6 +146,15 @@ public sealed class Tokenizer
                 continue;
             }
 
+            if (character == ',')
+            {
+                tokens.Add(
+                    new Token(TokenType.Comma, ","));
+
+                Advance();
+                continue;
+            }
+
             throw new InvalidOperationException($"Unexpected character '{character}' at position {_position}.");
         }
 
@@ -172,6 +181,8 @@ public sealed class Tokenizer
             "IF" => TokenType.If,
             "THEN" => TokenType.Then,
             "YIELD" => TokenType.Yield,
+            "TEXTAT" => TokenType.TextAt,
+            "CLS" => TokenType.Cls,
             _ => TokenType.Identifier
         };
 

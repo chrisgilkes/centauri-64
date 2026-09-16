@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Input;
 using Centauri64.Graphics;
 using Centauri64.Console;
 using Centauri64.Basic;
+using Centauri64.Machine;
 
 namespace Centauri64;
 
@@ -26,6 +27,10 @@ public class Game1 : Game
     private Texture2D _pixel = null!;
 
     private BasicMachine _basicMachine = null!;
+
+    private CentauriMachine _machine = null!;
+
+    private KeyboardState _previousKeyboardState;
 
     public Game1()
     {
@@ -65,19 +70,35 @@ public class Game1 : Game
         _console.WriteLine("");
         _console.WriteLine("READY.");
 
-        _basicMachine = new BasicMachine(_console);
+        _machine = new CentauriMachine(_console);
+
+        _basicMachine = new BasicMachine(_console, _machine);
 
     }
 
     protected override void Update(GameTime gameTime)
     {
-        if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
-            Exit();
+        /*if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
+            Exit();*/
 
-        _console.Update(gameTime);
+        var keyboardState = Keyboard.GetState();
+
+        if (_basicMachine.IsRunning)
+        {
+            if (keyboardState.IsKeyDown(Keys.Escape) && _previousKeyboardState.IsKeyUp(Keys.Escape))
+            {
+                _basicMachine.Stop();
+            }
+        }
+        else
+        {
+            _console.Update(gameTime);
+        }
 
         _basicMachine.Update();
-        
+
+        _previousKeyboardState = keyboardState;
+
         base.Update(gameTime);
     }
 
