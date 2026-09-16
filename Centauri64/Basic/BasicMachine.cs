@@ -20,11 +20,15 @@ public sealed class BasicMachine
 
     public bool IsRunning =>_interpreter.IsRunning;
 
+    private readonly ProgramStorage _storage;
+
     public BasicMachine(TextConsole console, CentauriMachine machine)
     {
         _console = console;
 
         _interpreter = new Interpreter(console, machine);
+
+        _storage = new ProgramStorage();
 
         _console.LineEntered += OnLineEntered;
     }
@@ -63,6 +67,18 @@ public sealed class BasicMachine
                 return;
             }
 
+            if (source.StartsWith("SAVE "))
+            {
+                SaveProgram(source);
+                return;
+            }
+
+            if (source.StartsWith("LOAD "))
+            {
+                LoadProgram(source);
+                return;
+            }
+
             if (TryDeleteLine(source))
             {
                 return;
@@ -79,6 +95,72 @@ public sealed class BasicMachine
         {
             _console.WriteLine($"?{exception.Message.ToUpperInvariant()}");
         }
+    }
+
+    private void LoadProgram(string source)
+    {
+        var argument = source["LOAD ".Length..].Trim();
+
+        if (argument.Length < 2 ||
+            argument[0] != '"' ||
+            argument[^1] != '"')
+        {
+            throw new InvalidOperationException(
+                "EXPECTED PROGRAM NAME");
+        }
+
+        var name = argument[1..^1];
+
+        var sourceLines = _storage.Load(name);
+
+        var loadedProgram = new BasicProgram();
+
+        foreach (var sourceLine in sourceLines)
+        {
+            var tokens =
+                _tokenizer.Tokenize(sourceLine);
+
+            var line =
+                _parser.ParseLine(
+                    tokens,
+                    sourceLine);
+
+            loadedProgram.StoreLine(line);
+        }
+
+        _program.Clear();
+
+        foreach (var line in loadedProgram.Lines)
+        {
+            _program.StoreLine(line);
+        }
+
+        _console.WriteLine("");
+        _console.WriteLine($"LOADED {name}");
+        _console.WriteLine("");
+        _console.WriteLine("READY.");
+    }
+
+    private void SaveProgram(string source)
+    {
+        var argument = source["SAVE ".Length..].Trim();
+
+        if (argument.Length < 2 ||
+            argument[0] != '"' ||
+            argument[^1] != '"')
+        {
+            throw new InvalidOperationException(
+                "EXPECTED PROGRAM NAME");
+        }
+
+        var name = argument[1..^1];
+
+        _storage.Save(name, _program);
+
+        _console.WriteLine("");
+        _console.WriteLine($"SAVED {name}");
+        _console.WriteLine("");
+        _console.WriteLine("READY.");
     }
 
     private void RunProgram()
