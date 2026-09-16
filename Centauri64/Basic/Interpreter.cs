@@ -202,6 +202,51 @@ public sealed class Interpreter
             return ExecutionResult.Continue();
         }
 
+        if (statement is InkStatement ink)
+        {
+            var colour = Evaluate(ink.Colour);
+
+            if (!colour.IsInteger)
+            {
+                throw new InvalidOperationException(
+                    "INK expects a number.");
+            }
+
+            _machine.SetInk(colour.Integer);
+
+            return ExecutionResult.Continue();
+        }
+
+        if (statement is PaperStatement paper)
+        {
+            var colour = Evaluate(paper.Colour);
+
+            if (!colour.IsInteger)
+            {
+                throw new InvalidOperationException(
+                    "PAPER expects a number.");
+            }
+
+            _machine.SetPaper(colour.Integer);
+
+            return ExecutionResult.Continue();
+        }
+
+        if (statement is BorderStatement border)
+        {
+            var colour = Evaluate(border.Colour);
+
+            if (!colour.IsInteger)
+            {
+                throw new InvalidOperationException(
+                    "BORDER expects a number.");
+            }
+
+            _machine.SetBorder(colour.Integer);
+
+            return ExecutionResult.Continue();
+        }
+
         if (statement is AssignmentStatement assignment)
         {
             var value = Evaluate(assignment.Value);

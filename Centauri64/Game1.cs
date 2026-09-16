@@ -14,8 +14,6 @@ public class Game1 : Game
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch;
 
-    private const int VIRTUAL_WIDTH  = 640;
-    private const int VIRTUAL_HEIGHT = 400;
     private const int WINDOW_SCALE   = 2;
 
     private RenderTarget2D _renderTarget;
@@ -35,8 +33,11 @@ public class Game1 : Game
     public Game1()
     {
         _graphics = new GraphicsDeviceManager(this);
-        _graphics.PreferredBackBufferWidth  = VIRTUAL_WIDTH * WINDOW_SCALE;
-        _graphics.PreferredBackBufferHeight = VIRTUAL_HEIGHT * WINDOW_SCALE;
+
+        _graphics.PreferredBackBufferWidth  = CentauriMachine.DISPLAY_WIDTH * WINDOW_SCALE;
+
+        _graphics.PreferredBackBufferHeight = CentauriMachine.DISPLAY_HEIGHT * WINDOW_SCALE;
+
         _graphics.ApplyChanges();
 
         Window.Title = "Centauri64";
@@ -56,7 +57,7 @@ public class Game1 : Game
     {
         _spriteBatch    = new SpriteBatch(GraphicsDevice);
 
-        _renderTarget   = new RenderTarget2D(GraphicsDevice,VIRTUAL_WIDTH,VIRTUAL_HEIGHT);
+        _renderTarget = new RenderTarget2D(GraphicsDevice,CentauriMachine.DISPLAY_WIDTH,CentauriMachine.DISPLAY_HEIGHT);
 
         _pixel = new Texture2D(GraphicsDevice, 1, 1);
         _pixel.SetData(new[] { Color.White });
@@ -106,7 +107,7 @@ public class Game1 : Game
     {
         GraphicsDevice.SetRenderTarget(_renderTarget);
 
-        GraphicsDevice.Clear(new Color(40, 40, 160));
+        GraphicsDevice.Clear(CentauriPalette.Get(_machine.BorderColour));
 
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
@@ -124,8 +125,8 @@ public class Game1 : Game
                             new Rectangle(
                                 0,
                                 0,
-                                VIRTUAL_WIDTH * WINDOW_SCALE,
-                                VIRTUAL_HEIGHT * WINDOW_SCALE),
+                                CentauriMachine.DISPLAY_WIDTH * WINDOW_SCALE,
+                                CentauriMachine.DISPLAY_HEIGHT * WINDOW_SCALE),
                             Color.White);
 
         _spriteBatch.End();

@@ -26,5 +26,8 @@ public enum TokenType
     Comma,
     TextAt,
     Cls,
+    Ink,
+    Paper,
+    Border,
     EndOfLine
 }

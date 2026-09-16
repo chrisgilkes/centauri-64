@@ -78,6 +78,21 @@ public sealed class Parser
             return ParseClsStatement();
         }
 
+        if (token.Type == TokenType.Ink)
+        {
+            return ParseInkStatement();
+        }
+
+        if (token.Type == TokenType.Paper)
+        {
+            return ParsePaperStatement();
+        }
+
+        if (token.Type == TokenType.Border)
+        {
+            return ParseBorderStatement();
+        }
+
         if (token.Type == TokenType.Identifier)
         {
             return ParseAssignmentStatement();
@@ -85,6 +100,30 @@ public sealed class Parser
 
         throw new InvalidOperationException(
             $"Unexpected token: {token.Type}");
+    }
+
+    private BorderStatement ParseBorderStatement()
+    {
+        Expect(TokenType.Border);
+
+        return new BorderStatement(
+            ParseExpression());
+    }
+
+    private PaperStatement ParsePaperStatement()
+    {
+        Expect(TokenType.Paper);
+
+        return new PaperStatement(
+            ParseExpression());
+    }
+
+    private InkStatement ParseInkStatement()
+    {
+        Expect(TokenType.Ink);
+
+        return new InkStatement(
+            ParseExpression());
     }
 
     private ClsStatement ParseClsStatement()

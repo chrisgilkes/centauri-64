@@ -1,5 +1,7 @@
 using System;
+using System.Reflection.Metadata;
 using Centauri64.Graphics;
+using Centauri64.Machine;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -14,7 +16,7 @@ public sealed class TextConsole
     private const int CHARACTER_WIDTH = 8;
     private const int CHARACTER_HEIGHT = 8;
 
-    private readonly char[,] _characters = new char[ROWS, COLUMNS];
+    private readonly ScreenCell[,] _cells;
 
     private int _cursorColumn;
     private int _cursorRow;
@@ -86,8 +88,31 @@ public sealed class TextConsole
 
     public event Action<string>? LineEntered;
 
+    private int _foreground = 1;
+    private int _background = 6;
+
+    public int Foreground
+    {
+        get => _foreground;
+        set => _foreground = value;
+    }
+
+    public int Background
+    {
+        get => _background;
+        set => _background = value;
+    }
+
+    private const int SCREEN_OFFSET_X = CentauriMachine.BORDER_SIZE;
+
+    private const int SCREEN_OFFSET_Y = CentauriMachine.BORDER_SIZE;
+
+    public const int ScreenMargin = 16;
+
     public TextConsole()
     {
+        _cells = new ScreenCell[ROWS, COLUMNS];
+
         Clear();
     }
 
@@ -282,13 +307,13 @@ public sealed class TextConsole
         if (_cursorColumn > 0)
         {
             _cursorColumn--;
-            _characters[_cursorRow, _cursorColumn] = ' ';
+            _cells[_cursorRow, _cursorColumn]= new ScreenCell(' ', _foreground, _background);
         }
     }
 
     private void Delete()
     {
-        _characters[_cursorRow, _cursorColumn] = ' ';
+        _cells[_cursorRow, _cursorColumn] = new ScreenCell(' ', _foreground, _background);
     }
 
     private void ResetCursorFlash()
@@ -303,7 +328,7 @@ public sealed class TextConsole
         {
             for (var column = 0; column < COLUMNS; column++)
             {
-                _characters[row, column] = ' ';
+                _cells[row, column] = new ScreenCell(' ',_foreground, _background);
             }
         }
 
@@ -337,13 +362,13 @@ public sealed class TextConsole
                 continue;
             }
 
-            _characters[y, column] = text[i];
+            _cells[y, column] = new ScreenCell(text[i], _foreground, _background);
         }
     }
 
     private void PutCharacter(char character)
     {
-        _characters[_cursorRow, _cursorColumn] = character;
+        _cells[_cursorRow, _cursorColumn] = new ScreenCell(character, _foreground, _background);
 
         _cursorColumn++;
 
@@ -371,14 +396,13 @@ public sealed class TextConsole
         {
             for (var column = 0; column < COLUMNS; column++)
             {
-                _characters[row - 1, column] =
-                    _characters[row, column];
+                _cells[row - 1, column] = new ScreenCell(_cells[row, column].Character, _foreground, _background);
             }
         }
 
         for (var column = 0; column < COLUMNS; column++)
         {
-            _characters[ROWS - 1, column] = ' ';
+            _cells[ROWS - 1, column] = new ScreenCell(' ', _foreground, _background);
         }
     }
 
@@ -388,30 +412,60 @@ public sealed class TextConsole
         {
             for (var column = 0; column < COLUMNS; column++)
             {
-                var character = _characters[row, column];
+                var cell = _cells[row, column];
 
-                if (character == ' ')
+                var foreground =
+                    CentauriPalette.Get(cell.Foreground);
+
+                var background =
+                    CentauriPalette.Get(cell.Background);
+
+                var drawX =
+                    SCREEN_OFFSET_X +
+                    column * CHARACTER_WIDTH;
+
+                var drawY =
+                    SCREEN_OFFSET_Y +
+                    row * CHARACTER_HEIGHT;
+
+                var cellRectangle = new Rectangle(
+                    drawX,
+                    drawY,
+                    CHARACTER_WIDTH,
+                    CHARACTER_HEIGHT);
+
+                spriteBatch.Draw(
+                    pixel,
+                    cellRectangle,
+                    background);
+
+                if (cell.Character == ' ')
                     continue;
 
-               font.DrawCharacter(
+                font.DrawCharacter(
                     spriteBatch,
-                    character,
-                    new Vector2(
-                        column * CHARACTER_WIDTH,
-                        row * CHARACTER_HEIGHT),
-                    foregroundColor);
+                    cell.Character,
+                    new Vector2(drawX, drawY),
+                    foreground);
             }
         }
 
         if (_cursorVisible)
         {
-            var cursorPosition = new Vector2(
-                _cursorColumn * CHARACTER_WIDTH,
-                _cursorRow * CHARACTER_HEIGHT);
+            var cursorX =
+                SCREEN_OFFSET_X +
+                _cursorColumn * CHARACTER_WIDTH;
+
+            var cursorY =
+                SCREEN_OFFSET_Y +
+                _cursorRow * CHARACTER_HEIGHT;
+
+            var cursorPosition =
+                new Vector2(cursorX, cursorY);
 
             var cursorRectangle = new Rectangle(
-                (int)cursorPosition.X,
-                (int)cursorPosition.Y,
+                cursorX,
+                cursorY,
                 CHARACTER_WIDTH,
                 CHARACTER_HEIGHT);
 
@@ -420,7 +474,8 @@ public sealed class TextConsole
                 cursorRectangle,
                 foregroundColor);
 
-            var character = _characters[_cursorRow, _cursorColumn];
+            var character =
+                _cells[_cursorRow, _cursorColumn].Character;
 
             if (character != ' ')
             {
@@ -440,7 +495,7 @@ public sealed class TextConsole
         for (var column = 0; column < _cursorColumn; column++)
         {
             characters[column] =
-                _characters[_cursorRow, column];
+                _cells[_cursorRow, column].Character;
         }
 
         return new string(characters).TrimEnd();

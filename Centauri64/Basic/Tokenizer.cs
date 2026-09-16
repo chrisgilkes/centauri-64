@@ -183,6 +183,9 @@ public sealed class Tokenizer
             "YIELD" => TokenType.Yield,
             "TEXTAT" => TokenType.TextAt,
             "CLS" => TokenType.Cls,
+            "INK" => TokenType.Ink,
+            "PAPER" => TokenType.Paper,
+            "BORDER" => TokenType.Border,
             _ => TokenType.Identifier
         };
 
