@@ -93,6 +93,11 @@ public sealed class Parser
             return ParseBorderStatement();
         }
 
+        if (token.Type == TokenType.SpritePosition)
+        {
+            return ParseSpritePositionStatement();
+        }
+
         if (token.Type == TokenType.Identifier)
         {
             return ParseAssignmentStatement();
@@ -100,6 +105,26 @@ public sealed class Parser
 
         throw new InvalidOperationException(
             $"Unexpected token: {token.Type}");
+    }
+
+    private SpritePositionStatement ParseSpritePositionStatement()
+    {
+        Expect(TokenType.SpritePosition);
+
+        var spriteIndex = ParseExpression();
+
+        Expect(TokenType.Comma);
+
+        var x = ParseExpression();
+
+        Expect(TokenType.Comma);
+
+        var y = ParseExpression();
+
+        return new SpritePositionStatement(
+            spriteIndex,
+            x,
+            y);
     }
 
     private BorderStatement ParseBorderStatement()

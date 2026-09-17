@@ -72,6 +72,7 @@ public class Game1 : Game
         _console.WriteLine("READY.");
 
         _machine = new CentauriMachine(_console);
+        _machine.CreateTestSprite();
 
         _basicMachine = new BasicMachine(_console, _machine);
 
@@ -162,6 +163,10 @@ public class Game1 : Game
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
         _console.Draw(_spriteBatch,_font,_pixel,Color.White,new Color(40, 40, 160));
+
+        _machine.DrawSprites(
+            _spriteBatch,
+            _pixel);
 
         _spriteBatch.End();
 

@@ -186,6 +186,7 @@ public sealed class Tokenizer
             "INK" => TokenType.Ink,
             "PAPER" => TokenType.Paper,
             "BORDER" => TokenType.Border,
+            "SPRITEPOS" => TokenType.SpritePosition,
             _ => TokenType.Identifier
         };
 

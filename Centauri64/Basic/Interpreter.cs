@@ -247,6 +247,33 @@ public sealed class Interpreter
             return ExecutionResult.Continue();
         }
 
+        if (statement is SpritePositionStatement spritePosition)
+        {
+            var spriteIndex =
+                Evaluate(spritePosition.SpriteIndex);
+
+            var x =
+                Evaluate(spritePosition.X);
+
+            var y =
+                Evaluate(spritePosition.Y);
+
+            if (!spriteIndex.IsInteger ||
+                !x.IsInteger ||
+                !y.IsInteger)
+            {
+                throw new InvalidOperationException(
+                    "SPRITEPOS expects numeric values.");
+            }
+
+            _machine.SetSpritePosition(
+                spriteIndex.Integer,
+                x.Integer,
+                y.Integer);
+
+            return ExecutionResult.Continue();
+        }
+
         if (statement is AssignmentStatement assignment)
         {
             var value = Evaluate(assignment.Value);
