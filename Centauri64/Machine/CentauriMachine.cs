@@ -32,6 +32,8 @@ public sealed class CentauriMachine
 
     private readonly SpriteRenderer _spriteRenderer = new();
 
+    private readonly Dictionary<string, SpriteAsset> _spriteAssets = new();
+
     public CentauriMachine(TextConsole console)
     {
         _console = console;
@@ -40,6 +42,8 @@ public sealed class CentauriMachine
         {
             _sprites[i] = new CentauriSprite();
         }
+
+        CreateBuiltInSpriteAssets();
     }
 
     public bool IsKeyDown(string keyName)
@@ -98,27 +102,6 @@ public sealed class CentauriMachine
         }
     }
 
-    public void CreateTestSprite()
-    {
-        var sprite = _sprites[0];
-
-        for (var y = 0; y < CentauriSprite.HEIGHT; y++)
-        {
-            for (var x = 0; x < CentauriSprite.WIDTH; x++)
-            {
-                if (x == y ||
-                    x == CentauriSprite.WIDTH - 1 - y)
-                {
-                    sprite.Pixels[y, x] = 7;
-                }
-            }
-        }
-
-        sprite.X = 100;
-        sprite.Y = 100;
-        sprite.Visible = true;
-    }
-
     public void SetSpritePosition(int index,int x,int y)
     {
         ValidateSpriteIndex(index);
@@ -156,5 +139,57 @@ public sealed class CentauriMachine
             spriteBatch,
             pixel,
             _sprites);
+    }
+
+    private void CreateBuiltInSpriteAssets()
+    {
+        var player = new SpriteAsset("PLAYER");
+
+        for (var y = 0;
+            y < CentauriSprite.HEIGHT;
+            y++)
+        {
+            for (var x = 0;
+                x < CentauriSprite.WIDTH;
+                x++)
+            {
+                if (x == y ||
+                    x == CentauriSprite.WIDTH - 1 - y)
+                {
+                    player.Pixels[y, x] = 7;
+                }
+            }
+        }
+
+        _spriteAssets[player.Name] = player;
+    }
+
+    public void SetSprite(int index,string assetName)
+    {
+        ValidateSpriteIndex(index);
+
+        if (!_spriteAssets.TryGetValue(
+                assetName,
+                out var asset))
+        {
+            throw new InvalidOperationException(
+                $"Unknown sprite {assetName}.");
+        }
+
+        var sprite = _sprites[index];
+
+        for (var y = 0;
+            y < CentauriSprite.HEIGHT;
+            y++)
+        {
+            for (var x = 0;
+                x < CentauriSprite.WIDTH;
+                x++)
+            {
+                sprite.Pixels[y, x] = asset.Pixels[y, x];
+            }
+        }
+
+        sprite.Visible = true;
     }
 }

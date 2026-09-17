@@ -29,6 +29,7 @@ public enum TokenType
     Ink,
     Paper,
     Border,
+    Sprite,
     SpritePosition,
     EndOfLine
 }

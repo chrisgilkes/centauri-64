@@ -93,6 +93,11 @@ public sealed class Parser
             return ParseBorderStatement();
         }
 
+        if (token.Type == TokenType.Sprite)
+        {
+            return ParseSpriteStatement();
+        }
+
         if (token.Type == TokenType.SpritePosition)
         {
             return ParseSpritePositionStatement();
@@ -105,6 +110,21 @@ public sealed class Parser
 
         throw new InvalidOperationException(
             $"Unexpected token: {token.Type}");
+    }
+
+    private SpriteStatement ParseSpriteStatement()
+    {
+        Expect(TokenType.Sprite);
+
+        var spriteIndex = ParseExpression();
+
+        Expect(TokenType.Comma);
+
+        var assetName = ParseExpression();
+
+        return new SpriteStatement(
+            spriteIndex,
+            assetName);
     }
 
     private SpritePositionStatement ParseSpritePositionStatement()

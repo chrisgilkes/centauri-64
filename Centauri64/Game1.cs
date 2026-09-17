@@ -72,7 +72,6 @@ public class Game1 : Game
         _console.WriteLine("READY.");
 
         _machine = new CentauriMachine(_console);
-        _machine.CreateTestSprite();
 
         _basicMachine = new BasicMachine(_console, _machine);
 
