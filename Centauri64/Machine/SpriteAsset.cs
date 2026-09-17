@@ -1,30 +1,44 @@
+using System;
+using System.Collections.Generic;
+using Centauri64.Machine.Sprites;
+
 namespace Centauri64.Machine;
 
 public sealed class SpriteAsset
 {
+    private readonly Dictionary<string, SpriteAnimation>
+        _animations = new();
+
     public string Name { get; }
 
-    public int[,] Pixels { get; }
+    public IReadOnlyDictionary<string, SpriteAnimation>
+        Animations => _animations;
 
     public SpriteAsset(string name)
     {
         Name = name;
+    }
 
-        Pixels = new int[
-            CentauriSprite.HEIGHT,
-            CentauriSprite.WIDTH];
+    public SpriteAnimation AddAnimation(string name)
+    {
+        var animation =
+            new SpriteAnimation(name);
 
-        for (var y = 0;
-             y < CentauriSprite.HEIGHT;
-             y++)
+        _animations[name] = animation;
+
+        return animation;
+    }
+
+    public SpriteAnimation GetAnimation(string name)
+    {
+        if (!_animations.TryGetValue(
+                name,
+                out var animation))
         {
-            for (var x = 0;
-                 x < CentauriSprite.WIDTH;
-                 x++)
-            {
-                Pixels[y, x] =
-                    CentauriSprite.TRANSPARENT;
-            }
+            throw new InvalidOperationException(
+                $"Unknown animation {name}.");
         }
+
+        return animation;
     }
 }

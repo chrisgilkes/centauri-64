@@ -5,6 +5,8 @@ using Centauri64.Console;
 using Microsoft.Xna.Framework.Graphics;
 using System.Linq;
 
+using Centauri64.Machine.Sprites;
+
 namespace Centauri64.Machine;
 
 public sealed class CentauriMachine
@@ -32,7 +34,11 @@ public sealed class CentauriMachine
 
     private readonly SpriteRenderer _spriteRenderer = new();
 
-    private readonly Dictionary<string, SpriteAsset> _spriteAssets = new();
+    private readonly SpriteAssetStore _spriteAssets = new();
+
+    private readonly SpriteEditor _spriteEditor;
+
+    public SpriteEditor SpriteEditor => _spriteEditor;
 
     public CentauriMachine(TextConsole console)
     {
@@ -42,6 +48,8 @@ public sealed class CentauriMachine
         {
             _sprites[i] = new CentauriSprite();
         }
+
+        _spriteEditor = new SpriteEditor(_spriteAssets);
 
         CreateBuiltInSpriteAssets();
     }
@@ -133,6 +141,19 @@ public sealed class CentauriMachine
         }
     }
 
+    public void UpdateSpriteEditor(MouseState mouse,KeyboardState keyboard,KeyboardState previousKeyboard)
+    {
+        _spriteEditor.Update(
+            mouse,
+            keyboard,
+            previousKeyboard);
+    }
+
+    public void DrawSpriteEditor(SpriteBatch spriteBatch,Texture2D pixel)
+    {
+        _spriteEditor.Draw(spriteBatch,pixel);
+    }
+
    public void DrawSprites(SpriteBatch spriteBatch,Texture2D pixel)
     {
         _spriteRenderer.Draw(
@@ -143,7 +164,14 @@ public sealed class CentauriMachine
 
     private void CreateBuiltInSpriteAssets()
     {
-        var player = new SpriteAsset("PLAYER");
+        var player =
+            new SpriteAsset("PLAYER");
+
+        var animation =
+            player.AddAnimation("DEFAULT");
+
+        var frame =
+            animation.AddFrame();
 
         for (var y = 0;
             y < CentauriSprite.HEIGHT;
@@ -156,27 +184,35 @@ public sealed class CentauriMachine
                 if (x == y ||
                     x == CentauriSprite.WIDTH - 1 - y)
                 {
-                    player.Pixels[y, x] = 7;
+                    frame.Pixels[y, x] = 7;
                 }
             }
         }
 
-        _spriteAssets[player.Name] = player;
+        _spriteAssets.Add(player);
     }
 
     public void SetSprite(int index,string assetName)
     {
         ValidateSpriteIndex(index);
 
-        if (!_spriteAssets.TryGetValue(
-                assetName,
-                out var asset))
+        var asset =
+            _spriteAssets.Get(assetName);
+
+        var animation =
+            asset.GetAnimation("DEFAULT");
+
+        if (animation.Frames.Count == 0)
         {
             throw new InvalidOperationException(
-                $"Unknown sprite {assetName}.");
+                $"Sprite {assetName} has no frames.");
         }
 
-        var sprite = _sprites[index];
+        var frame =
+            animation.Frames[0];
+
+        var sprite =
+            _sprites[index];
 
         for (var y = 0;
             y < CentauriSprite.HEIGHT;
@@ -186,7 +222,8 @@ public sealed class CentauriMachine
                 x < CentauriSprite.WIDTH;
                 x++)
             {
-                sprite.Pixels[y, x] = asset.Pixels[y, x];
+                sprite.Pixels[y, x] =
+                    frame.Pixels[y, x];
             }
         }
 

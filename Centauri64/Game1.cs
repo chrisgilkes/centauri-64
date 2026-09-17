@@ -121,6 +121,9 @@ public class Game1 : Game
         if (KeyPressed(keyboardState, Keys.F4))
             SetWindowScale(4);
 
+        if ( KeyPressed(keyboardState, Keys.F5))
+            _machine.SpriteEditor.Open("PLAYER");
+
         if (KeyPressed(keyboardState, Keys.F11))
             ToggleFullscreen();
 
@@ -148,6 +151,32 @@ public class Game1 : Game
 
         _basicMachine.Update();
 
+        if (_machine.SpriteEditor.IsActive)
+        {
+            var mouse = Mouse.GetState();
+
+           var scaleX =
+                GraphicsDevice.Viewport.Width /
+                (float)CentauriMachine.DISPLAY_WIDTH;
+
+            var scaleY =
+                GraphicsDevice.Viewport.Height /
+                (float)CentauriMachine.DISPLAY_HEIGHT;
+
+            var virtualMouse =
+                new MouseState(
+                    (int)(mouse.X / scaleX),
+                    (int)(mouse.Y / scaleY),
+                    mouse.ScrollWheelValue,
+                    mouse.LeftButton,
+                    mouse.MiddleButton,
+                    mouse.RightButton,
+                    mouse.XButton1,
+                    mouse.XButton2);
+
+            _machine.UpdateSpriteEditor(virtualMouse,keyboardState,_previousKeyboardState);
+        }
+
         _previousKeyboardState = keyboardState;
 
         base.Update(gameTime);
@@ -161,11 +190,25 @@ public class Game1 : Game
 
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
-        _console.Draw(_spriteBatch,_font,_pixel,Color.White,new Color(40, 40, 160));
+        if (_machine.SpriteEditor.IsActive)
+        {
+            _machine.DrawSpriteEditor(
+                _spriteBatch,
+                _pixel);
+        }
+        else
+        {
+            _console.Draw(
+                _spriteBatch,
+                _font,
+                _pixel,
+                Color.White,
+                new Color(40, 40, 160));
 
-        _machine.DrawSprites(
-            _spriteBatch,
-            _pixel);
+            _machine.DrawSprites(
+                _spriteBatch,
+                _pixel);
+        }
 
         _spriteBatch.End();
 
