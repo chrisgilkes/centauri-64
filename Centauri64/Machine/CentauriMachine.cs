@@ -146,6 +146,14 @@ public sealed class CentauriMachine
         _sprites[index].Visible = false;
     }
 
+    public void HideAllSprites()
+    {
+        foreach (var sprite in _sprites)
+        {
+            sprite.Visible = false;
+        }
+    }
+
     private static void ValidateSpriteIndex(int index)
     {
         if (index < 0 || index >= MAX_SPRITES)
@@ -275,6 +283,6 @@ public sealed class CentauriMachine
         SetPaper(DEFAULT_PAPER);
         SetBorder(DEFAULT_BORDER);
 
-        _console.ClearScreenReady();
+        _console.Clear();
     }
 }

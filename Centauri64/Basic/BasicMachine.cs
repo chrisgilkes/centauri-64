@@ -79,6 +79,8 @@ public sealed class BasicMachine
             if (source == "RESET")
             {
                 _machine.ResetDisplay();
+                _console.WriteLine("");
+                _console.WriteLine("READY.");
                 return;
             }
 
@@ -200,8 +202,11 @@ public sealed class BasicMachine
 
         _interpreter.Stop();
 
-        _console.WriteLine("");
+        _machine.HideAllSprites();
+        _machine.ResetDisplay();
+
         _console.WriteLine("BREAK");
+        _console.WriteLine("");
         _console.WriteLine("READY.");
     }
 
