@@ -5,8 +5,9 @@ namespace Centauri64.Machine.Sprites;
 
 public sealed class SpriteAssetStore
 {
-    private readonly Dictionary<string, SpriteAsset>
-        _assets = new();
+    private readonly Dictionary<string, SpriteAsset>    _assets = new();
+
+    public IEnumerable<SpriteAsset> Assets => _assets.Values;
 
     public void Add(SpriteAsset asset)
     {
@@ -19,8 +20,7 @@ public sealed class SpriteAssetStore
                 name,
                 out var asset))
         {
-            throw new InvalidOperationException(
-                $"Unknown sprite {name}.");
+            throw new InvalidOperationException($"Unknown sprite {name}.");
         }
 
         return asset;
@@ -29,5 +29,10 @@ public sealed class SpriteAssetStore
     public bool Contains(string name)
     {
         return _assets.ContainsKey(name);
+    }
+
+    public void Clear()
+    {
+        _assets.Clear();
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using Centauri64.Console;
 using Centauri64.Machine;
+using Centauri64.Machine.Sprites;
 
 namespace Centauri64.Basic;
 
@@ -22,13 +23,21 @@ public sealed class BasicMachine
 
     private readonly ProgramStorage _storage;
 
+    private readonly SpriteStorage _spriteStorage;
+
+    private readonly CentauriMachine _machine;
+
     public BasicMachine(TextConsole console, CentauriMachine machine)
     {
         _console = console;
 
+        _machine = machine;
+
         _interpreter = new Interpreter(console, machine);
 
         _storage = new ProgramStorage();
+
+        _spriteStorage = new SpriteStorage();
 
         _console.LineEntered += OnLineEntered;
     }
@@ -135,6 +144,9 @@ public sealed class BasicMachine
             _program.StoreLine(line);
         }
 
+
+        _spriteStorage.Load(name,_machine.SpriteAssets);
+
         _console.WriteLine("");
         _console.WriteLine($"LOADED {name}");
         _console.WriteLine("");
@@ -155,7 +167,9 @@ public sealed class BasicMachine
 
         var name = argument[1..^1];
 
-        _storage.Save(name, _program);
+        _storage.Save(name,_program);
+
+        _spriteStorage.Save(name,_machine.SpriteAssets);
 
         _console.WriteLine("");
         _console.WriteLine($"SAVED {name}");

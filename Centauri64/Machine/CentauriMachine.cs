@@ -40,6 +40,8 @@ public sealed class CentauriMachine
 
     public SpriteEditor SpriteEditor => _spriteEditor;
 
+    public SpriteAssetStore SpriteAssets => _spriteAssets;
+
     public CentauriMachine(TextConsole console)
     {
         _console = console;
