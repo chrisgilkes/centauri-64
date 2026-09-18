@@ -18,11 +18,11 @@ public sealed class CentauriMachine
 
     public const int BORDER_SIZE = 8;
 
-    public const int DISPLAY_WIDTH =
-        SCREEN_WIDTH + BORDER_SIZE * 2;
+    public const int DEVELOPMENT_WIDTH = SCREEN_WIDTH + BORDER_SIZE * 2;
+    public const int DEVELOPMENT_HEIGHT = SCREEN_HEIGHT + BORDER_SIZE * 2;
 
-    public const int DISPLAY_HEIGHT =
-        SCREEN_HEIGHT + BORDER_SIZE * 2;
+    public const int GAME_WIDTH = 320;
+    public const int GAME_HEIGHT = 180;
 
     public int BorderColour { get; private set; } = 6;
 

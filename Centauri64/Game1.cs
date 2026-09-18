@@ -1,4 +1,6 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System;
+
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
@@ -16,7 +18,9 @@ public class Game1 : Game
 
     private const int WINDOW_SCALE   = 2;
 
-    private RenderTarget2D _renderTarget;
+    private RenderTarget2D _developmentRenderTarget = null!;
+
+    private RenderTarget2D _gameRenderTarget = null!;
 
     private BitmapFont _font = null!;
 
@@ -34,9 +38,9 @@ public class Game1 : Game
     {
         _graphics = new GraphicsDeviceManager(this);
 
-        _graphics.PreferredBackBufferWidth  = CentauriMachine.DISPLAY_WIDTH * WINDOW_SCALE;
+        _graphics.PreferredBackBufferWidth = CentauriMachine.DEVELOPMENT_WIDTH * WINDOW_SCALE;
 
-        _graphics.PreferredBackBufferHeight = CentauriMachine.DISPLAY_HEIGHT * WINDOW_SCALE;
+        _graphics.PreferredBackBufferHeight = CentauriMachine.DEVELOPMENT_HEIGHT * WINDOW_SCALE;
 
         _graphics.ApplyChanges();
 
@@ -57,7 +61,15 @@ public class Game1 : Game
     {
         _spriteBatch    = new SpriteBatch(GraphicsDevice);
 
-        _renderTarget = new RenderTarget2D(GraphicsDevice,CentauriMachine.DISPLAY_WIDTH,CentauriMachine.DISPLAY_HEIGHT);
+        _developmentRenderTarget =new RenderTarget2D(
+        GraphicsDevice,
+        CentauriMachine.DEVELOPMENT_WIDTH,
+        CentauriMachine.DEVELOPMENT_HEIGHT);
+
+        _gameRenderTarget =new RenderTarget2D(
+        GraphicsDevice,
+        CentauriMachine.GAME_WIDTH,
+        CentauriMachine.GAME_HEIGHT);
 
         _pixel = new Texture2D(GraphicsDevice, 1, 1);
         _pixel.SetData(new[] { Color.White });
@@ -83,10 +95,10 @@ public class Game1 : Game
             _graphics.ToggleFullScreen();
 
         _graphics.PreferredBackBufferWidth =
-            CentauriMachine.DISPLAY_WIDTH * scale;
+            CentauriMachine.DEVELOPMENT_WIDTH * scale;
 
         _graphics.PreferredBackBufferHeight =
-            CentauriMachine.DISPLAY_HEIGHT * scale;
+            CentauriMachine.DEVELOPMENT_HEIGHT * scale;
 
         _graphics.ApplyChanges();
     }
@@ -155,13 +167,9 @@ public class Game1 : Game
         {
             var mouse = Mouse.GetState();
 
-           var scaleX =
-                GraphicsDevice.Viewport.Width /
-                (float)CentauriMachine.DISPLAY_WIDTH;
+           var scaleX = GraphicsDevice.Viewport.Width / (float)CentauriMachine.DEVELOPMENT_WIDTH;
 
-            var scaleY =
-                GraphicsDevice.Viewport.Height /
-                (float)CentauriMachine.DISPLAY_HEIGHT;
+            var scaleY = GraphicsDevice.Viewport.Height / (float)CentauriMachine.DEVELOPMENT_HEIGHT;
 
             var virtualMouse =
                 new MouseState(
@@ -184,11 +192,28 @@ public class Game1 : Game
 
     protected override void Draw(GameTime gameTime)
     {
-        GraphicsDevice.SetRenderTarget(_renderTarget);
+        if (_basicMachine.IsRunning)
+        {
+            DrawGame();
+        }
+        else
+        {
+            DrawDevelopment();
+        }
 
-        GraphicsDevice.Clear(CentauriPalette.Get(_machine.BorderColour));
+        base.Draw(gameTime);
+    }
 
-        _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+    private void DrawDevelopment()
+    {
+        GraphicsDevice.SetRenderTarget(
+            _developmentRenderTarget);
+
+        GraphicsDevice.Clear(
+            CentauriPalette.Get(_machine.BorderColour));
+
+        _spriteBatch.Begin(
+            samplerState: SamplerState.PointClamp);
 
         if (_machine.SpriteEditor.IsActive)
         {
@@ -214,20 +239,84 @@ public class Game1 : Game
 
         GraphicsDevice.SetRenderTarget(null);
 
-        GraphicsDevice.Clear(Color.Black);
+        DrawRenderTargetToWindow(_developmentRenderTarget);
+    }
 
-        _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+    private void DrawGame()
+    {
+        GraphicsDevice.SetRenderTarget(
+            _gameRenderTarget);
 
-        _spriteBatch.Draw(_renderTarget,
-                            new Rectangle(
-                                0,
-                                0,
-                                GraphicsDevice.Viewport.Width,
-                                GraphicsDevice.Viewport.Height),
-                            Color.White);
+        GraphicsDevice.Clear(
+            CentauriPalette.Get(_machine.BorderColour));
+
+        _spriteBatch.Begin(
+            samplerState: SamplerState.PointClamp);
+
+        _console.Draw(
+            _spriteBatch,
+            _font,
+            _pixel,
+            Color.White,
+            new Color(40, 40, 160));
+
+        _machine.DrawSprites(
+            _spriteBatch,
+            _pixel);
 
         _spriteBatch.End();
 
-        base.Draw(gameTime);
+        GraphicsDevice.SetRenderTarget(null);
+
+        DrawRenderTargetToWindow(_gameRenderTarget);
+    }
+
+    private void DrawRenderTargetToWindow(RenderTarget2D renderTarget)
+    {
+        GraphicsDevice.Clear(Color.Black);
+
+        var viewportWidth =
+            GraphicsDevice.Viewport.Width;
+
+        var viewportHeight =
+            GraphicsDevice.Viewport.Height;
+
+        var scaleX =
+            viewportWidth / (float)renderTarget.Width;
+
+        var scaleY =
+            viewportHeight / (float)renderTarget.Height;
+
+        var scale =
+            MathF.Min(scaleX, scaleY);
+
+        var destinationWidth =
+            (int)(renderTarget.Width * scale);
+
+        var destinationHeight =
+            (int)(renderTarget.Height * scale);
+
+        var destinationX =
+            (viewportWidth - destinationWidth) / 2;
+
+        var destinationY =
+            (viewportHeight - destinationHeight) / 2;
+
+        var destinationRectangle =
+            new Rectangle(
+                destinationX,
+                destinationY,
+                destinationWidth,
+                destinationHeight);
+
+        _spriteBatch.Begin(
+            samplerState: SamplerState.PointClamp);
+
+        _spriteBatch.Draw(
+            renderTarget,
+            destinationRectangle,
+            Color.White);
+
+        _spriteBatch.End();
     }
 }
