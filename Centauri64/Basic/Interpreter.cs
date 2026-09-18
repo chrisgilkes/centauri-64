@@ -337,6 +337,28 @@ public sealed class Interpreter
             return ExecutionResult.Return();
         }
 
+        if (statement is BeepStatement beep)
+        {
+            var frequency =
+                Evaluate(beep.Frequency);
+
+            var duration =
+                Evaluate(beep.Duration);
+
+            if (!frequency.IsInteger ||
+                !duration.IsInteger)
+            {
+                throw new InvalidOperationException(
+                    "BEEP expects numeric values.");
+            }
+
+            _machine.Beep(
+                frequency.Integer,
+                duration.Integer);
+
+            return ExecutionResult.Continue();
+        }
+
         if (statement is AssignmentStatement assignment)
         {
             var value = Evaluate(assignment.Value);

@@ -9,6 +9,8 @@ using Centauri64.Machine.Sprites;
 using Centauri64.Graphics;
 using Centauri64.Basic;
 
+using Centauri64.Machine.Audio;
+
 namespace Centauri64.Machine;
 
 public sealed class CentauriMachine
@@ -49,6 +51,8 @@ public sealed class CentauriMachine
     public const int DEFAULT_INK = 1;
     public const int DEFAULT_PAPER = 6;
     public const int DEFAULT_BORDER = 6;
+
+    private readonly CentauriAudio _audio = new();
 
     public CentauriMachine(TextConsole console)
     {
@@ -256,6 +260,13 @@ public sealed class CentauriMachine
             first.X + CentauriSprite.WIDTH > second.X &&
             first.Y < second.Y + CentauriSprite.HEIGHT &&
             first.Y + CentauriSprite.HEIGHT > second.Y;
+    }
+
+    public void Beep(int frequency,int durationMs)
+    {
+        _audio.Beep(
+            frequency,
+            durationMs);
     }
 
     public void ResetDisplay()

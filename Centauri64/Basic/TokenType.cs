@@ -34,5 +34,6 @@ public enum TokenType
     Reset,
     Gosub,
     Return,
+    Beep,
     EndOfLine
 }

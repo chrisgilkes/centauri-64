@@ -118,6 +118,11 @@ public sealed class Parser
             return ParseReturnStatement();
         }
 
+        if (token.Type == TokenType.Beep)
+        {
+            return ParseBeepStatement();
+        }
+
         if (token.Type == TokenType.Identifier)
         {
             return ParseAssignmentStatement();
@@ -125,6 +130,21 @@ public sealed class Parser
 
         throw new InvalidOperationException(
             $"Unexpected token: {token.Type}");
+    }
+
+    private Statement ParseBeepStatement()
+    {
+        Expect(TokenType.Beep);
+
+        var frequency = ParseExpression();
+
+        Expect(TokenType.Comma);
+
+        var duration = ParseExpression();
+
+        return new BeepStatement(
+            frequency,
+            duration);
     }
 
     private Statement ParseGosubStatement()
