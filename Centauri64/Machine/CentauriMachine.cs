@@ -240,6 +240,24 @@ public sealed class CentauriMachine
         sprite.Visible = true;
     }
 
+    public bool SpritesCollide(int firstIndex, int secondIndex)
+    {
+        ValidateSpriteIndex(firstIndex);
+        ValidateSpriteIndex(secondIndex);
+
+        var first = _sprites[firstIndex];
+        var second = _sprites[secondIndex];
+
+        if (!first.Visible || !second.Visible)
+            return false;
+
+        return
+            first.X < second.X + CentauriSprite.WIDTH &&
+            first.X + CentauriSprite.WIDTH > second.X &&
+            first.Y < second.Y + CentauriSprite.HEIGHT &&
+            first.Y + CentauriSprite.HEIGHT > second.Y;
+    }
+
     public void ResetDisplay()
     {
         SetInk(DEFAULT_INK);

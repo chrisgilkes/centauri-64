@@ -363,10 +363,41 @@ public sealed class Interpreter
         {
             "KEY" => EvaluateKeyFunction(function),
             "RND" => EvaluateRandomFunction(function),
+            "COLLIDE" => EvaluateCollideFunction(function),
 
             _ => throw new InvalidOperationException(
                 $"Unknown function {function.Name}.")
         };
+    }
+
+    private BasicValue EvaluateCollideFunction(FunctionCallExpression function)
+    {
+        if (function.Arguments.Count != 2)
+        {
+            throw new InvalidOperationException(
+                "COLLIDE expects two arguments.");
+        }
+
+        var first =
+            Evaluate(function.Arguments[0]);
+
+        var second =
+            Evaluate(function.Arguments[1]);
+
+        if (!first.IsInteger ||
+            !second.IsInteger)
+        {
+            throw new InvalidOperationException(
+                "COLLIDE expects sprite numbers.");
+        }
+
+        var collided =
+            _machine.SpritesCollide(
+                first.Integer,
+                second.Integer);
+
+        return new BasicValue(
+            collided ? 1 : 0);
     }
 
     private BasicValue EvaluateKeyFunction(FunctionCallExpression function)
