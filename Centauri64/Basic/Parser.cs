@@ -108,6 +108,16 @@ public sealed class Parser
             return ParseResetStatement();
         }
 
+        if (token.Type == TokenType.Gosub)
+        {
+            return ParseGosubStatement();
+        }
+
+        if (token.Type == TokenType.Return)
+        {
+            return ParseReturnStatement();
+        }
+
         if (token.Type == TokenType.Identifier)
         {
             return ParseAssignmentStatement();
@@ -115,6 +125,24 @@ public sealed class Parser
 
         throw new InvalidOperationException(
             $"Unexpected token: {token.Type}");
+    }
+
+    private Statement ParseGosubStatement()
+    {
+        Expect(TokenType.Gosub);
+
+        var lineNumber =
+            Expect(TokenType.Number);
+
+        return new GosubStatement(
+            int.Parse(lineNumber.Text));
+    }
+
+    private Statement ParseReturnStatement()
+    {
+        Expect(TokenType.Return);
+
+        return new ReturnStatement();
     }
 
     private ResetStatement ParseResetStatement()

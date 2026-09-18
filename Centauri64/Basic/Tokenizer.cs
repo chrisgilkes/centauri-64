@@ -189,6 +189,8 @@ public sealed class Tokenizer
             "SPRITE" => TokenType.Sprite,
             "SPRITEPOS" => TokenType.SpritePosition,
             "RESET" => TokenType.Reset,
+            "GOSUB" => TokenType.Gosub,
+            "RETURN" => TokenType.Return,
             _ => TokenType.Identifier
         };
 

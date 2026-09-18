@@ -29,4 +29,10 @@ public readonly struct ExecutionResult
         return new ExecutionResult(
             ExecutionAction.Yield);
     }
+
+    public static ExecutionResult Return()
+    {
+        return new ExecutionResult(
+            ExecutionAction.Return);
+    }
 }

@@ -24,6 +24,8 @@ public sealed class Interpreter
 
     private readonly CentauriMachine _machine;
 
+    private readonly Stack<int> _returnStack = new();
+
     public Interpreter(TextConsole console, CentauriMachine machine)
     {
         _console = console;
@@ -33,6 +35,7 @@ public sealed class Interpreter
     public void Start(BasicProgram program)
     {
         _variables.Clear();
+        _returnStack.Clear();
 
         _lines = program.GetLines();
         _programCounter = 0;
@@ -78,6 +81,11 @@ public sealed class Interpreter
             case ExecutionAction.Yield:
                 _programCounter++;
                 break;
+
+
+            case ExecutionAction.Return:
+                _programCounter = _returnStack.Pop();
+                break;
         }
 
         if (_programCounter >= _lines.Count)
@@ -95,6 +103,8 @@ public sealed class Interpreter
 
     public void Run(BasicProgram program)
     {
+        _returnStack.Clear();
+
         _variables.Clear();
 
         var lines = program.GetLines();
@@ -306,6 +316,25 @@ public sealed class Interpreter
                 y.Integer);
 
             return ExecutionResult.Continue();
+        }
+
+        if (statement is GosubStatement gosubStatement)
+        {
+            _returnStack.Push(_programCounter + 1);
+
+            return ExecutionResult.Jump(
+                gosubStatement.LineNumber);
+        }
+
+        if (statement is ReturnStatement)
+        {
+            if (_returnStack.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    "RETURN without GOSUB.");
+            }
+
+            return ExecutionResult.Return();
         }
 
         if (statement is AssignmentStatement assignment)

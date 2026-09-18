@@ -32,5 +32,7 @@ public enum TokenType
     Sprite,
     SpritePosition,
     Reset,
+    Gosub,
+    Return,
     EndOfLine
 }
