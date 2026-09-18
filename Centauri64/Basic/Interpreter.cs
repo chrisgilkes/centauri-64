@@ -13,7 +13,7 @@ public sealed class Interpreter
 
     private readonly Random _random = new();
 
-    private const int MAX_INSTRUCTIONS_PER_RUN = 100_000;
+    private const int MAX_INSTRUCTIONS_WITHOUT_YIELD  = 100_000;
 
     private IReadOnlyList<ProgramLine> _lines = [];
     private int _programCounter;
@@ -55,7 +55,7 @@ public sealed class Interpreter
             return false;
         }
 
-        if (++_instructionCount > MAX_INSTRUCTIONS_PER_RUN)
+        if (++_instructionCount > MAX_INSTRUCTIONS_WITHOUT_YIELD)
         {
             Stop();
 
@@ -80,6 +80,7 @@ public sealed class Interpreter
 
             case ExecutionAction.Yield:
                 _programCounter++;
+                _instructionCount = 0;
                 break;
 
 
@@ -114,7 +115,7 @@ public sealed class Interpreter
 
         while(programCounter < lines.Count)
         {
-            if(++instructionCount > MAX_INSTRUCTIONS_PER_RUN)
+            if(++instructionCount > MAX_INSTRUCTIONS_WITHOUT_YIELD)
             {
                 throw new InvalidOperationException("Program execution limit exceeded.");    
             }
