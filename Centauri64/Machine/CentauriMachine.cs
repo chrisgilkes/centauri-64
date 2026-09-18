@@ -7,12 +7,15 @@ using System.Linq;
 
 using Centauri64.Machine.Sprites;
 using Centauri64.Graphics;
+using Centauri64.Basic;
 
 namespace Centauri64.Machine;
 
 public sealed class CentauriMachine
 {
     private readonly TextConsole _console;
+
+    private readonly BasicMachine _basic;
 
     public const int SCREEN_WIDTH = 640;
     public const int SCREEN_HEIGHT = 400;
@@ -243,6 +246,6 @@ public sealed class CentauriMachine
         SetPaper(DEFAULT_PAPER);
         SetBorder(DEFAULT_BORDER);
 
-        ClearScreen();
+        _console.ClearScreenReady();
     }
 }

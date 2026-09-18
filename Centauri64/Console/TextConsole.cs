@@ -500,4 +500,12 @@ public sealed class TextConsole
 
         return new string(characters).TrimEnd();
     }
+
+    public void ClearScreenReady()
+    {
+        Clear();
+
+        WriteLine("");
+        WriteLine("READY.");
+    }
 }
