@@ -11,6 +11,8 @@ public sealed class Interpreter
     private readonly TextConsole _console;
     private readonly Dictionary<string, int> _variables = new();
 
+    private readonly Random _random = new();
+
     private const int MAX_INSTRUCTIONS_PER_RUN = 100_000;
 
     private IReadOnlyList<ProgramLine> _lines = [];
@@ -355,6 +357,7 @@ public sealed class Interpreter
         return function.Name switch
         {
             "KEY" => EvaluateKeyFunction(function),
+            "RND" => EvaluateRandomFunction(function),
 
             _ => throw new InvalidOperationException(
                 $"Unknown function {function.Name}.")
@@ -382,6 +385,32 @@ public sealed class Interpreter
             _machine.IsKeyDown(argument.String!);
 
         return new BasicValue(pressed ? 1 : 0);
+    }
+
+    private BasicValue EvaluateRandomFunction(FunctionCallExpression function)
+    {
+        if (function.Arguments.Count != 1)
+        {
+            throw new InvalidOperationException(
+                "RND expects one argument.");
+        }
+
+        var argument = Evaluate(function.Arguments[0]);
+
+        if (!argument.IsInteger)
+        {
+            throw new InvalidOperationException(
+                "RND expects a number.");
+        }
+
+        if (argument.Integer <= 0)
+        {
+            throw new InvalidOperationException(
+                "RND expects a positive number.");
+        }
+
+        return new BasicValue(
+            _random.Next(argument.Integer));
     }
 
     private BasicValue EvaluateBinary(BinaryExpression expression)
