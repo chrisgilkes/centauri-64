@@ -35,4 +35,10 @@ public readonly struct ExecutionResult
         return new ExecutionResult(
             ExecutionAction.Return);
     }
+
+    public static ExecutionResult Wait()
+    {
+        return new ExecutionResult(
+            ExecutionAction.Wait);
+    }
 }

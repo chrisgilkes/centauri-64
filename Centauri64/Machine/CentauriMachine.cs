@@ -16,6 +16,7 @@ namespace Centauri64.Machine;
 public sealed class CentauriMachine
 {
     private readonly TextConsole _console;
+    private readonly TextConsole _programConsole;
 
     private readonly BasicMachine _basic;
 
@@ -54,9 +55,14 @@ public sealed class CentauriMachine
 
     private readonly CentauriAudio _audio = new();
 
-    public CentauriMachine(TextConsole console)
+    private CentauriDisplayMode _displayMode = CentauriDisplayMode.HighResolution;
+
+    public CentauriDisplayMode DisplayMode => _displayMode;
+
+    public CentauriMachine(TextConsole console, TextConsole programConsole)
     {
         _console = console;
+        _programConsole = programConsole;
 
         for (var i = 0; i < MAX_SPRITES; i++)
         {
@@ -66,6 +72,17 @@ public sealed class CentauriMachine
         _spriteEditor = new SpriteEditor(_spriteAssets);
 
         CreateBuiltInSpriteAssets();
+    }
+
+    public void SetDisplayMode(int mode)
+    {
+        if (!Enum.IsDefined(typeof(CentauriDisplayMode), mode))
+        {
+            throw new InvalidOperationException(
+                $"Unsupported display mode {mode}.");
+        }
+
+        _displayMode = (CentauriDisplayMode)mode;
     }
 
     public bool IsKeyDown(string keyName)
@@ -84,14 +101,14 @@ public sealed class CentauriMachine
         };
     }
 
-    public void WriteText(int x,int y,string text)
+    public void WriteText(int x, int y, string text)
     {
-        _console.WriteAt(x, y, text);
+        _programConsole.WriteAt(x, y, text);
     }
 
     public void ClearScreen()
     {
-        _console.Clear();
+        _programConsole.Clear();
     }
 
     public void SetInk(int colour)
@@ -284,5 +301,16 @@ public sealed class CentauriMachine
         SetBorder(DEFAULT_BORDER);
 
         _console.Clear();
+    }
+
+    public void ResetProgramDisplay()
+    {
+        _programConsole.Clear();
+        _displayMode = CentauriDisplayMode.HighResolution;
+    }
+
+    public void Print(string text)
+    {
+        _programConsole.WriteLine(text);
     }
 }

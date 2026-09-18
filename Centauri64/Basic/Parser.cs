@@ -123,6 +123,16 @@ public sealed class Parser
             return ParseBeepStatement();
         }
 
+        if (token.Type == TokenType.Wait)
+        {
+            return ParseWaitStatement();
+        }
+
+        if (token.Type == TokenType.Mode)
+        {
+            return ParseModeStatement();
+        }
+
         if (token.Type == TokenType.Identifier)
         {
             return ParseAssignmentStatement();
@@ -130,6 +140,24 @@ public sealed class Parser
 
         throw new InvalidOperationException(
             $"Unexpected token: {token.Type}");
+    }
+
+    private Statement ParseModeStatement()
+    {
+        Expect(TokenType.Mode);
+
+        var mode = ParseExpression();
+
+        return new ModeStatement(mode);
+    }
+
+    private Statement ParseWaitStatement()
+    {
+        Expect(TokenType.Wait);
+
+        var duration = ParseExpression();
+
+        return new WaitStatement(duration);
     }
 
     private Statement ParseBeepStatement()

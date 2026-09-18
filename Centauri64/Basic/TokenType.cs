@@ -7,6 +7,7 @@ public enum TokenType
     Identifier,
 
     Print,
+    Wait,
     Goto,
     Yield,
     If,
@@ -35,5 +36,6 @@ public enum TokenType
     Gosub,
     Return,
     Beep,
+    Mode,
     EndOfLine
 }

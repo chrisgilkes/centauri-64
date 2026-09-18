@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+
 using Centauri64.Basic.Syntax;
 using Centauri64.Console;
 using Centauri64.Machine;
@@ -18,6 +20,7 @@ public sealed class Interpreter
     private IReadOnlyList<ProgramLine> _lines = [];
     private int _programCounter;
     private int _instructionCount;
+    private long? _waitUntil;
     private bool _isRunning;
 
     public bool IsRunning => _isRunning;
@@ -34,6 +37,9 @@ public sealed class Interpreter
 
     public void Start(BasicProgram program)
     {
+        _waitUntil = null;
+        _machine.ResetProgramDisplay();
+
         _variables.Clear();
         _returnStack.Clear();
 
@@ -48,6 +54,16 @@ public sealed class Interpreter
     {
         if (!_isRunning)
             return false;
+
+        if (_waitUntil.HasValue)
+        {
+            if (Stopwatch.GetTimestamp() < _waitUntil.Value)
+            {
+                return true;
+            }
+
+            _waitUntil = null;
+        }
 
         if (_programCounter >= _lines.Count)
         {
@@ -82,24 +98,30 @@ public sealed class Interpreter
                 _programCounter++;
                 _instructionCount = 0;
                 break;
-
+                
+            case ExecutionAction.Wait:
+                _programCounter++;
+                _instructionCount = 0;
+                break;
 
             case ExecutionAction.Return:
                 _programCounter = _returnStack.Pop();
                 break;
         }
 
-        if (_programCounter >= _lines.Count)
+        if (_programCounter >= _lines.Count &&
+            !_waitUntil.HasValue)
         {
             Stop();
         }
 
-        return result.Action == ExecutionAction.Yield;
+        return result.Action == ExecutionAction.Yield || result.Action == ExecutionAction.Wait;
     }
 
     public void Stop()
     {
         _isRunning = false;
+        _waitUntil = null;
     }
 
     public void Run(BasicProgram program)
@@ -150,11 +172,11 @@ public sealed class Interpreter
 
     private ExecutionResult Execute(Statement statement)
     {
-        if(statement is PrintStatement print)
+        if (statement is PrintStatement print)
         {
             var value = Evaluate(print.Expression);
 
-            _console.WriteLine(value.ToString());
+            _machine.Print(value.ToString());
 
             return ExecutionResult.Continue();
         }
@@ -358,6 +380,49 @@ public sealed class Interpreter
                 duration.Integer);
 
             return ExecutionResult.Continue();
+        }
+
+        if (statement is ModeStatement mode)
+        {
+            var value = Evaluate(mode.Mode);
+
+            if (!value.IsInteger)
+            {
+                throw new InvalidOperationException(
+                    "MODE expects a numeric value.");
+            }
+
+            _machine.SetDisplayMode(value.Integer);
+
+            return ExecutionResult.Continue();
+        }
+
+        if (statement is WaitStatement wait)
+        {
+            var duration = Evaluate(wait.Duration);
+
+            if (!duration.IsInteger)
+            {
+                throw new InvalidOperationException(
+                    "WAIT expects a numeric duration.");
+            }
+
+            if (duration.Integer < 0)
+            {
+                throw new InvalidOperationException(
+                    "WAIT duration cannot be negative.");
+            }
+
+            var ticks =
+                (long)(
+                    duration.Integer / 1000.0 *
+                    Stopwatch.Frequency);
+
+            _waitUntil =
+                Stopwatch.GetTimestamp() + ticks;
+
+
+            return ExecutionResult.Wait();
         }
 
         if (statement is AssignmentStatement assignment)

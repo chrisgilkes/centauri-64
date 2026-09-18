@@ -192,6 +192,8 @@ public sealed class Tokenizer
             "GOSUB" => TokenType.Gosub,
             "RETURN" => TokenType.Return,
             "BEEP" => TokenType.Beep,
+            "WAIT" => TokenType.Wait,
+            "MODE" => TokenType.Mode,
             _ => TokenType.Identifier
         };
 
