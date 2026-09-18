@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 
 namespace Centauri64.Machine.Sprites;
@@ -7,7 +8,7 @@ public sealed class SpriteAssetStore
 {
     private readonly Dictionary<string, SpriteAsset>    _assets = new();
 
-    public IEnumerable<SpriteAsset> Assets => _assets.Values;
+    public IReadOnlyList<SpriteAsset> Assets =>_assets.Values.OrderBy(asset => asset.Name).ToList();
 
     public void Add(SpriteAsset asset)
     {

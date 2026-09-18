@@ -151,12 +151,13 @@ public class Game1 : Game
 
         if (_basicMachine.IsRunning)
         {
-            if (keyboardState.IsKeyDown(Keys.Escape) && _previousKeyboardState.IsKeyUp(Keys.Escape))
+            if (keyboardState.IsKeyDown(Keys.Escape) &&
+                _previousKeyboardState.IsKeyUp(Keys.Escape))
             {
                 _basicMachine.Stop();
             }
         }
-        else
+        else if (!_machine.SpriteEditor.IsActive)
         {
             _console.Update(gameTime);
         }
@@ -219,6 +220,7 @@ public class Game1 : Game
         {
             _machine.DrawSpriteEditor(
                 _spriteBatch,
+                _font,
                 _pixel);
         }
         else

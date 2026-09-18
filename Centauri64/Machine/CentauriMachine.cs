@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework.Graphics;
 using System.Linq;
 
 using Centauri64.Machine.Sprites;
+using Centauri64.Graphics;
 
 namespace Centauri64.Machine;
 
@@ -151,9 +152,9 @@ public sealed class CentauriMachine
             previousKeyboard);
     }
 
-    public void DrawSpriteEditor(SpriteBatch spriteBatch,Texture2D pixel)
+    public void DrawSpriteEditor(SpriteBatch spriteBatch,BitmapFont font, Texture2D pixel)
     {
-        _spriteEditor.Draw(spriteBatch,pixel);
+        _spriteEditor.Draw(spriteBatch,font, pixel);
     }
 
    public void DrawSprites(SpriteBatch spriteBatch,Texture2D pixel)

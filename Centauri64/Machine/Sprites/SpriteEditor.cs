@@ -4,6 +4,8 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
+using Centauri64.Graphics;
+
 namespace Centauri64.Machine.Sprites;
 
 public sealed class SpriteEditor
@@ -29,6 +31,11 @@ public sealed class SpriteEditor
     private const int PaletteCellSize = 24;
     private const int PaletteColumns = 4;
 
+    private int _currentAssetIndex;
+
+    private bool _enteringSpriteName;
+    private string _newSpriteName = "";
+
     public SpriteEditor(SpriteAssetStore assets)
     {
         _assets = assets;
@@ -36,8 +43,47 @@ public sealed class SpriteEditor
 
     public void Open(string assetName)
     {
+        var assets =
+            _assets.Assets;
+
+        _currentAssetIndex = -1;
+
+        for (var i = 0; i < assets.Count; i++)
+        {
+            if (assets[i].Name == assetName)
+            {
+                _currentAssetIndex = i;
+                break;
+            }
+        }
+
+        if (_currentAssetIndex < 0)
+        {
+            throw new InvalidOperationException(
+                $"Unknown sprite {assetName}.");
+        }
+
+        SelectAsset(
+            _currentAssetIndex);
+
+        IsActive = true;
+    }
+
+    private void SelectAsset(int index)
+    {
+        var assets =
+            _assets.Assets;
+
+        if (index < 0 ||
+            index >= assets.Count)
+        {
+            return;
+        }
+
+        _currentAssetIndex = index;
+
         _asset =
-            _assets.Get(assetName);
+            assets[_currentAssetIndex];
 
         _animation =
             _asset.GetAnimation("DEFAULT");
@@ -50,14 +96,29 @@ public sealed class SpriteEditor
 
         _frame =
             _animation.Frames[0];
-
-        IsActive = true;
     }
 
     public void Update( MouseState mouse,KeyboardState keyboard,KeyboardState previousKeyboard)
     {
         if (!IsActive || _frame == null)
         return;
+
+        if (_enteringSpriteName)
+        {
+            UpdateSpriteNameEntry(
+                keyboard,
+                previousKeyboard);
+
+            return;
+        }
+
+        if (keyboard.IsKeyDown(Keys.N) &&
+            previousKeyboard.IsKeyUp(Keys.N))
+        {
+            _enteringSpriteName = true;
+            _newSpriteName = "";
+            return;
+        }
 
         if (keyboard.IsKeyDown(Keys.Escape) &&
             previousKeyboard.IsKeyUp(Keys.Escape))
@@ -70,6 +131,20 @@ public sealed class SpriteEditor
             previousKeyboard.IsKeyUp(Keys.C))
         {
             _frame.Clear();
+            return;
+        }
+
+        if (keyboard.IsKeyDown(Keys.Left) &&
+            previousKeyboard.IsKeyUp(Keys.Left))
+        {
+            SelectPreviousAsset();
+            return;
+        }
+
+        if (keyboard.IsKeyDown(Keys.Right) &&
+            previousKeyboard.IsKeyUp(Keys.Right))
+        {
+            SelectNextAsset();
             return;
         }
 
@@ -116,6 +191,40 @@ public sealed class SpriteEditor
         }
     }
 
+    private void SelectPreviousAsset()
+    {
+        var assets =
+            _assets.Assets;
+
+        if (assets.Count == 0)
+            return;
+
+        var index =
+            _currentAssetIndex - 1;
+
+        if (index < 0)
+            index = assets.Count - 1;
+
+        SelectAsset(index);
+    }
+
+    private void SelectNextAsset()
+    {
+        var assets =
+            _assets.Assets;
+
+        if (assets.Count == 0)
+            return;
+
+        var index =
+            _currentAssetIndex + 1;
+
+        if (index >= assets.Count)
+            index = 0;
+
+        SelectAsset(index);
+    }
+
     private bool TrySelectPaletteColour(int mouseX,int mouseY)
     {
         var paletteWidth =
@@ -152,20 +261,27 @@ public sealed class SpriteEditor
         return true;
     }
 
-    public void Draw(SpriteBatch spriteBatch,Texture2D pixel)
+    public void Draw(SpriteBatch spriteBatch,BitmapFont font,Texture2D pixel)
     {
         if (!IsActive || _frame == null)
             return;
 
-        // Editor background.
         spriteBatch.Draw(
             pixel,
             new Rectangle(0, 0, 640, 400),
             Color.Black);
 
-        DrawGrid(spriteBatch,pixel);
+        DrawGrid(
+            spriteBatch,
+            pixel);
 
-        DrawPalette(spriteBatch,pixel);
+        DrawPalette(
+            spriteBatch,
+            pixel);
+
+        DrawEditorText(
+            spriteBatch,
+            font);
     }
 
     private void DrawPalette(SpriteBatch spriteBatch,Texture2D pixel)
@@ -316,6 +432,212 @@ public sealed class SpriteEditor
                     gridWidth,
                     1),
                 Color.Gray);
+        }
+    }
+
+    private void DrawEditorText(
+        SpriteBatch spriteBatch,
+        BitmapFont font)
+    {
+        if (_asset == null ||
+            _animation == null)
+        {
+            return;
+        }
+
+        if (_enteringSpriteName)
+        {
+            font.Draw(
+                spriteBatch,
+                "NEW SPRITE:",
+                new Vector2(440, 250),
+                Color.White);
+
+            font.Draw(
+                spriteBatch,
+                _newSpriteName + "_",
+                new Vector2(440, 270),
+                Color.White);
+
+            font.Draw(
+                spriteBatch,
+                "ENTER - CREATE",
+                new Vector2(440, 300),
+                Color.White);
+
+            font.Draw(
+                spriteBatch,
+                "ESC - CANCEL",
+                new Vector2(440, 320),
+                Color.White);
+
+            return;
+        }
+
+        font.Draw(
+            spriteBatch,
+            "SPRITE EDITOR",
+            new Vector2(440, 20),
+            Color.White);
+
+        font.Draw(
+            spriteBatch,
+            $"SPRITE: {_asset.Name}",
+            new Vector2(440, 180),
+            Color.White);
+
+        font.Draw(
+            spriteBatch,
+            $"ANIM: {_animation.Name}",
+            new Vector2(440, 200),
+            Color.White);
+
+        font.Draw(
+            spriteBatch,
+            "FRAME: 1/1",
+            new Vector2(440, 220),
+            Color.White);
+
+        font.Draw(
+            spriteBatch,
+            "N - NEW SPRITE",
+            new Vector2(440, 250),
+            Color.White);
+
+        font.Draw(
+            spriteBatch,
+            "< > - CHANGE",
+            new Vector2(440, 270),
+            Color.White);
+
+        font.Draw(
+            spriteBatch,
+            "C - CLEAR",
+            new Vector2(440, 290),
+            Color.White);
+
+        font.Draw(
+            spriteBatch,
+            "ESC - EXIT",
+            new Vector2(440, 310),
+            Color.White);
+    }
+
+    private void UpdateSpriteNameEntry(
+        KeyboardState keyboard,
+        KeyboardState previousKeyboard)
+    {
+        if (keyboard.IsKeyDown(Keys.Escape) &&
+            previousKeyboard.IsKeyUp(Keys.Escape))
+        {
+            _enteringSpriteName = false;
+            _newSpriteName = "";
+            return;
+        }
+
+        if (keyboard.IsKeyDown(Keys.Back) &&
+            previousKeyboard.IsKeyUp(Keys.Back))
+        {
+            if (_newSpriteName.Length > 0)
+            {
+                _newSpriteName =
+                    _newSpriteName[..^1];
+            }
+
+            return;
+        }
+
+        if (keyboard.IsKeyDown(Keys.Enter) &&
+            previousKeyboard.IsKeyUp(Keys.Enter))
+        {
+            CreateSprite();
+            return;
+        }
+
+        foreach (var key in keyboard.GetPressedKeys())
+        {
+            if (!previousKeyboard.IsKeyUp(key))
+                continue;
+
+            if (key >= Keys.A &&
+                key <= Keys.Z)
+            {
+                var character =
+                    (char)('A' + (key - Keys.A));
+
+                if (_newSpriteName.Length < 12)
+                {
+                    _newSpriteName += character;
+                }
+
+                return;
+            }
+
+            if (key >= Keys.D0 &&
+                key <= Keys.D9)
+            {
+                var character =
+                    (char)('0' + (key - Keys.D0));
+
+                if (_newSpriteName.Length < 12)
+                {
+                    _newSpriteName += character;
+                }
+
+                return;
+            }
+        }
+    }
+
+    private void CreateSprite()
+    {
+        if (string.IsNullOrWhiteSpace(
+                _newSpriteName))
+        {
+            return;
+        }
+
+        if (_assets.Contains(
+                _newSpriteName))
+        {
+            _enteringSpriteName = false;
+            _newSpriteName = "";
+            return;
+        }
+
+        var asset =
+            new SpriteAsset(
+                _newSpriteName);
+
+        var animation =
+            asset.AddAnimation(
+                "DEFAULT");
+
+        animation.AddFrame();
+
+        _assets.Add(asset);
+
+        _enteringSpriteName = false;
+
+        var name =
+            _newSpriteName;
+
+        _newSpriteName = "";
+
+        // Assets are sorted, so find the newly
+        // created asset's actual index.
+        var assets =
+            _assets.Assets;
+
+        for (var i = 0;
+            i < assets.Count;
+            i++)
+        {
+            if (assets[i].Name == name)
+            {
+                SelectAsset(i);
+                break;
+            }
         }
     }
 
