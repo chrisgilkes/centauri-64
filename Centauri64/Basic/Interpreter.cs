@@ -276,6 +276,11 @@ public sealed class Interpreter
             return ExecutionResult.Continue();
         }
 
+        if( statement is ResetStatement reset)
+        {
+            _machine.ResetDisplay();
+        }
+
         if (statement is SpritePositionStatement spritePosition)
         {
             var spriteIndex =

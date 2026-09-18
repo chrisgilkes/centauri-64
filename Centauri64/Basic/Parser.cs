@@ -103,6 +103,11 @@ public sealed class Parser
             return ParseSpritePositionStatement();
         }
 
+        if (token.Type == TokenType.Reset)
+        {
+            return ParseResetStatement();
+        }
+
         if (token.Type == TokenType.Identifier)
         {
             return ParseAssignmentStatement();
@@ -110,6 +115,13 @@ public sealed class Parser
 
         throw new InvalidOperationException(
             $"Unexpected token: {token.Type}");
+    }
+
+    private ResetStatement ParseResetStatement()
+    {
+        Expect(TokenType.Reset);
+
+        return new ResetStatement();
     }
 
     private SpriteStatement ParseSpriteStatement()

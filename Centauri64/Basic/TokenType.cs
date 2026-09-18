@@ -31,5 +31,6 @@ public enum TokenType
     Border,
     Sprite,
     SpritePosition,
+    Reset,
     EndOfLine
 }

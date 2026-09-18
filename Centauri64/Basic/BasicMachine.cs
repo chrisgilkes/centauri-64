@@ -76,6 +76,12 @@ public sealed class BasicMachine
                 return;
             }
 
+            if (source == "RESET")
+            {
+                _machine.ResetDisplay();
+                return;
+            }
+
             if (source.StartsWith("SAVE "))
             {
                 SaveProgram(source);

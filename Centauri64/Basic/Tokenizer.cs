@@ -188,6 +188,7 @@ public sealed class Tokenizer
             "BORDER" => TokenType.Border,
             "SPRITE" => TokenType.Sprite,
             "SPRITEPOS" => TokenType.SpritePosition,
+            "RESET" => TokenType.Reset,
             _ => TokenType.Identifier
         };
 

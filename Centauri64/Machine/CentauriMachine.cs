@@ -25,7 +25,7 @@ public sealed class CentauriMachine
     public const int GAME_WIDTH = 320;
     public const int GAME_HEIGHT = 180;
 
-    public int BorderColour { get; private set; } = 6;
+    public int BorderColour { get; private set; } = DEFAULT_BORDER;
 
     public const int MAX_SPRITES = 16;
 
@@ -42,6 +42,10 @@ public sealed class CentauriMachine
     public SpriteEditor SpriteEditor => _spriteEditor;
 
     public SpriteAssetStore SpriteAssets => _spriteAssets;
+
+    public const int DEFAULT_INK = 1;
+    public const int DEFAULT_PAPER = 6;
+    public const int DEFAULT_BORDER = 6;
 
     public CentauriMachine(TextConsole console)
     {
@@ -231,5 +235,14 @@ public sealed class CentauriMachine
         }
 
         sprite.Visible = true;
+    }
+
+    public void ResetDisplay()
+    {
+        SetInk(DEFAULT_INK);
+        SetPaper(DEFAULT_PAPER);
+        SetBorder(DEFAULT_BORDER);
+
+        ClearScreen();
     }
 }
