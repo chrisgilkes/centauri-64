@@ -45,10 +45,10 @@ public sealed class SpriteRenderer
                 spriteBatch.Draw(
                     pixel,
                     new Rectangle(
-                        sprite.X + x,
-                        sprite.Y + y,
-                        1,
-                        1),
+                                    sprite.X + x + CentauriMachine.BORDER_SIZE,
+                                    sprite.Y + y + CentauriMachine.BORDER_SIZE,
+                                    1,
+                                    1),
                     colour);
             }
         }

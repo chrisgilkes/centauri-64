@@ -73,16 +73,16 @@ public sealed class Interpreter
         _isRunning = _lines.Count > 0;
     }
 
-    public bool ExecuteNextInstruction()
+    public ExecutionAction  ExecuteNextInstruction()
     {
         if (!_isRunning)
-            return false;
+            return ExecutionAction.Continue;
 
         if (_waitUntil.HasValue)
         {
             if (Stopwatch.GetTimestamp() < _waitUntil.Value)
             {
-                return true;
+                return ExecutionAction.Wait;
             }
 
             _waitUntil = null;
@@ -91,7 +91,7 @@ public sealed class Interpreter
         if (_programCounter >= _lines.Count)
         {
             Stop();
-            return false;
+            return ExecutionAction.Continue;
         }
 
         if (++_instructionCount > MAX_INSTRUCTIONS_WITHOUT_YIELD)
@@ -144,7 +144,7 @@ public sealed class Interpreter
             Stop();
         }
 
-        return _isRunning;
+        return result.Action;
     }
 
     public void Stop()

@@ -233,7 +233,7 @@ public class Game1 : Game
             _font,
             _pixel,
             Color.White,
-            new Color(40, 40, 160));
+            new Color(40, 40, 160), true, !_basicMachine.IsRunning);
 
         _machine.DrawGraphics(
             _spriteBatch,
@@ -316,7 +316,7 @@ public class Game1 : Game
                 CentauriMachine.ARCADE_HEIGHT),
             CentauriPalette.Get(_programConsole.Background));
 
-        _programConsole.Draw(_spriteBatch,_font,_pixel,Color.White,CentauriPalette.Get(_programConsole.Background),drawBackground: false);
+        _programConsole.Draw(_spriteBatch,_font,_pixel,Color.White,CentauriPalette.Get(_programConsole.Background),drawBackground: false, drawCursor: !_basicMachine.IsRunning);
 
         // GRAPHICS
         _machine.DrawGraphics(

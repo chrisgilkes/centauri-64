@@ -462,7 +462,8 @@ public sealed class TextConsole
         }
     }
 
-    public void Draw(SpriteBatch spriteBatch,BitmapFont font,Texture2D pixel,Color foregroundColor,Color backgroundColor,bool drawBackground = true)
+    public void Draw(SpriteBatch spriteBatch,BitmapFont font,Texture2D pixel,Color foregroundColor,
+            Color backgroundColor,bool drawBackground = true, bool drawCursor = true)
     {
         for (var row = 0; row < ROWS; row++)
         {
@@ -509,7 +510,7 @@ public sealed class TextConsole
             }
         }
 
-        if (_cursorVisible)
+        if (drawCursor && _cursorVisible)
         {
             var cursorX =
                 SCREEN_OFFSET_X +

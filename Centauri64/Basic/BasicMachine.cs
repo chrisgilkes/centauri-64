@@ -217,16 +217,15 @@ public sealed class BasicMachine
 
         try
         {
-            for (var i = 0;
-                i < INSTRUCTIONS_PER_FRAME &&
-                _interpreter.IsRunning;
-                i++)
+            for (var i = 0; i < INSTRUCTIONS_PER_FRAME && _interpreter.IsRunning; i++)
             {
-                var yielded =
-                    _interpreter.ExecuteNextInstruction();
+                var action = _interpreter.ExecuteNextInstruction();
 
-                if (yielded)
+                if (action == ExecutionAction.Yield ||
+                    action == ExecutionAction.Wait)
+                {
                     break;
+                }
             }
 
             if (!_interpreter.IsRunning)
