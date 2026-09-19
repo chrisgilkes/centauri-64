@@ -14,7 +14,7 @@ using Centauri64.Machine.Audio;
 
 namespace Centauri64.Machine;
 
-public sealed class CentauriMachine
+public sealed partial class CentauriMachine
 {
     private readonly TextConsole _console;
     private readonly TextConsole _programConsole;
@@ -64,125 +64,9 @@ public sealed class CentauriMachine
 
     public CentauriDisplayMode DisplayMode => _displayMode;
 
-    private sealed class PositionedText
-    {
-        public int X { get; }
-        public int Y { get; }
-        public string Text { get; }
-        public int Colour { get; }
-
-        public PositionedText(
-            int x,
-            int y,
-            string text,
-            int colour)
-        {
-            X = x;
-            Y = y;
-            Text = text;
-            Colour = colour;
-        }
-    }
-
-    private readonly List<PositionedText> _positionedText = new();
-
-    private sealed class PlotPoint
-    {
-        public int X { get; }
-        public int Y { get; }
-        public int Colour { get; }
-
-        public PlotPoint(int x, int y, int colour)
-        {
-            X = x;
-            Y = y;
-            Colour = colour;
-        }
-    }
-
-    private readonly List<PlotPoint> _plotPoints = new();
-
-    private sealed class LinePrimitive
-    {
-        public int X1 { get; }
-        public int Y1 { get; }
-        public int X2 { get; }
-        public int Y2 { get; }
-        public int Colour { get; }
-
-        public LinePrimitive(
-            int x1,
-            int y1,
-            int x2,
-            int y2,
-            int colour)
-        {
-            X1 = x1;
-            Y1 = y1;
-            X2 = x2;
-            Y2 = y2;
-            Colour = colour;
-        }
-    }
-
-    private readonly List<LinePrimitive> _lines = new();
-
-    private sealed class RectPrimitive
-    {
-        public int X { get; }
-        public int Y { get; }
-        public int Width { get; }
-        public int Height { get; }
-        public int Colour { get; }
-        public bool Filled { get; }
-
-        public RectPrimitive(
-            int x,
-            int y,
-            int width,
-            int height,
-            int colour,
-            bool filled)
-        {
-            X = x;
-            Y = y;
-            Width = width;
-            Height = height;
-            Colour = colour;
-            Filled = filled;
-        }
-    }
-
-    private readonly List<RectPrimitive> _rectangles = new();
-
-    private sealed class CirclePrimitive
-    {
-        public int X { get; }
-        public int Y { get; }
-        public int Radius { get; }
-        public int Colour { get; }
-        public bool Filled { get; }
-
-        public CirclePrimitive(
-            int x,
-            int y,
-            int radius,
-            int colour,
-            bool filled)
-        {
-            X = x;
-            Y = y;
-            Radius = radius;
-            Colour = colour;
-            Filled = filled;
-        }
-    }
-
-    private readonly List<CirclePrimitive> _circles = new();
-
     public CentauriMachine(TextConsole console, TextConsole programConsole)
     {
-        _console = console;
+        _console        = console;
         _programConsole = programConsole;
 
         for (var i = 0; i < MAX_SPRITES; i++)
@@ -199,8 +83,7 @@ public sealed class CentauriMachine
     {
         if (!Enum.IsDefined(typeof(CentauriDisplayMode), mode))
         {
-            throw new InvalidOperationException(
-                $"Unsupported display mode {mode}.");
+            throw new InvalidOperationException($"Unsupported display mode {mode}.");
         }
 
         _displayMode = (CentauriDisplayMode)mode;
@@ -224,12 +107,7 @@ public sealed class CentauriMachine
 
     public void WriteText(int x, int y, string text)
     {
-        _positionedText.Add(
-            new PositionedText(
-                x,
-                y,
-                text,
-                _programConsole.Foreground));
+        _positionedText.Add(new PositionedText(x,y,text,_programConsole.Foreground));
     }
 
     public void ClearScreen()
@@ -267,8 +145,7 @@ public sealed class CentauriMachine
     {
         if (colour < 0 || colour > 15)
         {
-            throw new InvalidOperationException(
-                "Colour must be between 0 and 15.");
+            throw new InvalidOperationException("Colour must be between 0 and 15.");
         }
     }
 
@@ -306,17 +183,13 @@ public sealed class CentauriMachine
     {
         if (index < 0 || index >= MAX_SPRITES)
         {
-            throw new InvalidOperationException(
-                $"Sprite must be between 0 and {MAX_SPRITES - 1}.");
+            throw new InvalidOperationException($"Sprite must be between 0 and {MAX_SPRITES - 1}.");
         }
     }
 
     public void UpdateSpriteEditor(MouseState mouse,KeyboardState keyboard,KeyboardState previousKeyboard)
     {
-        _spriteEditor.Update(
-            mouse,
-            keyboard,
-            previousKeyboard);
+        _spriteEditor.Update(mouse,keyboard,previousKeyboard);
     }
 
     public void DrawSpriteEditor(SpriteBatch spriteBatch,BitmapFont font, Texture2D pixel)
@@ -328,43 +201,28 @@ public sealed class CentauriMachine
     {
         foreach (var item in _positionedText)
         {
-            font.Draw(
-                spriteBatch,
-                item.Text,
-                new Vector2(item.X, item.Y),
-                CentauriPalette.Get(item.Colour));
+            font.Draw(spriteBatch,item.Text,new Vector2(item.X, item.Y),CentauriPalette.Get(item.Colour));
         }
     }
 
    public void DrawSprites(SpriteBatch spriteBatch,Texture2D pixel)
     {
-        _spriteRenderer.Draw(
-            spriteBatch,
-            pixel,
-            _sprites);
+        _spriteRenderer.Draw(spriteBatch,pixel,_sprites);
     }
 
     private void CreateBuiltInSpriteAssets()
     {
-        var player =
-            new SpriteAsset("PLAYER");
+        var player = new SpriteAsset("PLAYER");
 
-        var animation =
-            player.AddAnimation("DEFAULT");
+        var animation = player.AddAnimation("DEFAULT");
 
-        var frame =
-            animation.AddFrame();
+        var frame = animation.AddFrame();
 
-        for (var y = 0;
-            y < CentauriSprite.HEIGHT;
-            y++)
+        for (var y = 0;y < CentauriSprite.HEIGHT;y++)
         {
-            for (var x = 0;
-                x < CentauriSprite.WIDTH;
-                x++)
+            for (var x = 0;x < CentauriSprite.WIDTH;x++)
             {
-                if (x == y ||
-                    x == CentauriSprite.WIDTH - 1 - y)
+                if (x == y ||x == CentauriSprite.WIDTH - 1 - y)
                 {
                     frame.Pixels[y, x] = 7;
                 }
@@ -378,34 +236,24 @@ public sealed class CentauriMachine
     {
         ValidateSpriteIndex(index);
 
-        var asset =
-            _spriteAssets.Get(assetName);
+        var asset = _spriteAssets.Get(assetName);
 
-        var animation =
-            asset.GetAnimation("DEFAULT");
+        var animation = asset.GetAnimation("DEFAULT");
 
         if (animation.Frames.Count == 0)
         {
-            throw new InvalidOperationException(
-                $"Sprite {assetName} has no frames.");
+            throw new InvalidOperationException($"Sprite {assetName} has no frames.");
         }
 
-        var frame =
-            animation.Frames[0];
+        var frame = animation.Frames[0];
 
-        var sprite =
-            _sprites[index];
+        var sprite = _sprites[index];
 
-        for (var y = 0;
-            y < CentauriSprite.HEIGHT;
-            y++)
+        for (var y = 0;y < CentauriSprite.HEIGHT;y++)
         {
-            for (var x = 0;
-                x < CentauriSprite.WIDTH;
-                x++)
+            for (var x = 0;x < CentauriSprite.WIDTH;x++)
             {
-                sprite.Pixels[y, x] =
-                    frame.Pixels[y, x];
+                sprite.Pixels[y, x] = frame.Pixels[y, x];
             }
         }
 
@@ -432,25 +280,23 @@ public sealed class CentauriMachine
 
     public void Beep(int frequency,int durationMs)
     {
-        _audio.Beep(
-            frequency,
-            durationMs);
+        _audio.Beep(frequency,durationMs);
     }
 
     public void ResetDisplay()
     {
         _console.Foreground = DEFAULT_INK;
         _console.Background = DEFAULT_PAPER;
-        BorderColour = DEFAULT_BORDER;
+        BorderColour        = DEFAULT_BORDER;
 
         _console.Clear();
     }
 
     public void ResetProgramDisplay()
     {
-        _programConsole.Foreground = DEFAULT_INK;
-        _programConsole.Background = DEFAULT_PAPER;
-        BorderColour = DEFAULT_BORDER;
+        _programConsole.Foreground  = DEFAULT_INK;
+        _programConsole.Background  = DEFAULT_PAPER;
+        BorderColour                = DEFAULT_BORDER;
 
         _programConsole.Clear();
         _positionedText.Clear();
@@ -459,8 +305,7 @@ public sealed class CentauriMachine
         _rectangles.Clear();
         _circles.Clear();
 
-        _displayMode =
-            CentauriDisplayMode.HighResolution;
+        _displayMode = CentauriDisplayMode.HighResolution;
     }
 
     public void Print(string text)
@@ -468,348 +313,4 @@ public sealed class CentauriMachine
         _programConsole.WriteLine(text);
     }
 
-    public void Plot(int x, int y, int colour)
-    {
-        ValidateColour(colour);
-
-        _plotPoints.Add(
-            new PlotPoint(x, y, colour));
-    }
-
-    public void DrawGraphics(SpriteBatch spriteBatch, Texture2D pixel)
-    {
-        foreach (var point in _plotPoints)
-        {
-            spriteBatch.Draw(
-                pixel,
-                new Rectangle(
-                    point.X + BORDER_SIZE,
-                    point.Y + BORDER_SIZE,
-                    1,
-                    1),
-                CentauriPalette.Get(point.Colour));
-        }
-
-        foreach (var line in _lines)
-        {
-            DrawLine(
-                spriteBatch,
-                pixel,
-                line.X1,
-                line.Y1,
-                line.X2,
-                line.Y2,
-                CentauriPalette.Get(line.Colour));
-        }
-
-        foreach (var rect in _rectangles)
-        {
-            var colour =
-                CentauriPalette.Get(rect.Colour);
-
-            if (rect.Filled)
-            {
-                spriteBatch.Draw(
-                    pixel,
-                    new Rectangle(
-                        rect.X + BORDER_SIZE,
-                        rect.Y + BORDER_SIZE,
-                        rect.Width,
-                        rect.Height),
-                    colour);
-            }
-            else
-            {
-                var right =
-                    rect.X + rect.Width - 1;
-
-                var bottom =
-                    rect.Y + rect.Height - 1;
-
-                DrawLine(
-                    spriteBatch,
-                    pixel,
-                    rect.X,
-                    rect.Y,
-                    right,
-                    rect.Y,
-                    colour);
-
-                DrawLine(
-                    spriteBatch,
-                    pixel,
-                    right,
-                    rect.Y,
-                    right,
-                    bottom,
-                    colour);
-
-                DrawLine(
-                    spriteBatch,
-                    pixel,
-                    right,
-                    bottom,
-                    rect.X,
-                    bottom,
-                    colour);
-
-                DrawLine(
-                    spriteBatch,
-                    pixel,
-                    rect.X,
-                    bottom,
-                    rect.X,
-                    rect.Y,
-                    colour);
-            }
-        }
-
-        foreach (var circle in _circles)
-        {
-            var circleCol = CentauriPalette.Get(circle.Colour);
-
-            if (circle.Filled)
-            {
-                DrawFilledCircle(
-                    spriteBatch,
-                    pixel,
-                    circle.X,
-                    circle.Y,
-                    circle.Radius,
-                    circleCol);
-            }
-            else
-            {
-                DrawCircle(
-                    spriteBatch,
-                    pixel,
-                    circle.X,
-                    circle.Y,
-                    circle.Radius,
-                    circleCol);
-            }
-        }
-    }
-
-    public void Line(int x1,int y1,int x2,int y2,int colour)
-    {
-        ValidateColour(colour);
-
-        _lines.Add(
-            new LinePrimitive(
-                x1,
-                y1,
-                x2,
-                y2,
-                colour));
-    }
-
-    private static void DrawLine(SpriteBatch spriteBatch,Texture2D pixel,int x1,int y1,int x2,int y2,Color colour)
-    {
-        var dx = Math.Abs(x2 - x1);
-        var sx = x1 < x2 ? 1 : -1;
-
-        var dy = -Math.Abs(y2 - y1);
-        var sy = y1 < y2 ? 1 : -1;
-
-        var error = dx + dy;
-
-        while (true)
-        {
-            spriteBatch.Draw(
-                pixel,
-                new Rectangle(
-                    x1 + BORDER_SIZE,
-                    y1 + BORDER_SIZE,
-                    1,
-                    1),
-                colour);
-
-            if (x1 == x2 && y1 == y2)
-            {
-                break;
-            }
-
-            var error2 = error * 2;
-
-            if (error2 >= dy)
-            {
-                error += dy;
-                x1 += sx;
-            }
-
-            if (error2 <= dx)
-            {
-                error += dx;
-                y1 += sy;
-            }
-        }
-    }
-
-    private static void DrawPixel(SpriteBatch spriteBatch,Texture2D pixel,int x,int y,Color colour)
-    {
-        spriteBatch.Draw(
-            pixel,
-            new Rectangle(
-                x + BORDER_SIZE,
-                y + BORDER_SIZE,
-                1,
-                1),
-            colour);
-    }
-
-    private static void DrawCircle(SpriteBatch spriteBatch,Texture2D pixel,int centreX,int centreY,int radius,Color colour)
-    {
-        var x = radius;
-        var y = 0;
-        var error = 1 - radius;
-
-        while (x >= y)
-        {
-            DrawPixel(
-                spriteBatch, pixel,
-                centreX + x, centreY + y,
-                colour);
-
-            DrawPixel(
-                spriteBatch, pixel,
-                centreX + y, centreY + x,
-                colour);
-
-            DrawPixel(
-                spriteBatch, pixel,
-                centreX - y, centreY + x,
-                colour);
-
-            DrawPixel(
-                spriteBatch, pixel,
-                centreX - x, centreY + y,
-                colour);
-
-            DrawPixel(
-                spriteBatch, pixel,
-                centreX - x, centreY - y,
-                colour);
-
-            DrawPixel(
-                spriteBatch, pixel,
-                centreX - y, centreY - x,
-                colour);
-
-            DrawPixel(
-                spriteBatch, pixel,
-                centreX + y, centreY - x,
-                colour);
-
-            DrawPixel(
-                spriteBatch, pixel,
-                centreX + x, centreY - y,
-                colour);
-
-            y++;
-
-            if (error < 0)
-            {
-                error += 2 * y + 1;
-            }
-            else
-            {
-                x--;
-                error += 2 * (y - x) + 1;
-            }
-        }
-    }
-
-    private static void DrawHorizontalLine(SpriteBatch spriteBatch,Texture2D pixel,int x1,int x2,int y,Color colour)
-    {
-        if (x2 < x1)
-        {
-            (x1, x2) = (x2, x1);
-        }
-
-        spriteBatch.Draw(
-            pixel,
-            new Rectangle(
-                x1 + BORDER_SIZE,
-                y + BORDER_SIZE,
-                x2 - x1 + 1,
-                1),
-            colour);
-    }
-
-    private static void DrawFilledCircle(SpriteBatch spriteBatch,Texture2D pixel,int centreX,int centreY,int radius,Color colour)
-    {
-        var x = radius;
-        var y = 0;
-        var error = 1 - radius;
-
-        while (x >= y)
-        {
-            DrawHorizontalLine(
-                spriteBatch, pixel,
-                centreX - x,
-                centreX + x,
-                centreY + y,
-                colour);
-
-            DrawHorizontalLine(
-                spriteBatch, pixel,
-                centreX - x,
-                centreX + x,
-                centreY - y,
-                colour);
-
-            DrawHorizontalLine(
-                spriteBatch, pixel,
-                centreX - y,
-                centreX + y,
-                centreY + x,
-                colour);
-
-            DrawHorizontalLine(
-                spriteBatch, pixel,
-                centreX - y,
-                centreX + y,
-                centreY - x,
-                colour);
-
-            y++;
-
-            if (error < 0)
-            {
-                error += 2 * y + 1;
-            }
-            else
-            {
-                x--;
-                error += 2 * (y - x) + 1;
-            }
-        }
-    }
-    public void Rect(int x,int y,int width,int height,int colour,bool filled)
-    {
-        ValidateColour(colour);
-
-        _rectangles.Add(
-            new RectPrimitive(
-                x,
-                y,
-                width,
-                height,
-                colour,
-                filled));
-    }
-
-    public void Circle(int x,int y,int radius,int colour,bool filled)
-    {
-        ValidateColour(colour);
-
-        _circles.Add(
-            new CirclePrimitive(
-                x,
-                y,
-                radius,
-                colour,
-                filled));
-    }
 }
