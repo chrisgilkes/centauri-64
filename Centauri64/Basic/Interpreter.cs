@@ -789,8 +789,28 @@ public sealed class Interpreter
             "COLLIDE" => EvaluateCollideFunction(function),
             "SWIDTH" => EvaluateScreenWidthFunction(function),
             "SHEIGHT" => EvaluateScreenHeightFunction(function),
+            "KEYPRESSED" => EvaluateKeyPressedFunction(function),
             _ => throw new InvalidOperationException($"Unknown function {function.Name}.")
         };
+    }
+
+    private BasicValue EvaluateKeyPressedFunction(FunctionCallExpression function)
+    {
+        if (function.Arguments.Count != 1)
+        {
+            throw new InvalidOperationException("KEYPRESSED expects one argument.");
+        }
+
+        var argument = Evaluate(function.Arguments[0]);
+
+        if (!argument.IsString)
+        {
+            throw new InvalidOperationException("KEYPRESSED expects a string.");
+        }
+
+        var pressed = _machine.IsKeyPressed(argument.String!);
+
+        return new BasicValue(pressed ? 1 : 0);
     }
 
     private BasicValue EvaluateScreenWidthFunction(FunctionCallExpression function)

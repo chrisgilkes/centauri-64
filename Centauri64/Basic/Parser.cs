@@ -644,6 +644,7 @@ public sealed class Parser
     {
         return name is
             "KEY" or
+            "KEYPRESSED" or
             "RND" or
             "COLLIDE" or
             "SWIDTH" or

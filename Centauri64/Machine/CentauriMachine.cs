@@ -21,6 +21,9 @@ public sealed partial class CentauriMachine
 
     private readonly BasicMachine _basic;
 
+    private KeyboardState _keyboardState;
+    private KeyboardState _previousKeyboardState;
+
     public const int SCREEN_WIDTH = 640;
     public const int SCREEN_HEIGHT = 400;
 
@@ -85,20 +88,35 @@ public sealed partial class CentauriMachine
         _displayMode = (CentauriDisplayMode)mode;
     }
 
-    public bool IsKeyDown(string keyName)
+    private static Keys? GetKey(string keyName)
     {
-        var keyboard = Keyboard.GetState();
-
         return keyName switch
         {
-            "LEFT" => keyboard.IsKeyDown(Keys.Left),
-            "RIGHT" => keyboard.IsKeyDown(Keys.Right),
-            "UP" => keyboard.IsKeyDown(Keys.Up),
-            "DOWN" => keyboard.IsKeyDown(Keys.Down),
-            "SPACE" => keyboard.IsKeyDown(Keys.Space),
-
-            _ => false
+            "LEFT" => Keys.Left,
+            "RIGHT" => Keys.Right,
+            "UP" => Keys.Up,
+            "DOWN" => Keys.Down,
+            "SPACE" => Keys.Space,
+            _ => null
         };
+    }
+
+    public bool IsKeyDown(string keyName)
+    {
+        var key = GetKey(keyName);
+
+        return key.HasValue &&
+            _keyboardState.IsKeyDown(key.Value);
+    }
+
+    public bool IsKeyPressed(string keyName)
+    {
+        var key = GetKey(keyName);
+
+        if (!key.HasValue)
+            return false;
+
+        return _keyboardState.IsKeyDown(key.Value) && _previousKeyboardState.IsKeyUp(key.Value);
     }
 
     public void ClearScreen()
@@ -163,6 +181,12 @@ public sealed partial class CentauriMachine
         _circles.Clear();
 
         _displayMode = CentauriDisplayMode.HighResolution;
+    }
+
+    public void UpdateInput()
+    {
+        _previousKeyboardState = _keyboardState;
+        _keyboardState = Keyboard.GetState();
     }
 
 }
