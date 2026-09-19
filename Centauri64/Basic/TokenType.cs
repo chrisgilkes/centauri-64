@@ -46,5 +46,7 @@ public enum TokenType
     Rect,
     Circle,
     Fill,
+    SpriteShow,
+    SpriteHide,
     EndOfLine
 }

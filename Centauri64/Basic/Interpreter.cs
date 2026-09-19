@@ -634,6 +634,34 @@ public sealed class Interpreter
             return ExecutionResult.Continue();
         }
 
+        if (statement is SpriteShowStatement spriteShow)
+        {
+            var spriteIndex = Evaluate(spriteShow.SpriteIndex);
+
+            if (!spriteIndex.IsInteger)
+            {
+                throw new InvalidOperationException("SPRITESHOW expects a numeric sprite index.");
+            }
+
+            _machine.ShowSprite(spriteIndex.Integer);
+
+            return ExecutionResult.Continue();
+        }
+
+        if (statement is SpriteHideStatement spriteHide)
+        {
+            var spriteIndex = Evaluate(spriteHide.SpriteIndex);
+
+            if (!spriteIndex.IsInteger)
+            {
+                throw new InvalidOperationException("SPRITEHIDE expects a numeric sprite index.");
+            }
+
+            _machine.HideSprite(spriteIndex.Integer);
+
+            return ExecutionResult.Continue();
+        }
+
         throw new InvalidOperationException($"Unsupported statement: {statement.GetType().Name}");
     }
 

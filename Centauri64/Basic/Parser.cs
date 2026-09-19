@@ -28,8 +28,7 @@ public sealed class Parser
 
         if (token.Type != type)
         {
-            throw new InvalidOperationException(
-                $"Expected {type}, but found {token.Type}.");
+            throw new InvalidOperationException($"Expected {type}, but found {token.Type}.");
         }
 
         Advance();
@@ -163,13 +162,40 @@ public sealed class Parser
             return ParseCircleStatement();
         }
 
+        if (token.Type == TokenType.SpriteShow)
+        {
+            return ParseSpriteShowStatement();
+        }
+
+        if (token.Type == TokenType.SpriteHide)
+        {
+            return ParseSpriteHideStatement();
+        }
+
         if (token.Type == TokenType.Identifier)
         {
             return ParseAssignmentStatement();
         }
 
-        throw new InvalidOperationException(
-            $"Unexpected token: {token.Type}");
+        throw new InvalidOperationException($"Unexpected token: {token.Type}");
+    }
+
+    private SpriteShowStatement ParseSpriteShowStatement()
+    {
+        Expect(TokenType.SpriteShow);
+
+        var spriteIndex = ParseExpression();
+
+        return new SpriteShowStatement(spriteIndex);
+    }
+
+    private SpriteHideStatement ParseSpriteHideStatement()
+    {
+        Expect(TokenType.SpriteHide);
+
+        var spriteIndex = ParseExpression();
+
+        return new SpriteHideStatement(spriteIndex);
     }
 
     private CircleStatement ParseCircleStatement()
@@ -196,12 +222,7 @@ public sealed class Parser
             filled = true;
         }
 
-        return new CircleStatement(
-            x,
-            y,
-            radius,
-            colour,
-            filled);
+        return new CircleStatement(x,y,radius,colour,filled);
     }
 
     private RectStatement ParseRectStatement()
@@ -231,13 +252,7 @@ public sealed class Parser
             filled = true;
         }
 
-        return new RectStatement(
-            x,
-            y,
-            width,
-            height,
-            colour,
-            filled);
+        return new RectStatement(x,y,width,height,colour,filled);
     }
 
     private LineStatement ParseLineStatement()
@@ -258,12 +273,7 @@ public sealed class Parser
 
         var colour = ParseExpression();
 
-        return new LineStatement(
-            x1,
-            y1,
-            x2,
-            y2,
-            colour);
+        return new LineStatement(x1,y1,x2,y2,colour);
     }
 
     private PlotStatement ParsePlotStatement()
@@ -280,10 +290,7 @@ public sealed class Parser
 
         var colour = ParseExpression();
 
-        return new PlotStatement(
-            x,
-            y,
-            colour);
+        return new PlotStatement(x,y,colour);
     }
 
     private ForStatement ParseForStatement()
@@ -309,11 +316,7 @@ public sealed class Parser
             step = ParseExpression();
         }
 
-        return new ForStatement(
-            variable.Text,
-            start,
-            end,
-            step);
+        return new ForStatement(variable.Text,start,end,step);
     }
 
     private NextStatement ParseNextStatement()
@@ -353,20 +356,16 @@ public sealed class Parser
 
         var duration = ParseExpression();
 
-        return new BeepStatement(
-            frequency,
-            duration);
+        return new BeepStatement(frequency,duration);
     }
 
     private Statement ParseGosubStatement()
     {
         Expect(TokenType.Gosub);
 
-        var lineNumber =
-            Expect(TokenType.Number);
+        var lineNumber = Expect(TokenType.Number);
 
-        return new GosubStatement(
-            int.Parse(lineNumber.Text));
+        return new GosubStatement(int.Parse(lineNumber.Text));
     }
 
     private Statement ParseReturnStatement()
@@ -393,9 +392,7 @@ public sealed class Parser
 
         var assetName = ParseExpression();
 
-        return new SpriteStatement(
-            spriteIndex,
-            assetName);
+        return new SpriteStatement(spriteIndex,assetName);
     }
 
     private SpritePositionStatement ParseSpritePositionStatement()
@@ -412,34 +409,28 @@ public sealed class Parser
 
         var y = ParseExpression();
 
-        return new SpritePositionStatement(
-            spriteIndex,
-            x,
-            y);
+        return new SpritePositionStatement(spriteIndex,x,y);
     }
 
     private BorderStatement ParseBorderStatement()
     {
         Expect(TokenType.Border);
 
-        return new BorderStatement(
-            ParseExpression());
+        return new BorderStatement(ParseExpression());
     }
 
     private PaperStatement ParsePaperStatement()
     {
         Expect(TokenType.Paper);
 
-        return new PaperStatement(
-            ParseExpression());
+        return new PaperStatement(ParseExpression());
     }
 
     private InkStatement ParseInkStatement()
     {
         Expect(TokenType.Ink);
 
-        return new InkStatement(
-            ParseExpression());
+        return new InkStatement(ParseExpression());
     }
 
     private ClsStatement ParseClsStatement()
@@ -463,10 +454,7 @@ public sealed class Parser
 
         var text = ParseExpression();
 
-        return new PrintAtStatement(
-            x,
-            y,
-            text);
+        return new PrintAtStatement(x,y,text);
     }
 
     private PrintStatement ParsePrintStatement()
@@ -504,9 +492,7 @@ public sealed class Parser
 
         var thenStatement = ParseStatement();
 
-        return new IfStatement(
-            condition,
-            thenStatement);
+        return new IfStatement(condition,thenStatement);
     }
 
     private Token Current()

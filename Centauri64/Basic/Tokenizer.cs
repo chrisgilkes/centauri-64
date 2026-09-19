@@ -203,6 +203,8 @@ public sealed class Tokenizer
             "RECT"   => TokenType.Rect,
             "CIRCLE" => TokenType.Circle,
             "FILL" => TokenType.Fill,
+            "SPRITESHOW" => TokenType.SpriteShow,
+            "SPRITEHIDE" => TokenType.SpriteHide,
             _ => TokenType.Identifier
         };
 
