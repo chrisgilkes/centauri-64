@@ -115,7 +115,7 @@ public sealed class CentauriMachine
     {
         ValidateColour(colour);
 
-        _console.Foreground = colour;
+        _programConsole.Foreground = colour;
     }
 
     public void SetBorder(int colour)
@@ -129,7 +129,7 @@ public sealed class CentauriMachine
     {
         ValidateColour(colour);
 
-        _console.Background = colour;
+        _programConsole.Background = colour;
     }
 
     private static void ValidateColour(int colour)
@@ -296,17 +296,23 @@ public sealed class CentauriMachine
 
     public void ResetDisplay()
     {
-        SetInk(DEFAULT_INK);
-        SetPaper(DEFAULT_PAPER);
-        SetBorder(DEFAULT_BORDER);
+        _console.Foreground = DEFAULT_INK;
+        _console.Background = DEFAULT_PAPER;
+        BorderColour = DEFAULT_BORDER;
 
         _console.Clear();
     }
 
     public void ResetProgramDisplay()
     {
+        _programConsole.Foreground = DEFAULT_INK;
+        _programConsole.Background = DEFAULT_PAPER;
+        BorderColour = DEFAULT_BORDER;
+
         _programConsole.Clear();
-        _displayMode = CentauriDisplayMode.HighResolution;
+
+        _displayMode =
+            CentauriDisplayMode.HighResolution;
     }
 
     public void Print(string text)
