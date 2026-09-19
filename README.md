@@ -40,7 +40,13 @@ In the 1980s you could buy a computer magazine, find a program listing and spend
 
 Centauri64 will have magazines containing programs that can be typed into the computer.
 
-![Centauri64 program listing](docs/images/program-listing.png)
+Here is a small Centauri BASIC program entered directly into the machine:
+
+![Centauri BASIC program listing](docs/images/basic-listing.png)
+
+And the result when the program is run:
+
+![Centauri BASIC rectangle demo](docs/images/rectangle-demo.png)
 
 Some will be useful programs, some will demonstrate programming techniques and others will be complete small games.
 
