@@ -98,8 +98,7 @@ public sealed class Interpreter
         {
             Stop();
 
-            throw new InvalidOperationException(
-                "Program execution limit exceeded.");
+            throw new InvalidOperationException("Program execution limit exceeded.");
         }
 
         var line = _lines[_programCounter];
@@ -113,9 +112,7 @@ public sealed class Interpreter
                 break;
 
             case ExecutionAction.Jump:
-                _programCounter = FindLine(
-                    _lines,
-                    result.JumpToLine!.Value);
+                _programCounter = FindLine(_lines,result.JumpToLine!.Value);
                 break;
 
             case ExecutionAction.Yield:
@@ -221,14 +218,12 @@ public sealed class Interpreter
 
             if (!condition.IsInteger)
             {
-                throw new InvalidOperationException(
-                    "IF condition must be numeric.");
+                throw new InvalidOperationException("IF condition must be numeric.");
             }
 
             if (condition.Integer != 0)
             {
-                return Execute(
-                    ifStatement.ThenStatement);
+                return Execute(ifStatement.ThenStatement);
             }
 
             return ExecutionResult.Continue();
@@ -247,14 +242,10 @@ public sealed class Interpreter
 
             if (!x.IsInteger || !y.IsInteger)
             {
-                throw new InvalidOperationException(
-                    "PRINTAT coordinates must be numeric.");
+                throw new InvalidOperationException("PRINTAT coordinates must be numeric.");
             }
 
-            _machine.WriteText(
-                x.Integer,
-                y.Integer,
-                text.ToString());
+            _machine.WriteText(x.Integer,y.Integer,text.ToString());
 
             return ExecutionResult.Continue();
         }
@@ -272,8 +263,7 @@ public sealed class Interpreter
 
             if (!colour.IsInteger)
             {
-                throw new InvalidOperationException(
-                    "INK expects a number.");
+                throw new InvalidOperationException("INK expects a number.");
             }
 
             _machine.SetInk(colour.Integer);
@@ -287,8 +277,7 @@ public sealed class Interpreter
 
             if (!colour.IsInteger)
             {
-                throw new InvalidOperationException(
-                    "PAPER expects a number.");
+                throw new InvalidOperationException("PAPER expects a number.");
             }
 
             _machine.SetPaper(colour.Integer);
@@ -302,8 +291,7 @@ public sealed class Interpreter
 
             if (!colour.IsInteger)
             {
-                throw new InvalidOperationException(
-                    "BORDER expects a number.");
+                throw new InvalidOperationException("BORDER expects a number.");
             }
 
             _machine.SetBorder(colour.Integer);
@@ -313,27 +301,21 @@ public sealed class Interpreter
 
         if (statement is SpriteStatement sprite)
         {
-            var spriteIndex =
-                Evaluate(sprite.SpriteIndex);
+            var spriteIndex = Evaluate(sprite.SpriteIndex);
 
-            var assetName =
-                Evaluate(sprite.AssetName);
+            var assetName = Evaluate(sprite.AssetName);
 
             if (!spriteIndex.IsInteger)
             {
-                throw new InvalidOperationException(
-                    "SPRITE index must be numeric.");
+                throw new InvalidOperationException("SPRITE index must be numeric.");
             }
 
             if (!assetName.IsString)
             {
-                throw new InvalidOperationException(
-                    "SPRITE name must be a string.");
+                throw new InvalidOperationException("SPRITE name must be a string.");
             }
 
-            _machine.SetSprite(
-                spriteIndex.Integer,
-                assetName.String!);
+            _machine.SetSprite(spriteIndex.Integer,assetName.String!);
 
             return ExecutionResult.Continue();
         }
@@ -345,27 +327,20 @@ public sealed class Interpreter
 
         if (statement is SpritePositionStatement spritePosition)
         {
-            var spriteIndex =
-                Evaluate(spritePosition.SpriteIndex);
+            var spriteIndex = Evaluate(spritePosition.SpriteIndex);
 
-            var x =
-                Evaluate(spritePosition.X);
+            var x = Evaluate(spritePosition.X);
 
-            var y =
-                Evaluate(spritePosition.Y);
+            var y = Evaluate(spritePosition.Y);
 
             if (!spriteIndex.IsInteger ||
                 !x.IsInteger ||
                 !y.IsInteger)
             {
-                throw new InvalidOperationException(
-                    "SPRITEPOS expects numeric values.");
+                throw new InvalidOperationException("SPRITEPOS expects numeric values.");
             }
 
-            _machine.SetSpritePosition(
-                spriteIndex.Integer,
-                x.Integer,
-                y.Integer);
+            _machine.SetSpritePosition(spriteIndex.Integer,x.Integer,y.Integer);
 
             return ExecutionResult.Continue();
         }
@@ -374,16 +349,14 @@ public sealed class Interpreter
         {
             _returnStack.Push(_programCounter + 1);
 
-            return ExecutionResult.Jump(
-                gosubStatement.LineNumber);
+            return ExecutionResult.Jump(gosubStatement.LineNumber);
         }
 
         if (statement is ReturnStatement)
         {
             if (_returnStack.Count == 0)
             {
-                throw new InvalidOperationException(
-                    "RETURN without GOSUB.");
+                throw new InvalidOperationException("RETURN without GOSUB.");
             }
 
             return ExecutionResult.Return();
@@ -391,22 +364,17 @@ public sealed class Interpreter
 
         if (statement is BeepStatement beep)
         {
-            var frequency =
-                Evaluate(beep.Frequency);
+            var frequency = Evaluate(beep.Frequency);
 
-            var duration =
-                Evaluate(beep.Duration);
+            var duration = Evaluate(beep.Duration);
 
             if (!frequency.IsInteger ||
                 !duration.IsInteger)
             {
-                throw new InvalidOperationException(
-                    "BEEP expects numeric values.");
+                throw new InvalidOperationException("BEEP expects numeric values.");
             }
 
-            _machine.Beep(
-                frequency.Integer,
-                duration.Integer);
+            _machine.Beep(frequency.Integer,duration.Integer);
 
             return ExecutionResult.Continue();
         }
@@ -417,8 +385,7 @@ public sealed class Interpreter
 
             if (!value.IsInteger)
             {
-                throw new InvalidOperationException(
-                    "MODE expects a numeric value.");
+                throw new InvalidOperationException("MODE expects a numeric value.");
             }
 
             _machine.SetDisplayMode(value.Integer);
@@ -432,24 +399,17 @@ public sealed class Interpreter
 
             if (!duration.IsInteger)
             {
-                throw new InvalidOperationException(
-                    "WAIT expects a numeric duration.");
+                throw new InvalidOperationException("WAIT expects a numeric duration.");
             }
 
             if (duration.Integer < 0)
             {
-                throw new InvalidOperationException(
-                    "WAIT duration cannot be negative.");
+                throw new InvalidOperationException("WAIT duration cannot be negative.");
             }
 
-            var ticks =
-                (long)(
-                    duration.Integer / 1000.0 *
-                    Stopwatch.Frequency);
+            var ticks = (long)(duration.Integer / 1000.0 * Stopwatch.Frequency);
 
-            _waitUntil =
-                Stopwatch.GetTimestamp() + ticks;
-
+            _waitUntil = Stopwatch.GetTimestamp() + ticks;
 
             return ExecutionResult.Wait();
         }
@@ -475,8 +435,7 @@ public sealed class Interpreter
 
             if (!start.IsInteger || !end.IsInteger)
             {
-                throw new InvalidOperationException(
-                    "FOR expects numeric values.");
+                throw new InvalidOperationException("FOR expects numeric values.");
             }
 
             var step = 1;
@@ -487,8 +446,7 @@ public sealed class Interpreter
 
                 if (!stepValue.IsInteger)
                 {
-                    throw new InvalidOperationException(
-                        "STEP expects a numeric value.");
+                    throw new InvalidOperationException("STEP expects a numeric value.");
                 }
 
                 step = stepValue.Integer;
@@ -496,24 +454,18 @@ public sealed class Interpreter
 
             if (step == 0)
             {
-                throw new InvalidOperationException(
-                    "STEP cannot be zero.");
+                throw new InvalidOperationException("STEP cannot be zero.");
             }
 
             _variables[forStatement.VariableName] = start.Integer;
 
-            var shouldRun =
-                step > 0
-                    ? start.Integer <= end.Integer
-                    : start.Integer >= end.Integer;
+            var shouldRun = step > 0 ? start.Integer <= end.Integer : start.Integer >= end.Integer;
 
             if (!shouldRun)
             {
                 var depth = 0;
 
-                for (var i = _programCounter + 1;
-                    i < _lines.Count;
-                    i++)
+                for (var i = _programCounter + 1; i < _lines.Count; i++)
                 {
                     if (_lines[i].Statement is ForStatement)
                     {
@@ -523,16 +475,14 @@ public sealed class Interpreter
                     {
                         if (depth == 0)
                         {
-                            return ExecutionResult.JumpToProgramCounter(
-                                i + 1);
+                            return ExecutionResult.JumpToProgramCounter(i + 1);
                         }
 
                         depth--;
                     }
                 }
 
-                throw new InvalidOperationException(
-                    $"FOR {forStatement.VariableName} without NEXT.");
+                throw new InvalidOperationException($"FOR {forStatement.VariableName} without NEXT.");
             }
 
             _forStack.Push(
@@ -549,32 +499,25 @@ public sealed class Interpreter
         {
             if (_forStack.Count == 0)
             {
-                throw new InvalidOperationException(
-                    "NEXT without FOR.");
+                throw new InvalidOperationException("NEXT without FOR.");
             }
 
             var loop = _forStack.Peek();
 
             if (loop.VariableName != next.VariableName)
             {
-                throw new InvalidOperationException(
-                    $"NEXT {next.VariableName} does not match FOR {loop.VariableName}.");
+                throw new InvalidOperationException($"NEXT {next.VariableName} does not match FOR {loop.VariableName}.");
             }
 
-            var value =
-                GetVariable(loop.VariableName) + loop.Step;
+            var value = GetVariable(loop.VariableName) + loop.Step;
 
             _variables[loop.VariableName] = value;
 
-            var keepGoing =
-                loop.Step > 0
-                    ? value <= loop.End
-                    : value >= loop.End;
+            var keepGoing = loop.Step > 0 ? value <= loop.End : value >= loop.End;
 
             if (keepGoing)
             {
-                return ExecutionResult.JumpToProgramCounter(
-                    loop.LoopStartProgramCounter);
+                return ExecutionResult.JumpToProgramCounter(loop.LoopStartProgramCounter);
             }
 
             _forStack.Pop();
@@ -592,14 +535,10 @@ public sealed class Interpreter
                 !y.IsInteger ||
                 !colour.IsInteger)
             {
-                throw new InvalidOperationException(
-                    "PLOT expects numeric values.");
+                throw new InvalidOperationException("PLOT expects numeric values.");
             }
 
-            _machine.Plot(
-                x.Integer,
-                y.Integer,
-                colour.Integer);
+            _machine.Plot(x.Integer,y.Integer,colour.Integer);
 
             return ExecutionResult.Continue();
         }
@@ -618,8 +557,7 @@ public sealed class Interpreter
                 !y2.IsInteger ||
                 !colour.IsInteger)
             {
-                throw new InvalidOperationException(
-                    "LINE expects numeric values.");
+                throw new InvalidOperationException("LINE expects numeric values.");
             }
 
             _machine.Line(
@@ -646,15 +584,13 @@ public sealed class Interpreter
                 !height.IsInteger ||
                 !colour.IsInteger)
             {
-                throw new InvalidOperationException(
-                    "RECT expects numeric values.");
+                throw new InvalidOperationException("RECT expects numeric values.");
             }
 
             if (width.Integer <= 0 ||
                 height.Integer <= 0)
             {
-                throw new InvalidOperationException(
-                    "RECT width and height must be greater than zero.");
+                throw new InvalidOperationException("RECT width and height must be greater than zero.");
             }
 
             _machine.Rect(
@@ -680,14 +616,12 @@ public sealed class Interpreter
                 !radius.IsInteger ||
                 !colour.IsInteger)
             {
-                throw new InvalidOperationException(
-                    "CIRCLE expects numeric values.");
+                throw new InvalidOperationException("CIRCLE expects numeric values.");
             }
 
             if (radius.Integer <= 0)
             {
-                throw new InvalidOperationException(
-                    "CIRCLE radius must be greater than zero.");
+                throw new InvalidOperationException("CIRCLE radius must be greater than zero.");
             }
 
             _machine.Circle(
@@ -717,8 +651,7 @@ public sealed class Interpreter
 
         if (expression is VariableExpression variable)
         {
-            return new BasicValue(
-                GetVariable(variable.Name));
+            return new BasicValue(GetVariable(variable.Name));
         }
 
         if (expression is UnaryExpression unary)
@@ -727,8 +660,7 @@ public sealed class Interpreter
 
             if (!value.IsInteger)
             {
-                throw new InvalidOperationException(
-                    "Unary minus requires a numeric value.");
+                throw new InvalidOperationException("Unary minus requires a numeric value.");
             }
 
             if (unary.Operator == TokenType.Minus)
@@ -736,8 +668,7 @@ public sealed class Interpreter
                 return new BasicValue(-value.Integer);
             }
 
-            throw new InvalidOperationException(
-                $"Unsupported unary operator: {unary.Operator}");
+            throw new InvalidOperationException($"Unsupported unary operator: {unary.Operator}");
         }
 
         if (expression is BinaryExpression binary)
@@ -750,8 +681,7 @@ public sealed class Interpreter
             return EvaluateFunction(function);
         }
 
-        throw new InvalidOperationException(
-            $"Unsupported expression: {expression.GetType().Name}");
+        throw new InvalidOperationException($"Unsupported expression: {expression.GetType().Name}");
     }
 
     private BasicValue EvaluateFunction(FunctionCallExpression function)
@@ -761,31 +691,48 @@ public sealed class Interpreter
             "KEY" => EvaluateKeyFunction(function),
             "RND" => EvaluateRandomFunction(function),
             "COLLIDE" => EvaluateCollideFunction(function),
-
-            _ => throw new InvalidOperationException(
-                $"Unknown function {function.Name}.")
+            "SWIDTH" => EvaluateScreenWidthFunction(function),
+            "SHEIGHT" => EvaluateScreenHeightFunction(function),
+            _ => throw new InvalidOperationException($"Unknown function {function.Name}.")
         };
     }
+
+    private BasicValue EvaluateScreenWidthFunction(FunctionCallExpression function)
+    {
+        if (function.Arguments.Count != 0)
+        {
+            throw new InvalidOperationException("SWIDTH expects no arguments.");
+        }
+
+        return new BasicValue(_machine.ScreenWidth);
+    }
+
+    private BasicValue EvaluateScreenHeightFunction(FunctionCallExpression function)
+    {
+        if (function.Arguments.Count != 0)
+        {
+            throw new InvalidOperationException("SHEIGHT expects no arguments.");
+        }
+
+        return new BasicValue(_machine.ScreenHeight);
+    }
+
 
     private BasicValue EvaluateCollideFunction(FunctionCallExpression function)
     {
         if (function.Arguments.Count != 2)
         {
-            throw new InvalidOperationException(
-                "COLLIDE expects two arguments.");
+            throw new InvalidOperationException("COLLIDE expects two arguments.");
         }
 
-        var first =
-            Evaluate(function.Arguments[0]);
+        var first = Evaluate(function.Arguments[0]);
 
-        var second =
-            Evaluate(function.Arguments[1]);
+        var second = Evaluate(function.Arguments[1]);
 
         if (!first.IsInteger ||
             !second.IsInteger)
         {
-            throw new InvalidOperationException(
-                "COLLIDE expects sprite numbers.");
+            throw new InvalidOperationException("COLLIDE expects sprite numbers.");
         }
 
         var collided =
@@ -801,21 +748,17 @@ public sealed class Interpreter
     {
         if (function.Arguments.Count != 1)
         {
-            throw new InvalidOperationException(
-                "KEY expects one argument.");
+            throw new InvalidOperationException("KEY expects one argument.");
         }
 
-        var argument =
-            Evaluate(function.Arguments[0]);
+        var argument = Evaluate(function.Arguments[0]);
 
         if (!argument.IsString)
         {
-            throw new InvalidOperationException(
-                "KEY expects a string.");
+            throw new InvalidOperationException("KEY expects a string.");
         }
 
-        var pressed =
-            _machine.IsKeyDown(argument.String!);
+        var pressed = _machine.IsKeyDown(argument.String!);
 
         return new BasicValue(pressed ? 1 : 0);
     }
@@ -824,26 +767,22 @@ public sealed class Interpreter
     {
         if (function.Arguments.Count != 1)
         {
-            throw new InvalidOperationException(
-                "RND expects one argument.");
+            throw new InvalidOperationException("RND expects one argument.");
         }
 
         var argument = Evaluate(function.Arguments[0]);
 
         if (!argument.IsInteger)
         {
-            throw new InvalidOperationException(
-                "RND expects a number.");
+            throw new InvalidOperationException("RND expects a number.");
         }
 
         if (argument.Integer <= 0)
         {
-            throw new InvalidOperationException(
-                "RND expects a positive number.");
+            throw new InvalidOperationException("RND expects a positive number.");
         }
 
-        return new BasicValue(
-            _random.Next(argument.Integer));
+        return new BasicValue(_random.Next(argument.Integer));
     }
 
     private BasicValue EvaluateBinary(BinaryExpression expression)
@@ -853,8 +792,7 @@ public sealed class Interpreter
 
         if (!left.IsInteger || !right.IsInteger)
         {
-            throw new InvalidOperationException(
-                "Arithmetic requires numeric values.");
+            throw new InvalidOperationException("Arithmetic requires numeric values.");
         }
 
         var result = expression.Operator switch

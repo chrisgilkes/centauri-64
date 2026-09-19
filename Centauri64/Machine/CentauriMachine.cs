@@ -46,6 +46,20 @@ public sealed partial class CentauriMachine
 
     public CentauriDisplayMode DisplayMode => _displayMode;
 
+    public int ScreenWidth => _displayMode switch
+    {
+        CentauriDisplayMode.HighResolution => SCREEN_WIDTH,
+        CentauriDisplayMode.Arcade => ARCADE_WIDTH,
+        _ => SCREEN_WIDTH
+    };
+
+    public int ScreenHeight => _displayMode switch
+    {
+        CentauriDisplayMode.HighResolution => SCREEN_HEIGHT,
+        CentauriDisplayMode.Arcade => ARCADE_HEIGHT,
+        _ => SCREEN_HEIGHT
+    };
+
     public CentauriMachine(TextConsole console, TextConsole programConsole)
     {
         _console        = console;
