@@ -29,8 +29,12 @@ public sealed class CentauriMachine
     public const int DEVELOPMENT_WIDTH = SCREEN_WIDTH + BORDER_SIZE * 2;
     public const int DEVELOPMENT_HEIGHT = SCREEN_HEIGHT + BORDER_SIZE * 2;
 
-    public const int GAME_WIDTH = 320;
-    public const int GAME_HEIGHT = 180;
+    public const int ARCADE_WIDTH = 320;
+    public const int ARCADE_HEIGHT = 180;
+
+    public const int GAME_WIDTH = ARCADE_WIDTH + BORDER_SIZE * 2;
+
+    public const int GAME_HEIGHT =ARCADE_HEIGHT + BORDER_SIZE * 2;
 
     public int BorderColour { get; private set; } = DEFAULT_BORDER;
 
@@ -81,6 +85,76 @@ public sealed class CentauriMachine
     }
 
     private readonly List<PositionedText> _positionedText = new();
+
+    private sealed class PlotPoint
+    {
+        public int X { get; }
+        public int Y { get; }
+        public int Colour { get; }
+
+        public PlotPoint(int x, int y, int colour)
+        {
+            X = x;
+            Y = y;
+            Colour = colour;
+        }
+    }
+
+    private readonly List<PlotPoint> _plotPoints = new();
+
+    private sealed class LinePrimitive
+    {
+        public int X1 { get; }
+        public int Y1 { get; }
+        public int X2 { get; }
+        public int Y2 { get; }
+        public int Colour { get; }
+
+        public LinePrimitive(
+            int x1,
+            int y1,
+            int x2,
+            int y2,
+            int colour)
+        {
+            X1 = x1;
+            Y1 = y1;
+            X2 = x2;
+            Y2 = y2;
+            Colour = colour;
+        }
+    }
+
+    private readonly List<LinePrimitive> _lines = new();
+
+    private sealed class RectPrimitive
+    {
+        public int X { get; }
+        public int Y { get; }
+        public int Width { get; }
+        public int Height { get; }
+        public int Colour { get; }
+        public bool Filled { get; }
+
+        public RectPrimitive(
+            int x,
+            int y,
+            int width,
+            int height,
+            int colour,
+            bool filled)
+        {
+            X = x;
+            Y = y;
+            Width = width;
+            Height = height;
+            Colour = colour;
+            Filled = filled;
+        }
+    }
+
+    private readonly List<RectPrimitive> _rectangles = new();
+
 
     public CentauriMachine(TextConsole console, TextConsole programConsole)
     {
@@ -138,6 +212,9 @@ public sealed class CentauriMachine
     {
         _programConsole.Clear();
         _positionedText.Clear();
+        _plotPoints.Clear();
+        _lines.Clear();
+        _rectangles.Clear();
     }
 
     public void SetInk(int colour)
@@ -352,6 +429,9 @@ public sealed class CentauriMachine
 
         _programConsole.Clear();
         _positionedText.Clear();
+        _plotPoints.Clear();
+        _lines.Clear();
+        _rectangles.Clear();
 
         _displayMode =
             CentauriDisplayMode.HighResolution;
@@ -360,5 +440,171 @@ public sealed class CentauriMachine
     public void Print(string text)
     {
         _programConsole.WriteLine(text);
+    }
+
+    public void Plot(int x, int y, int colour)
+    {
+        ValidateColour(colour);
+
+        _plotPoints.Add(
+            new PlotPoint(x, y, colour));
+    }
+
+    public void DrawGraphics(SpriteBatch spriteBatch, Texture2D pixel)
+    {
+        foreach (var point in _plotPoints)
+        {
+            spriteBatch.Draw(
+                pixel,
+                new Rectangle(
+                    point.X + BORDER_SIZE,
+                    point.Y + BORDER_SIZE,
+                    1,
+                    1),
+                CentauriPalette.Get(point.Colour));
+        }
+
+        foreach (var line in _lines)
+        {
+            DrawLine(
+                spriteBatch,
+                pixel,
+                line.X1,
+                line.Y1,
+                line.X2,
+                line.Y2,
+                CentauriPalette.Get(line.Colour));
+        }
+
+        foreach (var rect in _rectangles)
+        {
+            var colour =
+                CentauriPalette.Get(rect.Colour);
+
+            if (rect.Filled)
+            {
+                spriteBatch.Draw(
+                    pixel,
+                    new Rectangle(
+                        rect.X + BORDER_SIZE,
+                        rect.Y + BORDER_SIZE,
+                        rect.Width,
+                        rect.Height),
+                    colour);
+            }
+            else
+            {
+                var right =
+                    rect.X + rect.Width - 1;
+
+                var bottom =
+                    rect.Y + rect.Height - 1;
+
+                DrawLine(
+                    spriteBatch,
+                    pixel,
+                    rect.X,
+                    rect.Y,
+                    right,
+                    rect.Y,
+                    colour);
+
+                DrawLine(
+                    spriteBatch,
+                    pixel,
+                    right,
+                    rect.Y,
+                    right,
+                    bottom,
+                    colour);
+
+                DrawLine(
+                    spriteBatch,
+                    pixel,
+                    right,
+                    bottom,
+                    rect.X,
+                    bottom,
+                    colour);
+
+                DrawLine(
+                    spriteBatch,
+                    pixel,
+                    rect.X,
+                    bottom,
+                    rect.X,
+                    rect.Y,
+                    colour);
+            }
+        }
+    }
+
+    public void Line(int x1,int y1,int x2,int y2,int colour)
+    {
+        ValidateColour(colour);
+
+        _lines.Add(
+            new LinePrimitive(
+                x1,
+                y1,
+                x2,
+                y2,
+                colour));
+    }
+
+    private static void DrawLine(SpriteBatch spriteBatch,Texture2D pixel,int x1,int y1,int x2,int y2,Color colour)
+    {
+        var dx = Math.Abs(x2 - x1);
+        var sx = x1 < x2 ? 1 : -1;
+
+        var dy = -Math.Abs(y2 - y1);
+        var sy = y1 < y2 ? 1 : -1;
+
+        var error = dx + dy;
+
+        while (true)
+        {
+            spriteBatch.Draw(
+                pixel,
+                new Rectangle(
+                    x1 + BORDER_SIZE,
+                    y1 + BORDER_SIZE,
+                    1,
+                    1),
+                colour);
+
+            if (x1 == x2 && y1 == y2)
+            {
+                break;
+            }
+
+            var error2 = error * 2;
+
+            if (error2 >= dy)
+            {
+                error += dy;
+                x1 += sx;
+            }
+
+            if (error2 <= dx)
+            {
+                error += dx;
+                y1 += sy;
+            }
+        }
+    }
+
+    public void Rect(int x,int y,int width,int height,int colour,bool filled)
+    {
+        ValidateColour(colour);
+
+        _rectangles.Add(
+            new RectPrimitive(
+                x,
+                y,
+                width,
+                height,
+                colour,
+                filled));
     }
 }

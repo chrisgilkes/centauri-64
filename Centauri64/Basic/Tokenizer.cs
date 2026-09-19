@@ -198,6 +198,11 @@ public sealed class Tokenizer
             "TO" => TokenType.To,
             "STEP" => TokenType.Step,
             "NEXT" => TokenType.Next,
+            "PLOT"   => TokenType.Plot,
+            "LINE"   => TokenType.Line,
+            "RECT"   => TokenType.Rect,
+            "CIRCLE" => TokenType.Circle,
+            "FILL" => TokenType.Fill,
             _ => TokenType.Identifier
         };
 

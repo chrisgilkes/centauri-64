@@ -235,11 +235,17 @@ public class Game1 : Game
             Color.White,
             new Color(40, 40, 160));
 
-        _machine.DrawText(_spriteBatch,_font);
+        _machine.DrawGraphics(
+            _spriteBatch,
+            _pixel);
 
         _machine.DrawSprites(
             _spriteBatch,
             _pixel);
+
+        _machine.DrawText(
+            _spriteBatch,
+            _font);
 
         _spriteBatch.End();
 
@@ -293,32 +299,44 @@ public class Game1 : Game
         GraphicsDevice.SetRenderTarget(
             _gameRenderTarget);
 
+        // BORDER
         GraphicsDevice.Clear(
             CentauriPalette.Get(_machine.BorderColour));
 
         _spriteBatch.Begin(
             samplerState: SamplerState.PointClamp);
 
-       _programConsole.Draw(
-            _spriteBatch,
-            _font,
+        // PAPER
+        _spriteBatch.Draw(
             _pixel,
-            Color.White,
-            new Color(40, 40, 160));
+            new Rectangle(
+                CentauriMachine.BORDER_SIZE,
+                CentauriMachine.BORDER_SIZE,
+                CentauriMachine.ARCADE_WIDTH,
+                CentauriMachine.ARCADE_HEIGHT),
+            CentauriPalette.Get(_programConsole.Background));
 
-        _machine.DrawText(
+        // GRAPHICS
+        _machine.DrawGraphics(
             _spriteBatch,
-            _font);
+            _pixel);
 
+        // SPRITES
         _machine.DrawSprites(
             _spriteBatch,
             _pixel);
+
+        // HUD / PRINTAT
+        _machine.DrawText(
+            _spriteBatch,
+            _font);
 
         _spriteBatch.End();
 
         GraphicsDevice.SetRenderTarget(null);
 
-        DrawRenderTargetToWindow(_gameRenderTarget);
+        DrawRenderTargetToWindow(
+            _gameRenderTarget);
     }
 
     private void DrawRenderTargetToWindow(RenderTarget2D renderTarget)

@@ -582,6 +582,92 @@ public sealed class Interpreter
             return ExecutionResult.Continue();
         }
 
+        if (statement is PlotStatement plot)
+        {
+            var x = Evaluate(plot.X);
+            var y = Evaluate(plot.Y);
+            var colour = Evaluate(plot.Colour);
+
+            if (!x.IsInteger ||
+                !y.IsInteger ||
+                !colour.IsInteger)
+            {
+                throw new InvalidOperationException(
+                    "PLOT expects numeric values.");
+            }
+
+            _machine.Plot(
+                x.Integer,
+                y.Integer,
+                colour.Integer);
+
+            return ExecutionResult.Continue();
+        }
+
+        if (statement is LineStatement line)
+        {
+            var x1 = Evaluate(line.X1);
+            var y1 = Evaluate(line.Y1);
+            var x2 = Evaluate(line.X2);
+            var y2 = Evaluate(line.Y2);
+            var colour = Evaluate(line.Colour);
+
+            if (!x1.IsInteger ||
+                !y1.IsInteger ||
+                !x2.IsInteger ||
+                !y2.IsInteger ||
+                !colour.IsInteger)
+            {
+                throw new InvalidOperationException(
+                    "LINE expects numeric values.");
+            }
+
+            _machine.Line(
+                x1.Integer,
+                y1.Integer,
+                x2.Integer,
+                y2.Integer,
+                colour.Integer);
+
+            return ExecutionResult.Continue();
+        }
+
+        if (statement is RectStatement rect)
+        {
+            var x = Evaluate(rect.X);
+            var y = Evaluate(rect.Y);
+            var width = Evaluate(rect.Width);
+            var height = Evaluate(rect.Height);
+            var colour = Evaluate(rect.Colour);
+
+            if (!x.IsInteger ||
+                !y.IsInteger ||
+                !width.IsInteger ||
+                !height.IsInteger ||
+                !colour.IsInteger)
+            {
+                throw new InvalidOperationException(
+                    "RECT expects numeric values.");
+            }
+
+            if (width.Integer <= 0 ||
+                height.Integer <= 0)
+            {
+                throw new InvalidOperationException(
+                    "RECT width and height must be greater than zero.");
+            }
+
+            _machine.Rect(
+                x.Integer,
+                y.Integer,
+                width.Integer,
+                height.Integer,
+                colour.Integer,
+                rect.Filled);
+
+            return ExecutionResult.Continue();
+        }
+
         throw new InvalidOperationException($"Unsupported statement: {statement.GetType().Name}");
     }
 

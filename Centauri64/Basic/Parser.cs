@@ -143,6 +143,21 @@ public sealed class Parser
             return ParseNextStatement();
         }
 
+        if (token.Type == TokenType.Plot)
+        {
+            return ParsePlotStatement();
+        }
+
+        if (token.Type == TokenType.Line)
+        {
+            return ParseLineStatement();
+        }
+
+        if (token.Type == TokenType.Rect)
+        {
+            return ParseRectStatement();
+        }
+
         if (token.Type == TokenType.Identifier)
         {
             return ParseAssignmentStatement();
@@ -150,6 +165,88 @@ public sealed class Parser
 
         throw new InvalidOperationException(
             $"Unexpected token: {token.Type}");
+    }
+
+    private RectStatement ParseRectStatement()
+    {
+        Expect(TokenType.Rect);
+
+        var x = ParseExpression();
+        Expect(TokenType.Comma);
+
+        var y = ParseExpression();
+        Expect(TokenType.Comma);
+
+        var width = ParseExpression();
+        Expect(TokenType.Comma);
+
+        var height = ParseExpression();
+        Expect(TokenType.Comma);
+
+        var colour = ParseExpression();
+
+        var filled = false;
+
+        if (Current().Type == TokenType.Comma)
+        {
+            Advance();
+            Expect(TokenType.Fill);
+            filled = true;
+        }
+
+        return new RectStatement(
+            x,
+            y,
+            width,
+            height,
+            colour,
+            filled);
+    }
+
+    private LineStatement ParseLineStatement()
+    {
+        Expect(TokenType.Line);
+
+        var x1 = ParseExpression();
+        Expect(TokenType.Comma);
+
+        var y1 = ParseExpression();
+        Expect(TokenType.Comma);
+
+        var x2 = ParseExpression();
+        Expect(TokenType.Comma);
+
+        var y2 = ParseExpression();
+        Expect(TokenType.Comma);
+
+        var colour = ParseExpression();
+
+        return new LineStatement(
+            x1,
+            y1,
+            x2,
+            y2,
+            colour);
+    }
+
+    private PlotStatement ParsePlotStatement()
+    {
+        Expect(TokenType.Plot);
+
+        var x = ParseExpression();
+
+        Expect(TokenType.Comma);
+
+        var y = ParseExpression();
+
+        Expect(TokenType.Comma);
+
+        var colour = ParseExpression();
+
+        return new PlotStatement(
+            x,
+            y,
+            colour);
     }
 
     private ForStatement ParseForStatement()

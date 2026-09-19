@@ -41,5 +41,10 @@ public enum TokenType
     To,
     Step,
     Next,
+    Plot,
+    Line,
+    Rect,
+    Circle,
+    Fill,
     EndOfLine
 }
