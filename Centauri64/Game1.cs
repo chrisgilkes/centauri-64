@@ -316,6 +316,8 @@ public class Game1 : Game
                 CentauriMachine.ARCADE_HEIGHT),
             CentauriPalette.Get(_programConsole.Background));
 
+        _programConsole.Draw(_spriteBatch,_font,_pixel,Color.White,CentauriPalette.Get(_programConsole.Background),drawBackground: false);
+
         // GRAPHICS
         _machine.DrawGraphics(
             _spriteBatch,

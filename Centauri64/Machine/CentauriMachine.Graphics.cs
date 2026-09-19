@@ -7,22 +7,6 @@ namespace Centauri64.Machine;
 
 public sealed partial class CentauriMachine
 {
-    private sealed class PositionedText
-    {
-        public int X { get; }
-        public int Y { get; }
-        public string Text { get; }
-        public int Colour { get; }
-
-        public PositionedText(int x,int y,string text,int colour)
-        {
-            X = x;
-            Y = y;
-            Text = text;
-            Colour = colour;
-        }
-    }
-
     private sealed class PlotPoint
     {
         public int X { get; }
@@ -92,8 +76,7 @@ public sealed partial class CentauriMachine
             Filled = filled;
         }
     }
-
-    private readonly List<PositionedText> _positionedText = new();
+    
     private readonly List<PlotPoint> _plotPoints = new();
     private readonly List<LinePrimitive> _lines = new();
 

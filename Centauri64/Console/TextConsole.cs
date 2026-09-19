@@ -462,7 +462,7 @@ public sealed class TextConsole
         }
     }
 
-    public void Draw(SpriteBatch spriteBatch,BitmapFont font,Texture2D pixel,Color foregroundColor,Color backgroundColor)
+    public void Draw(SpriteBatch spriteBatch,BitmapFont font,Texture2D pixel,Color foregroundColor,Color backgroundColor,bool drawBackground = true)
     {
         for (var row = 0; row < ROWS; row++)
         {
@@ -490,10 +490,13 @@ public sealed class TextConsole
                     CHARACTER_WIDTH,
                     CHARACTER_HEIGHT);
 
-                spriteBatch.Draw(
-                    pixel,
-                    cellRectangle,
-                    background);
+                if (drawBackground)
+                {       
+                    spriteBatch.Draw(
+                        pixel,
+                        cellRectangle,
+                        background);
+                }
 
                 if (cell.Character == ' ')
                     continue;
