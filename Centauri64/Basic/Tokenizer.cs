@@ -33,7 +33,15 @@ public sealed class Tokenizer
 
             if (char.IsLetter(character))
             {
-                tokens.Add(ReadWord());
+                var token = ReadWord();
+
+                tokens.Add(token);
+
+                if (token.Type == TokenType.Rem)
+                {
+                    break;
+                }
+
                 continue;
             }
 
@@ -163,6 +171,25 @@ public sealed class Tokenizer
         return tokens;
     }
 
+    private Token ReadRem()
+    {
+        while (!IsAtEnd() && char.IsWhiteSpace(Current()))
+        {
+            Advance();
+        }
+
+        var start = _position;
+
+        while (!IsAtEnd())
+        {
+            Advance();
+        }
+
+        var text = _source[start.._position];
+
+        return new Token(TokenType.Rem, text);
+    }
+
     private Token ReadWord()
     {
         var start = _position;
@@ -206,6 +233,7 @@ public sealed class Tokenizer
             "SPRITESHOW" => TokenType.SpriteShow,
             "SPRITEHIDE" => TokenType.SpriteHide,
             "DIM" => TokenType.Dim,
+            "REM" => TokenType.Rem,
             _ => TokenType.Identifier
         };
 

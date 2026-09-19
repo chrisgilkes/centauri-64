@@ -708,6 +708,11 @@ public sealed class Interpreter
             return ExecutionResult.Continue();
         }
 
+        if (statement is RemStatement)
+        {
+            return ExecutionResult.Continue();
+        }
+
         throw new InvalidOperationException($"Unsupported statement: {statement.GetType().Name}");
     }
 

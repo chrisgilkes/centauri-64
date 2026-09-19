@@ -49,5 +49,6 @@ public enum TokenType
     SpriteShow,
     SpriteHide,
     Dim,
+    Rem,
     EndOfLine
 }

@@ -177,6 +177,11 @@ public sealed class Parser
             return ParseDimStatement();
         }
 
+        if (token.Type == TokenType.Rem)
+        {
+            return ParseRemStatement();
+        }
+
         if (token.Type == TokenType.Identifier)
         {
             if (Peek().Type == TokenType.LeftParenthesis)
@@ -188,6 +193,13 @@ public sealed class Parser
         }
 
         throw new InvalidOperationException($"Unexpected token: {token.Type}");
+    }
+
+    private Statement ParseRemStatement()
+    {
+        Expect(TokenType.Rem);
+
+        return new RemStatement();
     }
 
     private ArrayAssignmentStatement ParseArrayAssignmentStatement()
