@@ -37,5 +37,9 @@ public enum TokenType
     Return,
     Beep,
     Mode,
+    For,
+    To,
+    Step,
+    Next,
     EndOfLine
 }

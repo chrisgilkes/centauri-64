@@ -2,13 +2,13 @@ public readonly struct ExecutionResult
 {
     public ExecutionAction Action { get; }
     public int? JumpToLine { get; }
+    public int? ProgramCounter { get; }
 
-    private ExecutionResult(
-        ExecutionAction action,
-        int? jumpToLine = null)
+    private ExecutionResult(ExecutionAction action,int? jumpToLine = null,int? programCounter = null)
     {
         Action = action;
         JumpToLine = jumpToLine;
+        ProgramCounter = programCounter;
     }
 
     public static ExecutionResult Continue()
@@ -40,5 +40,12 @@ public readonly struct ExecutionResult
     {
         return new ExecutionResult(
             ExecutionAction.Wait);
+    }
+
+    public static ExecutionResult JumpToProgramCounter(int programCounter)
+    {
+        return new ExecutionResult(
+            ExecutionAction.JumpToProgramCounter,
+            programCounter: programCounter);
     }
 }

@@ -29,6 +29,28 @@ public sealed class Interpreter
 
     private readonly Stack<int> _returnStack = new();
 
+    private sealed class ForLoop
+    {
+        public string VariableName { get; }
+        public int End { get; }
+        public int Step { get; }
+        public int LoopStartProgramCounter { get; }
+
+        public ForLoop(
+            string variableName,
+            int end,
+            int step,
+            int loopStartProgramCounter)
+        {
+            VariableName = variableName;
+            End = end;
+            Step = step;
+            LoopStartProgramCounter = loopStartProgramCounter;
+        }
+    }
+
+    private readonly Stack<ForLoop> _forStack = new();
+
     public Interpreter(TextConsole console, CentauriMachine machine)
     {
         _console = console;
@@ -42,6 +64,7 @@ public sealed class Interpreter
 
         _variables.Clear();
         _returnStack.Clear();
+        _forStack.Clear();
 
         _lines = program.GetLines();
         _programCounter = 0;
@@ -81,9 +104,6 @@ public sealed class Interpreter
 
         var line = _lines[_programCounter];
 
-        System.Console.WriteLine(
-            $"EXEC {line.LineNumber}: {line.Statement.GetType().Name}");
-
         var result = Execute(line.Statement);
 
         switch (result.Action)
@@ -111,6 +131,11 @@ public sealed class Interpreter
             case ExecutionAction.Return:
                 _programCounter = _returnStack.Pop();
                 break;
+
+            case ExecutionAction.JumpToProgramCounter:
+                _programCounter =
+                result.ProgramCounter!.Value;
+            break;
         }
 
         if (_programCounter >= _lines.Count &&
@@ -119,7 +144,7 @@ public sealed class Interpreter
             Stop();
         }
 
-        return result.Action == ExecutionAction.Yield || result.Action == ExecutionAction.Wait;
+        return _isRunning;
     }
 
     public void Stop()
@@ -131,8 +156,8 @@ public sealed class Interpreter
     public void Run(BasicProgram program)
     {
         _returnStack.Clear();
-
         _variables.Clear();
+        _forStack.Clear();
 
         var lines = program.GetLines();
 
@@ -443,6 +468,120 @@ public sealed class Interpreter
             return ExecutionResult.Continue();
         }
 
+        if (statement is ForStatement forStatement)
+        {
+            var start = Evaluate(forStatement.Start);
+            var end = Evaluate(forStatement.End);
+
+            if (!start.IsInteger || !end.IsInteger)
+            {
+                throw new InvalidOperationException(
+                    "FOR expects numeric values.");
+            }
+
+            var step = 1;
+
+            if (forStatement.Step != null)
+            {
+                var stepValue = Evaluate(forStatement.Step);
+
+                if (!stepValue.IsInteger)
+                {
+                    throw new InvalidOperationException(
+                        "STEP expects a numeric value.");
+                }
+
+                step = stepValue.Integer;
+            }
+
+            if (step == 0)
+            {
+                throw new InvalidOperationException(
+                    "STEP cannot be zero.");
+            }
+
+            _variables[forStatement.VariableName] = start.Integer;
+
+            var shouldRun =
+                step > 0
+                    ? start.Integer <= end.Integer
+                    : start.Integer >= end.Integer;
+
+            if (!shouldRun)
+            {
+                var depth = 0;
+
+                for (var i = _programCounter + 1;
+                    i < _lines.Count;
+                    i++)
+                {
+                    if (_lines[i].Statement is ForStatement)
+                    {
+                        depth++;
+                    }
+                    else if (_lines[i].Statement is NextStatement)
+                    {
+                        if (depth == 0)
+                        {
+                            return ExecutionResult.JumpToProgramCounter(
+                                i + 1);
+                        }
+
+                        depth--;
+                    }
+                }
+
+                throw new InvalidOperationException(
+                    $"FOR {forStatement.VariableName} without NEXT.");
+            }
+
+            _forStack.Push(
+                new ForLoop(
+                    forStatement.VariableName,
+                    end.Integer,
+                    step,
+                    _programCounter + 1));
+
+            return ExecutionResult.Continue();
+        }
+
+        if (statement is NextStatement next)
+        {
+            if (_forStack.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    "NEXT without FOR.");
+            }
+
+            var loop = _forStack.Peek();
+
+            if (loop.VariableName != next.VariableName)
+            {
+                throw new InvalidOperationException(
+                    $"NEXT {next.VariableName} does not match FOR {loop.VariableName}.");
+            }
+
+            var value =
+                GetVariable(loop.VariableName) + loop.Step;
+
+            _variables[loop.VariableName] = value;
+
+            var keepGoing =
+                loop.Step > 0
+                    ? value <= loop.End
+                    : value >= loop.End;
+
+            if (keepGoing)
+            {
+                return ExecutionResult.JumpToProgramCounter(
+                    loop.LoopStartProgramCounter);
+            }
+
+            _forStack.Pop();
+
+            return ExecutionResult.Continue();
+        }
+
         throw new InvalidOperationException($"Unsupported statement: {statement.GetType().Name}");
     }
 
@@ -462,6 +601,25 @@ public sealed class Interpreter
         {
             return new BasicValue(
                 GetVariable(variable.Name));
+        }
+
+        if (expression is UnaryExpression unary)
+        {
+            var value = Evaluate(unary.Operand);
+
+            if (!value.IsInteger)
+            {
+                throw new InvalidOperationException(
+                    "Unary minus requires a numeric value.");
+            }
+
+            if (unary.Operator == TokenType.Minus)
+            {
+                return new BasicValue(-value.Integer);
+            }
+
+            throw new InvalidOperationException(
+                $"Unsupported unary operator: {unary.Operator}");
         }
 
         if (expression is BinaryExpression binary)

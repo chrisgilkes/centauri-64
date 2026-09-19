@@ -194,6 +194,10 @@ public sealed class Tokenizer
             "BEEP" => TokenType.Beep,
             "WAIT" => TokenType.Wait,
             "MODE" => TokenType.Mode,
+            "FOR" => TokenType.For,
+            "TO" => TokenType.To,
+            "STEP" => TokenType.Step,
+            "NEXT" => TokenType.Next,
             _ => TokenType.Identifier
         };
 

@@ -136,14 +136,8 @@ public sealed class CentauriMachine
 
     public void ClearScreen()
     {
-        System.Console.WriteLine(
-            $"CLS BEFORE: PAPER={_programConsole.Background}");
-
         _programConsole.Clear();
         _positionedText.Clear();
-
-        System.Console.WriteLine(
-            $"CLS AFTER: PAPER={_programConsole.Background}");
     }
 
     public void SetInk(int colour)
@@ -165,9 +159,6 @@ public sealed class CentauriMachine
         ValidateColour(colour);
 
         _programConsole.Background = colour;
-
-            System.Console.WriteLine(
-        $"SET PAPER -> {_programConsole.Background}");
     }
 
     private static void ValidateColour(int colour)

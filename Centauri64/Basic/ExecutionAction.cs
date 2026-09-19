@@ -4,5 +4,6 @@ public enum ExecutionAction
     Jump,
     Yield,
     Wait,
-    Return
+    Return,
+    JumpToProgramCounter,
 }

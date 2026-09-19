@@ -133,6 +133,16 @@ public sealed class Parser
             return ParseModeStatement();
         }
 
+        if (token.Type == TokenType.For)
+        {
+            return ParseForStatement();
+        }
+
+        if (token.Type == TokenType.Next)
+        {
+            return ParseNextStatement();
+        }
+
         if (token.Type == TokenType.Identifier)
         {
             return ParseAssignmentStatement();
@@ -140,6 +150,45 @@ public sealed class Parser
 
         throw new InvalidOperationException(
             $"Unexpected token: {token.Type}");
+    }
+
+    private ForStatement ParseForStatement()
+    {
+        Expect(TokenType.For);
+
+        var variable = Expect(TokenType.Identifier);
+
+        Expect(TokenType.Equals);
+
+        var start = ParseExpression();
+
+        Expect(TokenType.To);
+
+        var end = ParseExpression();
+
+        Expression? step = null;
+
+        if (Current().Type == TokenType.Step)
+        {
+            Advance();
+
+            step = ParseExpression();
+        }
+
+        return new ForStatement(
+            variable.Text,
+            start,
+            end,
+            step);
+    }
+
+    private NextStatement ParseNextStatement()
+    {
+        Expect(TokenType.Next);
+
+        var variable = Expect(TokenType.Identifier);
+
+        return new NextStatement(variable.Text);
     }
 
     private Statement ParseModeStatement()
@@ -338,7 +387,7 @@ public sealed class Parser
 
     private Expression ParseMultiplicativeExpression()
     {
-        var left = ParsePrimaryExpression();
+        var left = ParseUnaryExpression();
 
         while (Current().Type == TokenType.Multiply ||
             Current().Type == TokenType.Divide)
@@ -346,7 +395,7 @@ public sealed class Parser
             var operatorToken = Current();
             Advance();
 
-            var right = ParsePrimaryExpression();
+            var right = ParseUnaryExpression();
 
             left = new BinaryExpression(
                 left,
@@ -355,6 +404,20 @@ public sealed class Parser
         }
 
         return left;
+    }
+
+    private Expression ParseUnaryExpression()
+    {
+        if (Current().Type == TokenType.Minus)
+        {
+            Advance();
+
+            return new UnaryExpression(
+                TokenType.Minus,
+                ParseUnaryExpression());
+        }
+
+        return ParsePrimaryExpression();
     }
 
     private Expression ParseAdditiveExpression()
