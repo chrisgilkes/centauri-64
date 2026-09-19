@@ -12,7 +12,7 @@ public sealed class Interpreter
 {
     private readonly TextConsole _console;
     private readonly Dictionary<string, int> _variables = new();
-
+    private readonly Dictionary<string, int[]> _arrays = new();
     private readonly Random _random = new();
 
     private const int MAX_INSTRUCTIONS_WITHOUT_YIELD  = 100_000;
@@ -65,6 +65,7 @@ public sealed class Interpreter
         _variables.Clear();
         _returnStack.Clear();
         _forStack.Clear();
+        _arrays.Clear();
 
         _lines = program.GetLines();
         _programCounter = 0;
@@ -155,6 +156,7 @@ public sealed class Interpreter
         _returnStack.Clear();
         _variables.Clear();
         _forStack.Clear();
+        _arrays.Clear();
 
         var lines = program.GetLines();
 
@@ -662,6 +664,50 @@ public sealed class Interpreter
             return ExecutionResult.Continue();
         }
 
+        if (statement is DimStatement dim)
+        {
+            var size = Evaluate(dim.Size);
+
+            if (!size.IsInteger)
+            {
+                throw new InvalidOperationException("DIM size must be numeric.");
+            }
+
+            if (size.Integer <= 0)
+            {
+                throw new InvalidOperationException("DIM size must be greater than zero.");
+            }
+
+            _arrays[dim.Name] = new int[size.Integer];
+
+            return ExecutionResult.Continue();
+        }
+
+        if (statement is ArrayAssignmentStatement arrayAssignment)
+        {
+            var index = Evaluate(arrayAssignment.Index);
+            var value = Evaluate(arrayAssignment.Value);
+
+            if (!index.IsInteger || !value.IsInteger)
+            {
+                throw new InvalidOperationException("Array assignment expects numeric values.");
+            }
+
+            if (!_arrays.TryGetValue(arrayAssignment.Name, out var array))
+            {
+                throw new InvalidOperationException($"Array {arrayAssignment.Name} has not been DIMensioned.");
+            }
+
+            if (index.Integer < 0 || index.Integer >= array.Length)
+            {
+                throw new InvalidOperationException($"Array index out of range: {arrayAssignment.Name}({index.Integer}).");
+            }
+
+            array[index.Integer] = value.Integer;
+
+            return ExecutionResult.Continue();
+        }
+
         throw new InvalidOperationException($"Unsupported statement: {statement.GetType().Name}");
     }
 
@@ -707,6 +753,28 @@ public sealed class Interpreter
         if (expression is FunctionCallExpression function)
         {
             return EvaluateFunction(function);
+        }
+
+        if (expression is ArrayAccessExpression arrayAccess)
+        {
+            var index = Evaluate(arrayAccess.Index);
+
+            if (!index.IsInteger)
+            {
+                throw new InvalidOperationException("Array index must be numeric.");
+            }
+
+            if (!_arrays.TryGetValue(arrayAccess.Name, out var array))
+            {
+                throw new InvalidOperationException($"Array {arrayAccess.Name} has not been DIMensioned.");
+            }
+
+            if (index.Integer < 0 || index.Integer >= array.Length)
+            {
+                throw new InvalidOperationException($"Array index out of range: {arrayAccess.Name}({index.Integer}).");
+            }
+
+            return new BasicValue(array[index.Integer]);
         }
 
         throw new InvalidOperationException($"Unsupported expression: {expression.GetType().Name}");

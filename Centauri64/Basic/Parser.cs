@@ -172,12 +172,54 @@ public sealed class Parser
             return ParseSpriteHideStatement();
         }
 
+        if (token.Type == TokenType.Dim)
+        {
+            return ParseDimStatement();
+        }
+
         if (token.Type == TokenType.Identifier)
         {
+            if (Peek().Type == TokenType.LeftParenthesis)
+            {
+                return ParseArrayAssignmentStatement();
+            }
+
             return ParseAssignmentStatement();
         }
 
         throw new InvalidOperationException($"Unexpected token: {token.Type}");
+    }
+
+    private ArrayAssignmentStatement ParseArrayAssignmentStatement()
+    {
+        var name = Expect(TokenType.Identifier);
+
+        Expect(TokenType.LeftParenthesis);
+
+        var index = ParseExpression();
+
+        Expect(TokenType.RightParenthesis);
+
+        Expect(TokenType.Equals);
+
+        var value = ParseExpression();
+
+        return new ArrayAssignmentStatement(name.Text,index,value);
+    }
+
+    private DimStatement ParseDimStatement()
+    {
+        Expect(TokenType.Dim);
+
+        var name = Expect(TokenType.Identifier);
+
+        Expect(TokenType.LeftParenthesis);
+
+        var size = ParseExpression();
+
+        Expect(TokenType.RightParenthesis);
+
+        return new DimStatement(name.Text,size);
     }
 
     private SpriteShowStatement ParseSpriteShowStatement()
@@ -598,6 +640,16 @@ public sealed class Parser
             type == TokenType.GreaterThanOrEqual;
     }
 
+    private static bool IsFunctionName(string name)
+    {
+        return name is
+            "KEY" or
+            "RND" or
+            "COLLIDE" or
+            "SWIDTH" or
+            "SHEIGHT";
+    }
+
     private Expression ParsePrimaryExpression()
     {
         var token = Current();
@@ -621,7 +673,12 @@ public sealed class Parser
         {
             if (Peek().Type == TokenType.LeftParenthesis)
             {
-                return ParseFunctionCallExpression();
+                if (IsFunctionName(token.Text))
+                {
+                    return ParseFunctionCallExpression();
+                }
+
+                return ParseArrayAccessExpression();
             }
 
             Advance();
@@ -642,6 +699,21 @@ public sealed class Parser
 
         throw new InvalidOperationException(
             $"Expected expression, but found {token.Type}.");
+    }
+
+    private ArrayAccessExpression ParseArrayAccessExpression()
+    {
+        var name = Expect(TokenType.Identifier);
+
+        Expect(TokenType.LeftParenthesis);
+
+        var index = ParseExpression();
+
+        Expect(TokenType.RightParenthesis);
+
+        return new ArrayAccessExpression(
+            name.Text,
+            index);
     }
 
     private FunctionCallExpression ParseFunctionCallExpression()

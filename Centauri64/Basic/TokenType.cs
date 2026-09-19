@@ -48,5 +48,6 @@ public enum TokenType
     Fill,
     SpriteShow,
     SpriteHide,
+    Dim,
     EndOfLine
 }

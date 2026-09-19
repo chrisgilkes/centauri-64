@@ -205,6 +205,7 @@ public sealed class Tokenizer
             "FILL" => TokenType.Fill,
             "SPRITESHOW" => TokenType.SpriteShow,
             "SPRITEHIDE" => TokenType.SpriteHide,
+            "DIM" => TokenType.Dim,
             _ => TokenType.Identifier
         };
 
