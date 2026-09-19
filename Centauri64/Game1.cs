@@ -235,6 +235,8 @@ public class Game1 : Game
             Color.White,
             new Color(40, 40, 160));
 
+        _machine.DrawText(_spriteBatch,_font);
+
         _machine.DrawSprites(
             _spriteBatch,
             _pixel);
@@ -303,6 +305,10 @@ public class Game1 : Game
             _pixel,
             Color.White,
             new Color(40, 40, 160));
+
+        _machine.DrawText(
+            _spriteBatch,
+            _font);
 
         _machine.DrawSprites(
             _spriteBatch,

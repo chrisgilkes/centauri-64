@@ -109,6 +109,8 @@ public sealed class TextConsole
 
     public const int ScreenMargin = 16;
 
+    public int DebugCellBackground => _cells[0, 0].Background;
+
     public TextConsole()
     {
         _cells = new ScreenCell[ROWS, COLUMNS];

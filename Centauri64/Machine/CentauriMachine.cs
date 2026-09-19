@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework.Input;
 using Centauri64.Console;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework;
 using System.Linq;
 
 using Centauri64.Machine.Sprites;
@@ -59,6 +60,28 @@ public sealed class CentauriMachine
 
     public CentauriDisplayMode DisplayMode => _displayMode;
 
+    private sealed class PositionedText
+    {
+        public int X { get; }
+        public int Y { get; }
+        public string Text { get; }
+        public int Colour { get; }
+
+        public PositionedText(
+            int x,
+            int y,
+            string text,
+            int colour)
+        {
+            X = x;
+            Y = y;
+            Text = text;
+            Colour = colour;
+        }
+    }
+
+    private readonly List<PositionedText> _positionedText = new();
+
     public CentauriMachine(TextConsole console, TextConsole programConsole)
     {
         _console = console;
@@ -103,12 +126,24 @@ public sealed class CentauriMachine
 
     public void WriteText(int x, int y, string text)
     {
-        _programConsole.WriteAt(x, y, text);
+        _positionedText.Add(
+            new PositionedText(
+                x,
+                y,
+                text,
+                _programConsole.Foreground));
     }
 
     public void ClearScreen()
     {
+        System.Console.WriteLine(
+            $"CLS BEFORE: PAPER={_programConsole.Background}");
+
         _programConsole.Clear();
+        _positionedText.Clear();
+
+        System.Console.WriteLine(
+            $"CLS AFTER: PAPER={_programConsole.Background}");
     }
 
     public void SetInk(int colour)
@@ -130,6 +165,9 @@ public sealed class CentauriMachine
         ValidateColour(colour);
 
         _programConsole.Background = colour;
+
+            System.Console.WriteLine(
+        $"SET PAPER -> {_programConsole.Background}");
     }
 
     private static void ValidateColour(int colour)
@@ -191,6 +229,18 @@ public sealed class CentauriMachine
     public void DrawSpriteEditor(SpriteBatch spriteBatch,BitmapFont font, Texture2D pixel)
     {
         _spriteEditor.Draw(spriteBatch,font, pixel);
+    }
+
+    public void DrawText(SpriteBatch spriteBatch,BitmapFont font)
+    {
+        foreach (var item in _positionedText)
+        {
+            font.Draw(
+                spriteBatch,
+                item.Text,
+                new Vector2(item.X, item.Y),
+                CentauriPalette.Get(item.Colour));
+        }
     }
 
    public void DrawSprites(SpriteBatch spriteBatch,Texture2D pixel)
@@ -310,6 +360,7 @@ public sealed class CentauriMachine
         BorderColour = DEFAULT_BORDER;
 
         _programConsole.Clear();
+        _positionedText.Clear();
 
         _displayMode =
             CentauriDisplayMode.HighResolution;

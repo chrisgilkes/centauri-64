@@ -25,7 +25,7 @@ public enum TokenType
     LeftParenthesis,
     RightParenthesis,
     Comma,
-    TextAt,
+    PrintAt,
     Cls,
     Ink,
     Paper,

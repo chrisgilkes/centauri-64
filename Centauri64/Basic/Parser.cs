@@ -68,9 +68,9 @@ public sealed class Parser
             return ParseYieldStatement();
         }
 
-        if (token.Type == TokenType.TextAt)
+        if (token.Type == TokenType.PrintAt)
         {
-            return ParseTextAtStatement();
+            return ParsePrintAtStatement();
         }
 
         if (token.Type == TokenType.Cls)
@@ -266,9 +266,9 @@ public sealed class Parser
         return new ClsStatement();
     }
 
-    private TextAtStatement ParseTextAtStatement()
+    private PrintAtStatement ParsePrintAtStatement()
     {
-        Expect(TokenType.TextAt);
+        Expect(TokenType.PrintAt);
 
         var x = ParseExpression();
 
@@ -280,7 +280,7 @@ public sealed class Parser
 
         var text = ParseExpression();
 
-        return new TextAtStatement(
+        return new PrintAtStatement(
             x,
             y,
             text);

@@ -181,7 +181,7 @@ public sealed class Tokenizer
             "IF" => TokenType.If,
             "THEN" => TokenType.Then,
             "YIELD" => TokenType.Yield,
-            "TEXTAT" => TokenType.TextAt,
+            "PRINTAT" => TokenType.PrintAt,
             "CLS" => TokenType.Cls,
             "INK" => TokenType.Ink,
             "PAPER" => TokenType.Paper,

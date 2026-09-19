@@ -80,6 +80,10 @@ public sealed class Interpreter
         }
 
         var line = _lines[_programCounter];
+
+        System.Console.WriteLine(
+            $"EXEC {line.LineNumber}: {line.Statement.GetType().Name}");
+
         var result = Execute(line.Statement);
 
         switch (result.Action)
@@ -210,16 +214,16 @@ public sealed class Interpreter
             return ExecutionResult.Yield();
         }
 
-        if (statement is TextAtStatement textAt)
+        if (statement is PrintAtStatement printAt)
         {
-            var x = Evaluate(textAt.X);
-            var y = Evaluate(textAt.Y);
-            var text = Evaluate(textAt.Text);
+            var x = Evaluate(printAt.X);
+            var y = Evaluate(printAt.Y);
+            var text = Evaluate(printAt.Text);
 
             if (!x.IsInteger || !y.IsInteger)
             {
                 throw new InvalidOperationException(
-                    "TEXTAT coordinates must be numeric.");
+                    "PRINTAT coordinates must be numeric.");
             }
 
             _machine.WriteText(

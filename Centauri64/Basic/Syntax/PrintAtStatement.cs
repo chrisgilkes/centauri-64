@@ -1,12 +1,12 @@
 namespace Centauri64.Basic.Syntax;
 
-public sealed class TextAtStatement : Statement
+public sealed class PrintAtStatement : Statement
 {
     public Expression X { get; }
     public Expression Y { get; }
     public Expression Text { get; }
 
-    public TextAtStatement(
+    public PrintAtStatement(
         Expression x,
         Expression y,
         Expression text)
