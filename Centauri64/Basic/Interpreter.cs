@@ -668,6 +668,38 @@ public sealed class Interpreter
             return ExecutionResult.Continue();
         }
 
+        if (statement is CircleStatement circle)
+        {
+            var x = Evaluate(circle.X);
+            var y = Evaluate(circle.Y);
+            var radius = Evaluate(circle.Radius);
+            var colour = Evaluate(circle.Colour);
+
+            if (!x.IsInteger ||
+                !y.IsInteger ||
+                !radius.IsInteger ||
+                !colour.IsInteger)
+            {
+                throw new InvalidOperationException(
+                    "CIRCLE expects numeric values.");
+            }
+
+            if (radius.Integer <= 0)
+            {
+                throw new InvalidOperationException(
+                    "CIRCLE radius must be greater than zero.");
+            }
+
+            _machine.Circle(
+                x.Integer,
+                y.Integer,
+                radius.Integer,
+                colour.Integer,
+                circle.Filled);
+
+            return ExecutionResult.Continue();
+        }
+
         throw new InvalidOperationException($"Unsupported statement: {statement.GetType().Name}");
     }
 

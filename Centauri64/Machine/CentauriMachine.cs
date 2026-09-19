@@ -155,6 +155,30 @@ public sealed class CentauriMachine
 
     private readonly List<RectPrimitive> _rectangles = new();
 
+    private sealed class CirclePrimitive
+    {
+        public int X { get; }
+        public int Y { get; }
+        public int Radius { get; }
+        public int Colour { get; }
+        public bool Filled { get; }
+
+        public CirclePrimitive(
+            int x,
+            int y,
+            int radius,
+            int colour,
+            bool filled)
+        {
+            X = x;
+            Y = y;
+            Radius = radius;
+            Colour = colour;
+            Filled = filled;
+        }
+    }
+
+    private readonly List<CirclePrimitive> _circles = new();
 
     public CentauriMachine(TextConsole console, TextConsole programConsole)
     {
@@ -215,6 +239,7 @@ public sealed class CentauriMachine
         _plotPoints.Clear();
         _lines.Clear();
         _rectangles.Clear();
+        _circles.Clear();
     }
 
     public void SetInk(int colour)
@@ -432,6 +457,7 @@ public sealed class CentauriMachine
         _plotPoints.Clear();
         _lines.Clear();
         _rectangles.Clear();
+        _circles.Clear();
 
         _displayMode =
             CentauriDisplayMode.HighResolution;
@@ -537,6 +563,32 @@ public sealed class CentauriMachine
                     colour);
             }
         }
+
+        foreach (var circle in _circles)
+        {
+            var circleCol = CentauriPalette.Get(circle.Colour);
+
+            if (circle.Filled)
+            {
+                DrawFilledCircle(
+                    spriteBatch,
+                    pixel,
+                    circle.X,
+                    circle.Y,
+                    circle.Radius,
+                    circleCol);
+            }
+            else
+            {
+                DrawCircle(
+                    spriteBatch,
+                    pixel,
+                    circle.X,
+                    circle.Y,
+                    circle.Radius,
+                    circleCol);
+            }
+        }
     }
 
     public void Line(int x1,int y1,int x2,int y2,int colour)
@@ -594,6 +646,146 @@ public sealed class CentauriMachine
         }
     }
 
+    private static void DrawPixel(SpriteBatch spriteBatch,Texture2D pixel,int x,int y,Color colour)
+    {
+        spriteBatch.Draw(
+            pixel,
+            new Rectangle(
+                x + BORDER_SIZE,
+                y + BORDER_SIZE,
+                1,
+                1),
+            colour);
+    }
+
+    private static void DrawCircle(SpriteBatch spriteBatch,Texture2D pixel,int centreX,int centreY,int radius,Color colour)
+    {
+        var x = radius;
+        var y = 0;
+        var error = 1 - radius;
+
+        while (x >= y)
+        {
+            DrawPixel(
+                spriteBatch, pixel,
+                centreX + x, centreY + y,
+                colour);
+
+            DrawPixel(
+                spriteBatch, pixel,
+                centreX + y, centreY + x,
+                colour);
+
+            DrawPixel(
+                spriteBatch, pixel,
+                centreX - y, centreY + x,
+                colour);
+
+            DrawPixel(
+                spriteBatch, pixel,
+                centreX - x, centreY + y,
+                colour);
+
+            DrawPixel(
+                spriteBatch, pixel,
+                centreX - x, centreY - y,
+                colour);
+
+            DrawPixel(
+                spriteBatch, pixel,
+                centreX - y, centreY - x,
+                colour);
+
+            DrawPixel(
+                spriteBatch, pixel,
+                centreX + y, centreY - x,
+                colour);
+
+            DrawPixel(
+                spriteBatch, pixel,
+                centreX + x, centreY - y,
+                colour);
+
+            y++;
+
+            if (error < 0)
+            {
+                error += 2 * y + 1;
+            }
+            else
+            {
+                x--;
+                error += 2 * (y - x) + 1;
+            }
+        }
+    }
+
+    private static void DrawHorizontalLine(SpriteBatch spriteBatch,Texture2D pixel,int x1,int x2,int y,Color colour)
+    {
+        if (x2 < x1)
+        {
+            (x1, x2) = (x2, x1);
+        }
+
+        spriteBatch.Draw(
+            pixel,
+            new Rectangle(
+                x1 + BORDER_SIZE,
+                y + BORDER_SIZE,
+                x2 - x1 + 1,
+                1),
+            colour);
+    }
+
+    private static void DrawFilledCircle(SpriteBatch spriteBatch,Texture2D pixel,int centreX,int centreY,int radius,Color colour)
+    {
+        var x = radius;
+        var y = 0;
+        var error = 1 - radius;
+
+        while (x >= y)
+        {
+            DrawHorizontalLine(
+                spriteBatch, pixel,
+                centreX - x,
+                centreX + x,
+                centreY + y,
+                colour);
+
+            DrawHorizontalLine(
+                spriteBatch, pixel,
+                centreX - x,
+                centreX + x,
+                centreY - y,
+                colour);
+
+            DrawHorizontalLine(
+                spriteBatch, pixel,
+                centreX - y,
+                centreX + y,
+                centreY + x,
+                colour);
+
+            DrawHorizontalLine(
+                spriteBatch, pixel,
+                centreX - y,
+                centreX + y,
+                centreY - x,
+                colour);
+
+            y++;
+
+            if (error < 0)
+            {
+                error += 2 * y + 1;
+            }
+            else
+            {
+                x--;
+                error += 2 * (y - x) + 1;
+            }
+        }
+    }
     public void Rect(int x,int y,int width,int height,int colour,bool filled)
     {
         ValidateColour(colour);
@@ -604,6 +796,19 @@ public sealed class CentauriMachine
                 y,
                 width,
                 height,
+                colour,
+                filled));
+    }
+
+    public void Circle(int x,int y,int radius,int colour,bool filled)
+    {
+        ValidateColour(colour);
+
+        _circles.Add(
+            new CirclePrimitive(
+                x,
+                y,
+                radius,
                 colour,
                 filled));
     }

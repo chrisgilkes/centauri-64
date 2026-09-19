@@ -158,6 +158,11 @@ public sealed class Parser
             return ParseRectStatement();
         }
 
+        if (token.Type == TokenType.Circle)
+        {
+            return ParseCircleStatement();
+        }
+
         if (token.Type == TokenType.Identifier)
         {
             return ParseAssignmentStatement();
@@ -165,6 +170,38 @@ public sealed class Parser
 
         throw new InvalidOperationException(
             $"Unexpected token: {token.Type}");
+    }
+
+    private CircleStatement ParseCircleStatement()
+    {
+        Expect(TokenType.Circle);
+
+        var x = ParseExpression();
+        Expect(TokenType.Comma);
+
+        var y = ParseExpression();
+        Expect(TokenType.Comma);
+
+        var radius = ParseExpression();
+        Expect(TokenType.Comma);
+
+        var colour = ParseExpression();
+
+        var filled = false;
+
+        if (Current().Type == TokenType.Comma)
+        {
+            Advance();
+            Expect(TokenType.Fill);
+            filled = true;
+        }
+
+        return new CircleStatement(
+            x,
+            y,
+            radius,
+            colour,
+            filled);
     }
 
     private RectStatement ParseRectStatement()
