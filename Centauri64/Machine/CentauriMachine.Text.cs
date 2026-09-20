@@ -36,14 +36,26 @@ public sealed partial class CentauriMachine
 
     public void WriteText(int x, int y, string text)
     {
-        _positionedText.Add(new PositionedText(x,y,text,_programConsole.Foreground));
+        var existing = _positionedText.FindIndex(
+            item => item.X == x && item.Y == y);
+
+        var positionedText = new PositionedText(x,y,text,_programConsole.Foreground);
+
+        if (existing >= 0)
+        {
+            _positionedText[existing] = positionedText;
+        }
+        else
+        {
+            _positionedText.Add(positionedText);
+        }
     }
 
     public void DrawText(SpriteBatch spriteBatch,BitmapFont font)
     {
         foreach (var item in _positionedText)
         {
-            font.Draw(spriteBatch,item.Text,new Vector2(item.X, item.Y),CentauriPalette.Get(item.Colour));
+            font.Draw(spriteBatch,item.Text,new Vector2(item.X + BORDER_SIZE, item.Y + BORDER_SIZE),CentauriPalette.Get(item.Colour));
         }
     }
 }

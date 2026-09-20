@@ -60,9 +60,10 @@ public sealed class BasicMachine
                 return;
             }
 
-            if(source == "LIST")
+            if (source == "LIST" ||
+                source.StartsWith("LIST "))
             {
-                ListProgram();
+                ListProgram(source);
                 return;
             }
 
@@ -306,15 +307,64 @@ public sealed class BasicMachine
         _console.WriteLine("READY.");
     }
 
-    private void ListProgram()
+    private void ListProgram(string source)
     {
-        foreach(var source in _program.SourceLines)
+        var argument = source["LIST".Length..].Trim();
+
+        if (string.IsNullOrEmpty(argument))
         {
-            _console.WriteLine(source);
+            foreach (var line in _program.Lines)
+            {
+                _console.WriteLine(line.Source);
+            }
+
+            _console.WriteLine("");
+            _console.WriteLine("READY.");
+            return;
         }
 
-        _console.WriteLine("");
-        _console.WriteLine("READY.");
+        if (int.TryParse(argument, out var lineNumber))
+        {
+            foreach (var line in _program.Lines)
+            {
+                if (line.LineNumber == lineNumber)
+                {
+                    _console.WriteLine(line.Source);
+                    break;
+                }
+            }
+
+            _console.WriteLine("");
+            _console.WriteLine("READY.");
+            return;
+        }
+
+        var parts = argument.Split('-', 2);
+
+        if (parts.Length == 2 &&
+            int.TryParse(parts[0], out var startLine) &&
+            int.TryParse(parts[1], out var endLine))
+        {
+            if (startLine > endLine)
+            {
+                throw new InvalidOperationException("BAD LIST RANGE");
+            }
+
+            foreach (var line in _program.Lines)
+            {
+                if (line.LineNumber >= startLine &&
+                    line.LineNumber <= endLine)
+                {
+                    _console.WriteLine(line.Source);
+                }
+            }
+
+            _console.WriteLine("");
+            _console.WriteLine("READY.");
+            return;
+        }
+
+        throw new InvalidOperationException("BAD LIST RANGE");
     }
 
     private void NewProgram()
