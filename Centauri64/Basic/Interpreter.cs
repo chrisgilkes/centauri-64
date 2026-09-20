@@ -261,29 +261,17 @@ public sealed partial class Interpreter
 
         if (statement is GotoStatement gotoStatement)
         {
-            return ExecutionResult.Jump(gotoStatement.LineNumber);
+            return ExecuteGoto(gotoStatement);
         }
 
         if (statement is IfStatement ifStatement)
         {
-            var condition = Evaluate(ifStatement.Condition);
-
-            if (!condition.IsInteger)
-            {
-                throw new InvalidOperationException("IF condition must be numeric.");
-            }
-
-            if (condition.Integer != 0)
-            {
-                return Execute(ifStatement.ThenStatement);
-            }
-
-            return ExecutionResult.Continue();
+            return ExecuteIf(ifStatement);
         }
 
-        if (statement is YieldStatement)
+        if (statement is YieldStatement yieldStatement)
         {
-            return ExecutionResult.Yield();
+            return ExecuteYield(yieldStatement);
         }
 
         if (statement is SpriteStatement sprite)
@@ -311,21 +299,14 @@ public sealed partial class Interpreter
             _machine.ResetDisplay();
         }
 
-        if (statement is GosubStatement gosubStatement)
+        if (statement is GosubStatement gosub)
         {
-            _returnStack.Push(_programCounter + 1);
-
-            return ExecutionResult.Jump(gosubStatement.LineNumber);
+            return ExecuteGosub(gosub);
         }
 
-        if (statement is ReturnStatement)
+        if (statement is ReturnStatement returnStatement)
         {
-            if (_returnStack.Count == 0)
-            {
-                throw new InvalidOperationException("RETURN without GOSUB.");
-            }
-
-            return ExecutionResult.Return();
+            return ExecuteReturn(returnStatement);
         }
 
         if (statement is BeepStatement beep)
@@ -347,23 +328,7 @@ public sealed partial class Interpreter
 
         if (statement is WaitStatement wait)
         {
-            var duration = Evaluate(wait.Duration);
-
-            if (!duration.IsInteger)
-            {
-                throw new InvalidOperationException("WAIT expects a numeric duration.");
-            }
-
-            if (duration.Integer < 0)
-            {
-                throw new InvalidOperationException("WAIT duration cannot be negative.");
-            }
-
-            var ticks = (long)(duration.Integer / 1000.0 * Stopwatch.Frequency);
-
-            _waitUntil = Stopwatch.GetTimestamp() + ticks;
-
-            return ExecutionResult.Wait();
+            return ExecuteWait(wait);
         }
 
         if (statement is AssignmentStatement assignment)
@@ -382,99 +347,12 @@ public sealed partial class Interpreter
 
         if (statement is ForStatement forStatement)
         {
-            var start = Evaluate(forStatement.Start);
-            var end = Evaluate(forStatement.End);
-
-            if (!start.IsInteger || !end.IsInteger)
-            {
-                throw new InvalidOperationException("FOR expects numeric values.");
-            }
-
-            var step = 1;
-
-            if (forStatement.Step != null)
-            {
-                var stepValue = Evaluate(forStatement.Step);
-
-                if (!stepValue.IsInteger)
-                {
-                    throw new InvalidOperationException("STEP expects a numeric value.");
-                }
-
-                step = stepValue.Integer;
-            }
-
-            if (step == 0)
-            {
-                throw new InvalidOperationException("STEP cannot be zero.");
-            }
-
-            _variables[forStatement.VariableName] = start.Integer;
-
-            var shouldRun = step > 0 ? start.Integer <= end.Integer : start.Integer >= end.Integer;
-
-            if (!shouldRun)
-            {
-                var depth = 0;
-
-                for (var i = _programCounter + 1; i < _lines.Count; i++)
-                {
-                    if (_lines[i].Statement is ForStatement)
-                    {
-                        depth++;
-                    }
-                    else if (_lines[i].Statement is NextStatement)
-                    {
-                        if (depth == 0)
-                        {
-                            return ExecutionResult.JumpToProgramCounter(i + 1);
-                        }
-
-                        depth--;
-                    }
-                }
-
-                throw new InvalidOperationException($"FOR {forStatement.VariableName} without NEXT.");
-            }
-
-            _forStack.Push(
-                new ForLoop(
-                    forStatement.VariableName,
-                    end.Integer,
-                    step,
-                    _programCounter + 1));
-
-            return ExecutionResult.Continue();
+            return ExecuteFor(forStatement);
         }
 
-        if (statement is NextStatement next)
+        if (statement is NextStatement nextStatement)
         {
-            if (_forStack.Count == 0)
-            {
-                throw new InvalidOperationException("NEXT without FOR.");
-            }
-
-            var loop = _forStack.Peek();
-
-            if (loop.VariableName != next.VariableName)
-            {
-                throw new InvalidOperationException($"NEXT {next.VariableName} does not match FOR {loop.VariableName}.");
-            }
-
-            var value = GetVariable(loop.VariableName) + loop.Step;
-
-            _variables[loop.VariableName] = value;
-
-            var keepGoing = loop.Step > 0 ? value <= loop.End : value >= loop.End;
-
-            if (keepGoing)
-            {
-                return ExecutionResult.JumpToProgramCounter(loop.LoopStartProgramCounter);
-            }
-
-            _forStack.Pop();
-
-            return ExecutionResult.Continue();
+            return ExecuteNext(nextStatement);
         }
 
         if (statement is DimStatement dim)
