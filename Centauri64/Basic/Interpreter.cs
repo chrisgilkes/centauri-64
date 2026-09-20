@@ -8,7 +8,7 @@ using Centauri64.Machine;
 
 namespace Centauri64.Basic;
 
-public sealed class Interpreter
+public sealed partial class Interpreter
 {
     private readonly TextConsole _console;
     private readonly Dictionary<string, int> _variables = new();
@@ -209,6 +209,56 @@ public sealed class Interpreter
             return ExecutionResult.Continue();
         }
 
+        if (statement is PrintAtStatement printAt)
+        {
+            return ExecutePrintAt(printAt);
+        }
+
+        if (statement is ClsStatement cls)
+        {
+            return ExecuteCls(cls);
+        }
+
+        if (statement is InkStatement ink)
+        {
+            return ExecuteInk(ink);
+        }
+
+        if (statement is PaperStatement paper)
+        {
+            return ExecutePaper(paper);
+        }
+
+        if (statement is BorderStatement border)
+        {
+            return ExecuteBorder(border);
+        }
+
+        if (statement is ModeStatement mode)
+        {    
+            return ExecuteMode(mode);
+        }
+
+        if (statement is PlotStatement plot)
+        {
+            return ExecutePlot(plot);
+        }
+
+        if (statement is LineStatement line)
+        {
+            return ExecuteLine(line);
+        }
+
+        if (statement is RectStatement rect)
+        {    
+            return ExecuteRect(rect);
+        }
+
+        if (statement is CircleStatement circle)
+        {    
+            return ExecuteCircle(circle);
+        }
+
         if (statement is GotoStatement gotoStatement)
         {
             return ExecutionResult.Jump(gotoStatement.LineNumber);
@@ -236,115 +286,29 @@ public sealed class Interpreter
             return ExecutionResult.Yield();
         }
 
-        if (statement is PrintAtStatement printAt)
-        {
-            var x = Evaluate(printAt.X);
-            var y = Evaluate(printAt.Y);
-            var text = Evaluate(printAt.Text);
-
-            if (!x.IsInteger || !y.IsInteger)
-            {
-                throw new InvalidOperationException("PRINTAT coordinates must be numeric.");
-            }
-
-            _machine.WriteText(x.Integer,y.Integer,text.ToString());
-
-            return ExecutionResult.Continue();
-        }
-
-        if (statement is ClsStatement)
-        {
-            _machine.ClearScreen();
-
-            return ExecutionResult.Continue();
-        }
-
-        if (statement is InkStatement ink)
-        {
-            var colour = Evaluate(ink.Colour);
-
-            if (!colour.IsInteger)
-            {
-                throw new InvalidOperationException("INK expects a number.");
-            }
-
-            _machine.SetInk(colour.Integer);
-
-            return ExecutionResult.Continue();
-        }
-
-        if (statement is PaperStatement paper)
-        {
-            var colour = Evaluate(paper.Colour);
-
-            if (!colour.IsInteger)
-            {
-                throw new InvalidOperationException("PAPER expects a number.");
-            }
-
-            _machine.SetPaper(colour.Integer);
-
-            return ExecutionResult.Continue();
-        }
-
-        if (statement is BorderStatement border)
-        {
-            var colour = Evaluate(border.Colour);
-
-            if (!colour.IsInteger)
-            {
-                throw new InvalidOperationException("BORDER expects a number.");
-            }
-
-            _machine.SetBorder(colour.Integer);
-
-            return ExecutionResult.Continue();
-        }
-
         if (statement is SpriteStatement sprite)
         {
-            var spriteIndex = Evaluate(sprite.SpriteIndex);
+            return ExecuteSprite(sprite);
+        }
 
-            var assetName = Evaluate(sprite.AssetName);
+        if (statement is SpritePositionStatement spritePosition)
+        {
+            return ExecuteSpritePosition(spritePosition);
+        }
 
-            if (!spriteIndex.IsInteger)
-            {
-                throw new InvalidOperationException("SPRITE index must be numeric.");
-            }
+        if (statement is SpriteShowStatement spriteShow)
+        {
+            return ExecuteSpriteShow(spriteShow);
+        }
 
-            if (!assetName.IsString)
-            {
-                throw new InvalidOperationException("SPRITE name must be a string.");
-            }
-
-            _machine.SetSprite(spriteIndex.Integer,assetName.String!);
-
-            return ExecutionResult.Continue();
+        if (statement is SpriteHideStatement spriteHide)
+        {
+            return ExecuteSpriteHide(spriteHide);
         }
 
         if( statement is ResetStatement reset)
         {
             _machine.ResetDisplay();
-        }
-
-        if (statement is SpritePositionStatement spritePosition)
-        {
-            var spriteIndex = Evaluate(spritePosition.SpriteIndex);
-
-            var x = Evaluate(spritePosition.X);
-
-            var y = Evaluate(spritePosition.Y);
-
-            if (!spriteIndex.IsInteger ||
-                !x.IsInteger ||
-                !y.IsInteger)
-            {
-                throw new InvalidOperationException("SPRITEPOS expects numeric values.");
-            }
-
-            _machine.SetSpritePosition(spriteIndex.Integer,x.Integer,y.Integer);
-
-            return ExecutionResult.Continue();
         }
 
         if (statement is GosubStatement gosubStatement)
@@ -377,20 +341,6 @@ public sealed class Interpreter
             }
 
             _machine.Beep(frequency.Integer,duration.Integer);
-
-            return ExecutionResult.Continue();
-        }
-
-        if (statement is ModeStatement mode)
-        {
-            var value = Evaluate(mode.Mode);
-
-            if (!value.IsInteger)
-            {
-                throw new InvalidOperationException("MODE expects a numeric value.");
-            }
-
-            _machine.SetDisplayMode(value.Integer);
 
             return ExecutionResult.Continue();
         }
@@ -523,143 +473,6 @@ public sealed class Interpreter
             }
 
             _forStack.Pop();
-
-            return ExecutionResult.Continue();
-        }
-
-        if (statement is PlotStatement plot)
-        {
-            var x = Evaluate(plot.X);
-            var y = Evaluate(plot.Y);
-            var colour = Evaluate(plot.Colour);
-
-            if (!x.IsInteger ||
-                !y.IsInteger ||
-                !colour.IsInteger)
-            {
-                throw new InvalidOperationException("PLOT expects numeric values.");
-            }
-
-            _machine.Plot(x.Integer,y.Integer,colour.Integer);
-
-            return ExecutionResult.Continue();
-        }
-
-        if (statement is LineStatement line)
-        {
-            var x1 = Evaluate(line.X1);
-            var y1 = Evaluate(line.Y1);
-            var x2 = Evaluate(line.X2);
-            var y2 = Evaluate(line.Y2);
-            var colour = Evaluate(line.Colour);
-
-            if (!x1.IsInteger ||
-                !y1.IsInteger ||
-                !x2.IsInteger ||
-                !y2.IsInteger ||
-                !colour.IsInteger)
-            {
-                throw new InvalidOperationException("LINE expects numeric values.");
-            }
-
-            _machine.Line(
-                x1.Integer,
-                y1.Integer,
-                x2.Integer,
-                y2.Integer,
-                colour.Integer);
-
-            return ExecutionResult.Continue();
-        }
-
-        if (statement is RectStatement rect)
-        {
-            var x = Evaluate(rect.X);
-            var y = Evaluate(rect.Y);
-            var width = Evaluate(rect.Width);
-            var height = Evaluate(rect.Height);
-            var colour = Evaluate(rect.Colour);
-
-            if (!x.IsInteger ||
-                !y.IsInteger ||
-                !width.IsInteger ||
-                !height.IsInteger ||
-                !colour.IsInteger)
-            {
-                throw new InvalidOperationException("RECT expects numeric values.");
-            }
-
-            if (width.Integer <= 0 ||
-                height.Integer <= 0)
-            {
-                throw new InvalidOperationException("RECT width and height must be greater than zero.");
-            }
-
-            _machine.Rect(
-                x.Integer,
-                y.Integer,
-                width.Integer,
-                height.Integer,
-                colour.Integer,
-                rect.Filled);
-
-            return ExecutionResult.Continue();
-        }
-
-        if (statement is CircleStatement circle)
-        {
-            var x = Evaluate(circle.X);
-            var y = Evaluate(circle.Y);
-            var radius = Evaluate(circle.Radius);
-            var colour = Evaluate(circle.Colour);
-
-            if (!x.IsInteger ||
-                !y.IsInteger ||
-                !radius.IsInteger ||
-                !colour.IsInteger)
-            {
-                throw new InvalidOperationException("CIRCLE expects numeric values.");
-            }
-
-            if (radius.Integer <= 0)
-            {
-                throw new InvalidOperationException("CIRCLE radius must be greater than zero.");
-            }
-
-            _machine.Circle(
-                x.Integer,
-                y.Integer,
-                radius.Integer,
-                colour.Integer,
-                circle.Filled);
-
-            return ExecutionResult.Continue();
-        }
-
-        if (statement is SpriteShowStatement spriteShow)
-        {
-            var spriteIndex = Evaluate(spriteShow.SpriteIndex);
-
-            if (!spriteIndex.IsInteger)
-            {
-                throw new InvalidOperationException("SPRITESHOW expects a numeric sprite index.");
-            }
-
-            _machine.ShowSprite(spriteIndex.Integer);
-
-            return ExecutionResult.Continue();
-        }
-
-        if (statement is SpriteHideStatement spriteHide)
-        {
-            var spriteIndex = Evaluate(spriteHide.SpriteIndex);
-
-            if (!spriteIndex.IsInteger)
-            {
-                throw new InvalidOperationException("SPRITEHIDE expects a numeric sprite index.");
-            }
-
-            _machine.HideSprite(spriteIndex.Integer);
 
             return ExecutionResult.Continue();
         }
