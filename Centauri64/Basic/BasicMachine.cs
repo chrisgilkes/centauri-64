@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using System.Collections.Generic;
 using Centauri64.Console;
 using Centauri64.Machine;
 using Centauri64.Machine.Sprites;
@@ -61,6 +63,18 @@ public sealed class BasicMachine
             if(source == "LIST")
             {
                 ListProgram();
+                return;
+            }
+
+            if (source == "DIR")
+            {
+                ListPrograms();
+                return;
+            }
+
+            if (source.StartsWith("DELETE "))
+            {
+                DeleteProgram(source);
                 return;
             }
 
@@ -193,6 +207,48 @@ public sealed class BasicMachine
         {
             OnProgramFinished();
         }
+    }
+
+    private void ListPrograms()
+    {
+        var programs = _storage.GetPrograms().ToList();
+
+        _console.WriteLine("");
+
+        foreach (var program in programs)
+        {
+            _console.WriteLine(program);
+        }
+
+        _console.WriteLine("");
+
+        _console.WriteLine(
+            $"{programs.Count} PROGRAM{(programs.Count == 1 ? "" : "S")}");
+
+        _console.WriteLine("");
+        _console.WriteLine("READY.");
+    }
+
+    private void DeleteProgram(string source)
+    {
+        var argument = source["DELETE ".Length..].Trim();
+
+        if (argument.Length < 2 ||
+            argument[0] != '"' ||
+            argument[^1] != '"')
+        {
+            throw new InvalidOperationException("EXPECTED PROGRAM NAME");
+        }
+
+        var name = argument[1..^1];
+
+        _storage.Delete(name);
+        _spriteStorage.Delete(name);
+
+        _console.WriteLine("");
+        _console.WriteLine($"DELETED {name.ToUpperInvariant()}");
+        _console.WriteLine("");
+        _console.WriteLine("READY.");
     }
 
     public void Stop()

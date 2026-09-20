@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.IO;
 using System.Collections.Generic;
 namespace Centauri64.Basic;
@@ -38,6 +39,27 @@ public sealed class ProgramStorage
         }
 
         return File.ReadLines(path);
+    }
+
+    public IEnumerable<string> GetPrograms()
+    {
+        return Directory
+            .EnumerateFiles(_programDirectory, "*.bas")
+            .Select(Path.GetFileNameWithoutExtension)
+            .OrderBy(name => name);
+    }
+
+    public void Delete(string name)
+    {
+        var path = GetProgramPath(name);
+
+        if (!File.Exists(path))
+        {
+            throw new InvalidOperationException(
+                "PROGRAM NOT FOUND");
+        }
+
+        File.Delete(path);
     }
 
     private string GetProgramPath(string name)

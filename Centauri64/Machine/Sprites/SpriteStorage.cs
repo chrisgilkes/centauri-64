@@ -104,6 +104,16 @@ public sealed class SpriteStorage
         return name.ToUpperInvariant();
     }
 
+    public void Delete(string name)
+    {
+        var path = GetSpritePath(name);
+
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
+    }
+
     public void Load(string name,SpriteAssetStore assets)
     {
         var path =
