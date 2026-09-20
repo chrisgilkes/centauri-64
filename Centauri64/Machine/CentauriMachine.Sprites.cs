@@ -110,11 +110,72 @@ public sealed partial class CentauriMachine
         if (!first.Visible || !second.Visible)
             return false;
 
+        if (!TryGetSpriteBounds(
+                first,
+                out var firstLeft,
+                out var firstTop,
+                out var firstRight,
+                out var firstBottom))
+        {
+            return false;
+        }
+
+        if (!TryGetSpriteBounds(
+                second,
+                out var secondLeft,
+                out var secondTop,
+                out var secondRight,
+                out var secondBottom))
+        {
+            return false;
+        }
+
+        var firstWorldLeft = first.X + firstLeft;
+        var firstWorldTop = first.Y + firstTop;
+        var firstWorldRight = first.X + firstRight;
+        var firstWorldBottom = first.Y + firstBottom;
+
+        var secondWorldLeft = second.X + secondLeft;
+        var secondWorldTop = second.Y + secondTop;
+        var secondWorldRight = second.X + secondRight;
+        var secondWorldBottom = second.Y + secondBottom;
+
         return
-            first.X < second.X + CentauriSprite.WIDTH &&
-            first.X + CentauriSprite.WIDTH > second.X &&
-            first.Y < second.Y + CentauriSprite.HEIGHT &&
-            first.Y + CentauriSprite.HEIGHT > second.Y;
+            firstWorldLeft <= secondWorldRight &&
+            firstWorldRight >= secondWorldLeft &&
+            firstWorldTop <= secondWorldBottom &&
+            firstWorldBottom >= secondWorldTop;
+    }
+
+    private static bool TryGetSpriteBounds(CentauriSprite sprite,out int left,out int top,out int right,out int bottom)
+    {
+        left = CentauriSprite.WIDTH;
+        top = CentauriSprite.HEIGHT;
+        right = -1;
+        bottom = -1;
+
+        for (var y = 0; y < CentauriSprite.HEIGHT; y++)
+        {
+            for (var x = 0; x < CentauriSprite.WIDTH; x++)
+            {
+                if (sprite.Pixels[y, x] == 0)
+                    continue;
+
+                if (x < left)
+                    left = x;
+
+                if (x > right)
+                    right = x;
+
+                if (y < top)
+                    top = y;
+
+                if (y > bottom)
+                    bottom = y;
+            }
+        }
+
+        return right >= left && bottom >= top;
     }
 
     private void CreateBuiltInSpriteAssets()
