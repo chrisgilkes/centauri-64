@@ -29,19 +29,43 @@ public sealed class BasicMachine
 
     private readonly CentauriMachine _machine;
 
+    private readonly BasicEditorTheme _editorTheme;
+
+    private readonly BasicSourceRenderer _sourceRenderer;
+
     public BasicMachine(TextConsole console, CentauriMachine machine)
     {
-        _console = console;
+        _console        = console;
 
-        _machine = machine;
+        _machine        = machine;
 
-        _interpreter = new Interpreter(console, machine);
+        _editorTheme    = new BasicEditorTheme();
 
-        _storage = new ProgramStorage();
+        _console.Background = _editorTheme.BackgroundColour;
+        _console.Foreground = _editorTheme.TextColour;
+        _console.Clear();
 
-        _spriteStorage = new SpriteStorage();
+        _sourceRenderer = new BasicSourceRenderer(_tokenizer,_editorTheme);
+
+        _interpreter    = new Interpreter(console, machine);
+
+        _storage        = new ProgramStorage();
+
+        _spriteStorage  = new SpriteStorage();
 
         _console.LineEntered += OnLineEntered;
+        _console.InputChanged += UpdateInputHighlighting;
+
+    }
+
+    private void WriteSystemMessage(string text)
+    {
+        _console.WriteLine(text,_editorTheme.SystemColour);
+    }
+
+    private void WriteError(string text)
+    {
+        _console.WriteLine(text,_editorTheme.ErrorColour);
     }
 
     private void OnLineEntered(string source)
@@ -223,8 +247,7 @@ public sealed class BasicMachine
 
         _console.WriteLine("");
 
-        _console.WriteLine(
-            $"{programs.Count} PROGRAM{(programs.Count == 1 ? "" : "S")}");
+        _console.WriteLine($"{programs.Count} PROGRAM{(programs.Count == 1 ? "" : "S")}");
 
         _console.WriteLine("");
         _console.WriteLine("READY.");
@@ -301,6 +324,13 @@ public sealed class BasicMachine
         }
     }
 
+    private void UpdateInputHighlighting()
+    {
+        var source = _console.GetCurrentLine();
+
+        _sourceRenderer.ColourExistingLine(_console,source,_console.CursorRow,0);
+    }
+
     private void OnProgramFinished()
     {
         _console.WriteLine("");
@@ -315,7 +345,7 @@ public sealed class BasicMachine
         {
             foreach (var line in _program.Lines)
             {
-                _console.WriteLine(line.Source);
+                _sourceRenderer.WriteLine(_console,line.Source);
             }
 
             _console.WriteLine("");
@@ -329,7 +359,7 @@ public sealed class BasicMachine
             {
                 if (line.LineNumber == lineNumber)
                 {
-                    _console.WriteLine(line.Source);
+                    _sourceRenderer.WriteLine(_console,line.Source);
                     break;
                 }
             }
@@ -355,7 +385,7 @@ public sealed class BasicMachine
                 if (line.LineNumber >= startLine &&
                     line.LineNumber <= endLine)
                 {
-                    _console.WriteLine(line.Source);
+                    _sourceRenderer.WriteLine(_console,line.Source);
                 }
             }
 

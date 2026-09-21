@@ -87,6 +87,7 @@ public sealed class TextConsole
     }
 
     public event Action<string>? LineEntered;
+    public event Action? InputChanged;
 
     private int _foreground = 1;
     private int _background = 6;
@@ -111,11 +112,26 @@ public sealed class TextConsole
 
     public int DebugCellBackground => _cells[0, 0].Background;
 
+    public int CursorColumn => _cursorColumn;
+    public int CursorRow => _cursorRow;
+
     public TextConsole()
     {
         _cells = new ScreenCell[ROWS, COLUMNS];
 
         Clear();
+    }
+
+    public string GetCurrentLine()
+    {
+        var characters = new char[COLUMNS];
+
+        for (var column = 0; column < COLUMNS; column++)
+        {
+            characters[column] = _cells[_cursorRow, column].Character;
+        }
+
+        return new string(characters).TrimEnd();
     }
 
     public void Update(GameTime gameTime)
@@ -189,6 +205,7 @@ public sealed class TextConsole
             var character = (char)('A' + (key - Keys.A));
             PutCharacter(character);
             ResetCursorFlash();
+            InputChanged?.Invoke();
             return;
         }
 
@@ -200,6 +217,7 @@ public sealed class TextConsole
 
             PutCharacter(character);
             ResetCursorFlash();
+            InputChanged?.Invoke();
             return;
         }
 
@@ -209,6 +227,7 @@ public sealed class TextConsole
         {
             PutCharacter(punctuation.Value);
             ResetCursorFlash();
+            InputChanged?.Invoke();
         }
 
         if (key == Keys.Left)
@@ -243,6 +262,7 @@ public sealed class TextConsole
         {
             PutCharacter(' ');
             ResetCursorFlash();
+            InputChanged?.Invoke();
             return;
         }
 
@@ -356,6 +376,8 @@ public sealed class TextConsole
                 ' ',
                 _foreground,
                 _background);
+
+        InputChanged?.Invoke();
     }
 
     private void ResetCursorFlash()
@@ -383,7 +405,19 @@ public sealed class TextConsole
         foreach (var character in text)
         {
             PutCharacter(character);
+            InputChanged?.Invoke();
         }
+    }
+
+    public void Write(string text, int foreground)
+    {
+        var previousForeground = _foreground;
+
+        _foreground = foreground;
+
+        Write(text);
+
+        _foreground = previousForeground;
     }
 
     public void WriteLine(string text)
@@ -391,6 +425,13 @@ public sealed class TextConsole
         Write(text);
         NewLine();
     }
+
+    public void WriteLine(string text, int foreground)
+    {
+        Write(text, foreground);
+        NewLine();
+    }
+    
 
     public void WriteAt(int x,int y,string text)
     {
@@ -406,6 +447,19 @@ public sealed class TextConsole
 
             _cells[y, column] = new ScreenCell(text[i], _foreground, _background);
         }
+    }
+
+    public void SetCellForeground(int column,int row,int foreground)
+    {
+        if (column < 0 || column >= COLUMNS ||
+            row < 0 || row >= ROWS)
+        {
+            return;
+        }
+
+        var cell = _cells[row, column];
+
+        _cells[row, column] =new ScreenCell(cell.Character,foreground,cell.Background);
     }
 
     private void PutCharacter(char character)
@@ -452,13 +506,14 @@ public sealed class TextConsole
         {
             for (var column = 0; column < COLUMNS; column++)
             {
-                _cells[row - 1, column] = new ScreenCell(_cells[row, column].Character, _foreground, _background);
+                var sourceCell = _cells[row, column];
+                _cells[row - 1, column] = new ScreenCell(sourceCell.Character,sourceCell.Foreground,sourceCell.Background);
             }
         }
 
         for (var column = 0; column < COLUMNS; column++)
         {
-            _cells[ROWS - 1, column] = new ScreenCell(' ', _foreground, _background);
+            _cells[ROWS - 1, column] =new ScreenCell(' ',_foreground,_background);
         }
     }
 
@@ -546,23 +601,6 @@ public sealed class TextConsole
                     backgroundColor);
             }
         }
-    }
-
-    private string GetCurrentLine()
-    {
-        var lineLength = GetLineLength(_cursorRow);
-
-        var characters = new char[lineLength];
-
-        for (var column = 0;
-            column < lineLength;
-            column++)
-        {
-            characters[column] =
-                _cells[_cursorRow, column].Character;
-        }
-
-        return new string(characters).TrimEnd();
     }
 
     public void ClearScreenReady()

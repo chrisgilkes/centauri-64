@@ -35,30 +35,27 @@ public sealed class Tokenizer
             {
                 var token = ReadWord();
 
-                tokens.Add(token);
-
                 if (token.Type == TokenType.Rem)
                 {
+                    tokens.Add(ReadRem(token.Start));
                     break;
                 }
+
+                tokens.Add(token);
 
                 continue;
             }
 
             if (character == '(')
             {
-                tokens.Add(
-                    new Token(TokenType.LeftParenthesis, "("));
-
+                tokens.Add(new Token(TokenType.LeftParenthesis,"(",_position,1));
                 Advance();
                 continue;
             }
 
             if (character == ')')
             {
-                tokens.Add(
-                    new Token(TokenType.RightParenthesis, ")"));
-
+                tokens.Add(new Token(TokenType.RightParenthesis, ")", _position, 1));
                 Advance();
                 continue;
             }
@@ -73,24 +70,21 @@ public sealed class Tokenizer
             {
                 if (Peek() == '=')
                 {
-                    tokens.Add(
-                        new Token(TokenType.LessThanOrEqual, "<="));
+                    tokens.Add(new Token(TokenType.LessThanOrEqual,"<=",_position,2));
 
                     Advance();
                     Advance();
                 }
                 else if (Peek() == '>')
                 {
-                    tokens.Add(
-                        new Token(TokenType.NotEqual, "<>"));
+                    tokens.Add(new Token(TokenType.NotEqual,"<>",_position,2));
 
                     Advance();
                     Advance();
                 }
                 else
                 {
-                    tokens.Add(
-                        new Token(TokenType.LessThan, "<"));
+                    tokens.Add(new Token(TokenType.LessThan,"<",_position,1));
 
                     Advance();
                 }
@@ -103,7 +97,11 @@ public sealed class Tokenizer
                 if (Peek() == '=')
                 {
                     tokens.Add(
-                        new Token(TokenType.GreaterThanOrEqual, ">="));
+                        new Token(
+                            TokenType.GreaterThanOrEqual,
+                            ">=",
+                            _position,
+                            2));
 
                     Advance();
                     Advance();
@@ -111,7 +109,11 @@ public sealed class Tokenizer
                 else
                 {
                     tokens.Add(
-                        new Token(TokenType.GreaterThan, ">"));
+                        new Token(
+                            TokenType.GreaterThan,
+                            ">",
+                            _position,
+                            1));
 
                     Advance();
                 }
@@ -121,43 +123,42 @@ public sealed class Tokenizer
 
             if (character == '=')
             {
-                tokens.Add(new Token(TokenType.Equals, "="));
+                tokens.Add(new Token(TokenType.Equals, "=", _position, 1));
                 Advance();
                 continue;
             }
 
             if (character == '+')
             {
-                tokens.Add(new Token(TokenType.Plus, "+"));
+                tokens.Add(new Token(TokenType.Plus, "+", _position, 1));
                 Advance();
                 continue;
             }
 
             if (character == '-')
             {
-                tokens.Add(new Token(TokenType.Minus, "-"));
+                tokens.Add(new Token(TokenType.Minus, "-", _position, 1));
                 Advance();
                 continue;
             }
 
             if (character == '*')
             {
-                tokens.Add(new Token(TokenType.Multiply, "*"));
+                tokens.Add(new Token(TokenType.Multiply, "*", _position, 1));
                 Advance();
                 continue;
             }
 
             if (character == '/')
             {
-                tokens.Add(new Token(TokenType.Divide, "/"));
+                tokens.Add(new Token(TokenType.Divide, "/", _position, 1));
                 Advance();
                 continue;
             }
 
             if (character == ',')
             {
-                tokens.Add(
-                    new Token(TokenType.Comma, ","));
+                tokens.Add(new Token(TokenType.Comma, ",", _position, 1));
 
                 Advance();
                 continue;
@@ -166,20 +167,13 @@ public sealed class Tokenizer
             throw new InvalidOperationException($"Unexpected character '{character}' at position {_position}.");
         }
 
-        tokens.Add(new Token(TokenType.EndOfLine, string.Empty));
+        tokens.Add(new Token(TokenType.EndOfLine,string.Empty,_position,0));
 
         return tokens;
     }
 
-    private Token ReadRem()
+    private Token ReadRem(int start)
     {
-        while (!IsAtEnd() && char.IsWhiteSpace(Current()))
-        {
-            Advance();
-        }
-
-        var start = _position;
-
         while (!IsAtEnd())
         {
             Advance();
@@ -187,7 +181,7 @@ public sealed class Tokenizer
 
         var text = _source[start.._position];
 
-        return new Token(TokenType.Rem, text);
+        return new Token(TokenType.Rem,text,start,_position - start);
     }
 
     private Token ReadWord()
@@ -237,7 +231,7 @@ public sealed class Tokenizer
             _ => TokenType.Identifier
         };
 
-        return new Token(type, text);
+        return new Token(type,text,start,_position - start);
     }
 
     private char Peek()
@@ -250,9 +244,11 @@ public sealed class Tokenizer
 
     private Token ReadString()
     {
+        var tokenStart = _position;
+
         Advance();
 
-        var start = _position;
+        var textStart = _position;
 
         while (!IsAtEnd() && Current() != '"')
         {
@@ -261,15 +257,14 @@ public sealed class Tokenizer
 
         if (IsAtEnd())
         {
-            throw new InvalidOperationException(
-                "Unterminated string.");
+            throw new InvalidOperationException("Unterminated string.");
         }
 
-        var text = _source[start.._position];
+        var text = _source[textStart.._position];
 
         Advance();
 
-        return new Token(TokenType.String, text);
+        return new Token(TokenType.String,text,tokenStart,_position - tokenStart);
     }
 
     private bool IsAtEnd()
@@ -298,6 +293,6 @@ public sealed class Tokenizer
 
         var text = _source[start.._position];
 
-        return new Token(TokenType.Number, text);
+        return new Token(TokenType.Number,text,start,_position - start);
     }
 }
