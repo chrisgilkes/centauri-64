@@ -10,7 +10,7 @@ namespace Centauri64.Machine;
 
 public sealed partial class CentauriMachine
 {
-    public const int MAX_SPRITES = 16;
+    public const int MAX_SPRITES = 32;
 
     private readonly CentauriSprite[] _sprites = new CentauriSprite[MAX_SPRITES];
 

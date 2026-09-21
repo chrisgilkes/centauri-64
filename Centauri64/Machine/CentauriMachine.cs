@@ -42,7 +42,7 @@ public sealed partial class CentauriMachine
     public int BorderColour { get; private set; } = DEFAULT_BORDER;
 
     public const int DEFAULT_INK = 1;
-    public const int DEFAULT_PAPER = 6;
+    public const int DEFAULT_PAPER = 0;
     public const int DEFAULT_BORDER = 6;
 
     private CentauriDisplayMode _displayMode = CentauriDisplayMode.HighResolution;
@@ -152,9 +152,11 @@ public sealed partial class CentauriMachine
 
     private static void ValidateColour(int colour)
     {
-        if (colour < 0 || colour > 15)
+        if (colour < 0 ||
+            colour >= CentauriPalette.MAX_COLORS)
         {
-            throw new InvalidOperationException("Colour must be between 0 and 15.");
+            throw new InvalidOperationException(
+                $"Colour must be between 0 and {CentauriPalette.MAX_COLORS - 1}.");
         }
     }
 
