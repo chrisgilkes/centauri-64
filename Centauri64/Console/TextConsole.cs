@@ -1,5 +1,5 @@
 using System;
-using System.Reflection.Metadata;
+using System.Collections.Generic;
 using Centauri64.Graphics;
 using Centauri64.Machine;
 using Microsoft.Xna.Framework;
@@ -115,6 +115,16 @@ public sealed class TextConsole
     public int CursorColumn => _cursorColumn;
     public int CursorRow => _cursorRow;
 
+    private readonly List<string> _inputHistory = new();
+
+    private int _historyIndex = -1;
+
+    private const int MAX_SCROLLBACK_LINES = 256;
+
+    private readonly List<ScreenCell[]> _scrollback = new();
+
+    private int _scrollbackOffset;
+
     public TextConsole()
     {
         _cells = new ScreenCell[ROWS, COLUMNS];
@@ -156,11 +166,15 @@ public sealed class TextConsole
             keyboardState.IsKeyDown(Keys.LeftShift) ||
             keyboardState.IsKeyDown(Keys.RightShift);
 
+        var control =
+            keyboardState.IsKeyDown(Keys.LeftControl) ||
+            keyboardState.IsKeyDown(Keys.RightControl);
+
         foreach (var key in keyboardState.GetPressedKeys())
         {
             if (_previousKeyboardState.IsKeyUp(key))
             {
-                HandleKey(key, shift);
+                HandleKey(key, shift, control);
 
                 if (CanRepeat(key))
                 {
@@ -170,12 +184,12 @@ public sealed class TextConsole
             }
         }
 
-        UpdateKeyRepeat(keyboardState,shift,gameTime.ElapsedGameTime.TotalSeconds);
+        UpdateKeyRepeat(keyboardState,shift,control,gameTime.ElapsedGameTime.TotalSeconds);
 
         _previousKeyboardState = keyboardState;
     }
 
-    private void UpdateKeyRepeat(KeyboardState keyboardState,bool shift,double deltaTime)
+    private void UpdateKeyRepeat(KeyboardState keyboardState,bool shift,bool control,double deltaTime)
     {
         if (!_repeatingKey.HasValue)
             return;
@@ -193,13 +207,18 @@ public sealed class TextConsole
 
         if (_keyRepeatTimer <= 0.0)
         {
-            HandleKey(key, shift);
+            HandleKey(key, shift, control);
             _keyRepeatTimer += KEY_REPEAT_INTERVAL;
         }
     }
 
-    private void HandleKey(Keys key,  bool shift)
+    private void HandleKey(Keys key,  bool shift, bool control)
     {
+        if (_scrollbackOffset > 0 && key != Keys.PageUp && key != Keys.PageDown)
+        {
+            _scrollbackOffset = 0;
+        }
+
         if (key >= Keys.A && key <= Keys.Z)
         {
             var character = (char)('A' + (key - Keys.A));
@@ -246,14 +265,30 @@ public sealed class TextConsole
 
         if (key == Keys.Up)
         {
-            MoveCursorUp();
+            if (control)
+            {
+                PreviousHistory();
+            }
+            else
+            {
+                MoveCursorUp();
+            }
+
             ResetCursorFlash();
             return;
         }
 
         if (key == Keys.Down)
         {
-            MoveCursorDown();
+            if (control)
+            {
+                NextHistory();
+            }
+            else
+            {
+                MoveCursorDown();
+            }
+
             ResetCursorFlash();
             return;
         }
@@ -284,11 +319,19 @@ public sealed class TextConsole
         {
             var line = GetCurrentLine();
 
+            if (!string.IsNullOrWhiteSpace(line))
+            {
+                _inputHistory.Add(line);
+            }
+
+            _historyIndex = _inputHistory.Count;
+
             NewLine();
-            
+
             LineEntered?.Invoke(line);
-            
+
             ResetCursorFlash();
+            return;
         }
 
         if (key == Keys.Home)
@@ -304,6 +347,70 @@ public sealed class TextConsole
             ResetCursorFlash();
             return;
         }
+
+        if (key == Keys.PageUp)
+        {
+            PageUp();
+            ResetCursorFlash();
+            return;
+        }
+
+        if (key == Keys.PageDown)
+        {
+            PageDown();
+            ResetCursorFlash();
+            return;
+        }
+        
+    }
+
+    private void PageUp()
+    {
+        if (_scrollback.Count == 0)
+            return;
+
+        _scrollbackOffset = Math.Min(
+            _scrollbackOffset + 40,
+            _scrollback.Count);
+    }
+
+    private void PageDown()
+    {
+        _scrollbackOffset = Math.Max(
+            0,
+            _scrollbackOffset - 40);
+    }
+
+    private void PreviousHistory()
+    {
+        if (_inputHistory.Count == 0)
+            return;
+
+        if (_historyIndex > 0)
+            _historyIndex--;
+
+        SetCurrentLine(
+            _inputHistory[_historyIndex]);
+    }
+
+    private void NextHistory()
+    {
+        if (_inputHistory.Count == 0)
+            return;
+
+        if (_historyIndex < _inputHistory.Count - 1)
+        {
+            _historyIndex++;
+
+            SetCurrentLine(
+                _inputHistory[_historyIndex]);
+
+            return;
+        }
+
+        _historyIndex = _inputHistory.Count;
+
+        SetCurrentLine(string.Empty);
     }
 
     private int GetLineLength(int row)
@@ -502,6 +609,22 @@ public sealed class TextConsole
 
     private void Scroll()
     {
+        var scrolledLine = new ScreenCell[COLUMNS];
+
+        for (var column = 0; column < COLUMNS; column++)
+        {
+            var cell = _cells[0, column];
+
+            scrolledLine[column] =new ScreenCell(cell.Character,cell.Foreground,cell.Background);
+        }
+
+        _scrollback.Add(scrolledLine);
+
+        if (_scrollback.Count > MAX_SCROLLBACK_LINES)
+        {
+            _scrollback.RemoveAt(0);
+        }
+
         for (var row = 1; row < ROWS; row++)
         {
             for (var column = 0; column < COLUMNS; column++)
@@ -517,6 +640,39 @@ public sealed class TextConsole
         }
     }
 
+    private ScreenCell GetDisplayCell(int row,int column)
+    {
+        if (_scrollbackOffset == 0)
+        {
+            return _cells[row, column];
+        }
+
+        var historyStart = _scrollback.Count - _scrollbackOffset;
+
+        var historyIndex =
+            historyStart + row;
+
+        if (historyIndex >= 0 &&
+            historyIndex < _scrollback.Count)
+        {
+            return _scrollback[historyIndex][column];
+        }
+
+        var liveRow =
+            historyIndex - _scrollback.Count;
+
+        if (liveRow >= 0 &&
+            liveRow < ROWS)
+        {
+            return _cells[liveRow, column];
+        }
+
+        return new ScreenCell(
+            ' ',
+            _foreground,
+            _background);
+    }
+
     public void Draw(SpriteBatch spriteBatch,BitmapFont font,Texture2D pixel,Color foregroundColor,
             Color backgroundColor,bool drawBackground = true, bool drawCursor = true)
     {
@@ -524,7 +680,7 @@ public sealed class TextConsole
         {
             for (var column = 0; column < COLUMNS; column++)
             {
-                var cell = _cells[row, column];
+                var cell = GetDisplayCell(row, column);
 
                 var foreground =
                     CentauriPalette.Get(cell.Foreground);
@@ -565,7 +721,7 @@ public sealed class TextConsole
             }
         }
 
-        if (drawCursor && _cursorVisible)
+        if (drawCursor && _cursorVisible && _scrollbackOffset == 0)
         {
             var cursorX =
                 SCREEN_OFFSET_X +
