@@ -59,7 +59,7 @@ public sealed partial class BasicMachine
         ShowBootMessage();
     }
 
-    private void ShowBootMessage()
+    public  void ShowBootMessage()
     {
         var systemMemoryK = _machine.SystemMemoryBytes / 1024;
 

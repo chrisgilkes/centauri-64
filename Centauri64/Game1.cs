@@ -8,10 +8,11 @@ using Centauri64.Graphics;
 using Centauri64.Console;
 using Centauri64.Basic;
 using Centauri64.Machine;
+using Centauri64.Game;
 
 namespace Centauri64;
 
-public class Game1 : Game
+public class Game1 : Microsoft.Xna.Framework.Game
 {
     private GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch;
@@ -35,6 +36,17 @@ public class Game1 : Game
 
     private KeyboardState _previousKeyboardState;
 
+    private GameMode _gameMode = GameMode.ComputerRoom;
+
+    private bool _waitForInputRelease;
+
+    private bool _computerPoweringOn;
+    private double _powerOnTimer;
+
+    private const double POWER_ON_DELAY = 0.5;
+
+    private ComputerRoom _computerRoom;
+
     public Game1()
     {
         _graphics = new GraphicsDeviceManager(this);
@@ -53,8 +65,6 @@ public class Game1 : Game
 
     protected override void Initialize()
     {
-        // TODO: Add your initialization logic here
-
         base.Initialize();
     }
 
@@ -78,12 +88,23 @@ public class Game1 : Game
         var fontTexture = Content.Load<Texture2D>("Fonts/centauri64-font");
         _font           = new BitmapFont(fontTexture);
 
+        _computerRoom   = new ComputerRoom(_font);
+
+        _computerRoom.ComputerSelected += () =>
+        {
+            _gameMode = GameMode.Computer;
+            _computerPoweringOn = true;
+            _powerOnTimer = 0.0;
+            _waitForInputRelease = true;
+
+            _machine.ResetDisplay();
+
+            // Power-on sound.
+            _machine.Beep(440, 100);
+        };
+
         _console = new TextConsole();
         _programConsole = new TextConsole();
-
-        _console.WriteLine("CENTAURI64");
-        _console.WriteLine("");
-        _console.WriteLine("READY.");
 
         _machine = new CentauriMachine(_console, _programConsole);
 
@@ -118,11 +139,59 @@ public class Game1 : Game
 
     protected override void Update(GameTime gameTime)
     {
-        /*if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
-            Exit();*/
+        var keyboardState = Keyboard.GetState();
+
+        if (_gameMode == GameMode.ComputerRoom)
+        {
+            _computerRoom.Update();
+
+            _previousKeyboardState = keyboardState;
+
+            base.Update(gameTime);
+            return;
+        }
+
+        if (_waitForInputRelease)
+        {
+            if (keyboardState.GetPressedKeyCount() == 0)
+            {
+                _waitForInputRelease = false;
+            }
+
+            _previousKeyboardState = keyboardState;
+
+            base.Update(gameTime);
+            return;
+        }
+
+        if (_computerPoweringOn)
+        {
+            _powerOnTimer += gameTime.ElapsedGameTime.TotalSeconds;
+
+            if (_powerOnTimer >= POWER_ON_DELAY)
+            {
+                _computerPoweringOn = false;
+
+                _basicMachine.ShowBootMessage();
+            }
+
+            _previousKeyboardState = keyboardState;
+
+            base.Update(gameTime);
+            return;
+        }
+
         _machine.UpdateInput();
 
-        var keyboardState = Keyboard.GetState();
+        if (KeyPressed(keyboardState, Keys.F12))
+        {
+            _gameMode = GameMode.ComputerRoom;
+
+            _previousKeyboardState = keyboardState;
+
+            base.Update(gameTime);
+            return;
+        }
 
         if (KeyPressed(keyboardState, Keys.F1))
             SetWindowScale(1);
@@ -194,8 +263,38 @@ public class Game1 : Game
         base.Update(gameTime);
     }
 
+    private void DrawComputerRoom()
+    {
+        GraphicsDevice.SetRenderTarget(
+            _developmentRenderTarget);
+
+        GraphicsDevice.Clear(Color.Black);
+
+        _computerRoom.Draw(_spriteBatch);
+
+        GraphicsDevice.SetRenderTarget(null);
+
+        DrawRenderTargetToWindow(
+            _developmentRenderTarget);
+    }
+
     protected override void Draw(GameTime gameTime)
     {
+        if (_computerPoweringOn)
+        {
+            GraphicsDevice.Clear(Color.Black);
+
+            base.Draw(gameTime);
+            return;
+        }
+
+        if (_gameMode == GameMode.ComputerRoom)
+        {
+            DrawComputerRoom();
+
+            base.Draw(gameTime);
+            return;
+        }
 
         if (_basicMachine.IsRunning)
         {
