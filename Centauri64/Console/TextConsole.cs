@@ -610,4 +610,35 @@ public sealed class TextConsole
         WriteLine("");
         WriteLine("READY.");
     }
+
+    public void SetCurrentLine(string text)
+    {
+        // Clear the current row.
+        for (var column = 0; column < COLUMNS; column++)
+        {
+            _cells[_cursorRow, column] =
+                new ScreenCell(
+                    ' ',
+                    _foreground,
+                    _background);
+        }
+
+        // Write the new text directly into the row.
+        var length = Math.Min(text.Length, COLUMNS);
+
+        for (var column = 0; column < length; column++)
+        {
+            _cells[_cursorRow, column] =
+                new ScreenCell(
+                    text[column],
+                    _foreground,
+                    _background);
+        }
+
+        // Put the cursor at the end of the line.
+        _cursorColumn = Math.Min(length, COLUMNS - 1);
+
+        ResetCursorFlash();
+        InputChanged?.Invoke();
+    }
 }

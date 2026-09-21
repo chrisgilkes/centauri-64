@@ -7,7 +7,7 @@ using Centauri64.Machine.Sprites;
 
 namespace Centauri64.Basic;
 
-public sealed class BasicMachine
+public sealed partial class BasicMachine
 {
     private readonly TextConsole _console;
 
@@ -74,13 +74,6 @@ public sealed class BasicMachine
         _console.WriteLine("READY.");
     }
 
-    private int GetBasicMemoryFree()
-    {
-        var used = _program.GetMemoryUsage();
-
-        return Math.Max(0,_machine.BasicMemoryBytes - used);
-    }
-
     private void WriteSystemMessage(string text)
     {
         _console.WriteLine(text,_editorTheme.SystemColour);
@@ -123,6 +116,12 @@ public sealed class BasicMachine
             if (source == "MEM")
             {
                 ShowMemory();
+                return;
+            }
+
+            if (source.StartsWith("EDIT "))
+            {
+                EditLine(source);
                 return;
             }
 
@@ -181,91 +180,6 @@ public sealed class BasicMachine
         }
     }
 
-    private void ShowMemory()
-    {
-        var programBytes = _program.GetMemoryUsage();
-        var freeBytes = GetBasicMemoryFree();
-
-        _console.WriteLine("");
-        _console.WriteLine("BASIC MEMORY");
-        _console.WriteLine("");
-        _console.WriteLine($"PROGRAM  {programBytes} BYTES");
-        _console.WriteLine($"FREE     {freeBytes} BYTES");
-        _console.WriteLine("");
-        _console.WriteLine("READY.");
-    }
-
-    private void LoadProgram(string source)
-    {
-        var argument = source["LOAD ".Length..].Trim();
-
-        if (argument.Length < 2 ||
-            argument[0] != '"' ||
-            argument[^1] != '"')
-        {
-            throw new InvalidOperationException(
-                "EXPECTED PROGRAM NAME");
-        }
-
-        var name = argument[1..^1];
-
-        var sourceLines = _storage.Load(name);
-
-        var loadedProgram = new BasicProgram();
-
-        foreach (var sourceLine in sourceLines)
-        {
-            var tokens =
-                _tokenizer.Tokenize(sourceLine);
-
-            var line =
-                _parser.ParseLine(
-                    tokens,
-                    sourceLine);
-
-            loadedProgram.StoreLine(line);
-        }
-
-        _program.Clear();
-
-        foreach (var line in loadedProgram.Lines)
-        {
-            _program.StoreLine(line);
-        }
-
-
-        _spriteStorage.Load(name,_machine.SpriteAssets);
-
-        _console.WriteLine("");
-        _console.WriteLine($"LOADED {name}");
-        _console.WriteLine("");
-        _console.WriteLine("READY.");
-    }
-
-    private void SaveProgram(string source)
-    {
-        var argument = source["SAVE ".Length..].Trim();
-
-        if (argument.Length < 2 ||
-            argument[0] != '"' ||
-            argument[^1] != '"')
-        {
-            throw new InvalidOperationException(
-                "EXPECTED PROGRAM NAME");
-        }
-
-        var name = argument[1..^1];
-
-        _storage.Save(name,_program);
-
-        _spriteStorage.Save(name,_machine.SpriteAssets);
-
-        _console.WriteLine("");
-        _console.WriteLine($"SAVED {name}");
-        _console.WriteLine("");
-        _console.WriteLine("READY.");
-    }
-
     private void RunProgram()
     {
         _interpreter.Start(_program);
@@ -274,47 +188,6 @@ public sealed class BasicMachine
         {
             OnProgramFinished();
         }
-    }
-
-    private void ListPrograms()
-    {
-        var programs = _storage.GetPrograms().ToList();
-
-        _console.WriteLine("");
-
-        foreach (var program in programs)
-        {
-            _console.WriteLine(program);
-        }
-
-        _console.WriteLine("");
-
-        _console.WriteLine($"{programs.Count} PROGRAM{(programs.Count == 1 ? "" : "S")}");
-
-        _console.WriteLine("");
-        _console.WriteLine("READY.");
-    }
-
-    private void DeleteProgram(string source)
-    {
-        var argument = source["DELETE ".Length..].Trim();
-
-        if (argument.Length < 2 ||
-            argument[0] != '"' ||
-            argument[^1] != '"')
-        {
-            throw new InvalidOperationException("EXPECTED PROGRAM NAME");
-        }
-
-        var name = argument[1..^1];
-
-        _storage.Delete(name);
-        _spriteStorage.Delete(name);
-
-        _console.WriteLine("");
-        _console.WriteLine($"DELETED {name.ToUpperInvariant()}");
-        _console.WriteLine("");
-        _console.WriteLine("READY.");
     }
 
     public void Stop()
@@ -366,102 +239,10 @@ public sealed class BasicMachine
         }
     }
 
-    private void UpdateInputHighlighting()
-    {
-        var source = _console.GetCurrentLine();
-
-        _sourceRenderer.ColourExistingLine(_console,source,_console.CursorRow,0);
-    }
-
     private void OnProgramFinished()
     {
         _console.WriteLine("");
         _console.WriteLine("READY.");
     }
 
-    private void ListProgram(string source)
-    {
-        var argument = source["LIST".Length..].Trim();
-
-        if (string.IsNullOrEmpty(argument))
-        {
-            foreach (var line in _program.Lines)
-            {
-                _sourceRenderer.WriteLine(_console,line.Source);
-            }
-
-            _console.WriteLine("");
-            _console.WriteLine("READY.");
-            return;
-        }
-
-        if (int.TryParse(argument, out var lineNumber))
-        {
-            foreach (var line in _program.Lines)
-            {
-                if (line.LineNumber == lineNumber)
-                {
-                    _sourceRenderer.WriteLine(_console,line.Source);
-                    break;
-                }
-            }
-
-            _console.WriteLine("");
-            _console.WriteLine("READY.");
-            return;
-        }
-
-        var parts = argument.Split('-', 2);
-
-        if (parts.Length == 2 &&
-            int.TryParse(parts[0], out var startLine) &&
-            int.TryParse(parts[1], out var endLine))
-        {
-            if (startLine > endLine)
-            {
-                throw new InvalidOperationException("BAD LIST RANGE");
-            }
-
-            foreach (var line in _program.Lines)
-            {
-                if (line.LineNumber >= startLine &&
-                    line.LineNumber <= endLine)
-                {
-                    _sourceRenderer.WriteLine(_console,line.Source);
-                }
-            }
-
-            _console.WriteLine("");
-            _console.WriteLine("READY.");
-            return;
-        }
-
-        throw new InvalidOperationException("BAD LIST RANGE");
-    }
-
-    private void NewProgram()
-    {
-        _program.Clear();
-
-        _console.WriteLine("");
-        _console.WriteLine("READY.");
-    }
-
-    private void ClearScreen()
-    {
-        _console.Clear();
-
-        _console.WriteLine("");
-        _console.WriteLine("READY.");
-    }
-
-    private bool TryDeleteLine(string source)
-    {
-        if (!int.TryParse(source, out var lineNumber))
-            return false;
-
-        _program.DeleteLine(lineNumber);
-
-        return true;
-    }
 }
