@@ -56,6 +56,29 @@ public sealed class BasicMachine
         _console.LineEntered += OnLineEntered;
         _console.InputChanged += UpdateInputHighlighting;
 
+        ShowBootMessage();
+    }
+
+    private void ShowBootMessage()
+    {
+        var systemMemoryK = _machine.SystemMemoryBytes / 1024;
+
+        _console.WriteLine("       CENTAURI64 PERSONAL COMPUTER");
+        _console.WriteLine("");
+
+        _console.WriteLine(
+            $"       {systemMemoryK}K RAM   " +
+            $"{_machine.BasicMemoryBytes} BASIC BYTES FREE");
+
+        _console.WriteLine("");
+        _console.WriteLine("READY.");
+    }
+
+    private int GetBasicMemoryFree()
+    {
+        var used = _program.GetMemoryUsage();
+
+        return Math.Max(0,_machine.BasicMemoryBytes - used);
     }
 
     private void WriteSystemMessage(string text)
@@ -97,6 +120,12 @@ public sealed class BasicMachine
                 return;
             }
 
+            if (source == "MEM")
+            {
+                ShowMemory();
+                return;
+            }
+
             if (source.StartsWith("DELETE "))
             {
                 DeleteProgram(source);
@@ -118,8 +147,7 @@ public sealed class BasicMachine
             if (source == "RESET")
             {
                 _machine.ResetDisplay();
-                _console.WriteLine("");
-                _console.WriteLine("READY.");
+                ShowBootMessage();
                 return;
             }
 
@@ -151,6 +179,20 @@ public sealed class BasicMachine
         {
             _console.WriteLine($"?{exception.Message.ToUpperInvariant()}");
         }
+    }
+
+    private void ShowMemory()
+    {
+        var programBytes = _program.GetMemoryUsage();
+        var freeBytes = GetBasicMemoryFree();
+
+        _console.WriteLine("");
+        _console.WriteLine("BASIC MEMORY");
+        _console.WriteLine("");
+        _console.WriteLine($"PROGRAM  {programBytes} BYTES");
+        _console.WriteLine($"FREE     {freeBytes} BYTES");
+        _console.WriteLine("");
+        _console.WriteLine("READY.");
     }
 
     private void LoadProgram(string source)

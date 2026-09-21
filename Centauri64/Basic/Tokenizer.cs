@@ -8,10 +8,13 @@ public sealed class Tokenizer
     private string _source = string.Empty;
     private int _position;
 
-    public List<Token> Tokenize(string source)
+    private bool _allowIncomplete;
+
+    public List<Token> Tokenize(string source, bool allowIncomplete = false)
     {
         _source = source;
         _position = 0;
+        _allowIncomplete = allowIncomplete;
 
         var tokens = new List<Token>();
 
@@ -164,6 +167,12 @@ public sealed class Tokenizer
                 continue;
             }
 
+            if (_allowIncomplete)
+            {
+                Advance();
+                continue;
+            }
+
             throw new InvalidOperationException($"Unexpected character '{character}' at position {_position}.");
         }
 
@@ -246,6 +255,7 @@ public sealed class Tokenizer
     {
         var tokenStart = _position;
 
+        // Skip opening quote.
         Advance();
 
         var textStart = _position;
@@ -257,14 +267,30 @@ public sealed class Tokenizer
 
         if (IsAtEnd())
         {
+            if (_allowIncomplete)
+            {
+                var incompleteText = _source[textStart.._position];
+
+                return new Token(
+                    TokenType.String,
+                    incompleteText,
+                    tokenStart,
+                    _position - tokenStart);
+            }
+
             throw new InvalidOperationException("Unterminated string.");
         }
 
         var text = _source[textStart.._position];
 
+        // Skip closing quote.
         Advance();
 
-        return new Token(TokenType.String,text,tokenStart,_position - tokenStart);
+        return new Token(
+            TokenType.String,
+            text,
+            tokenStart,
+            _position - tokenStart);
     }
 
     private bool IsAtEnd()

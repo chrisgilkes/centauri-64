@@ -17,7 +17,7 @@ public sealed class BasicSourceRenderer
 
     public void WriteLine(TextConsole console, string source)
     {
-        var tokens = _tokenizer.Tokenize(source);
+        var tokens = _tokenizer.Tokenize(source, allowIncomplete: true);
 
         var position = 0;
 
@@ -66,18 +66,7 @@ public sealed class BasicSourceRenderer
                 _theme.TextColour);
         }
 
-        IReadOnlyList<Token> tokens;
-
-        try
-        {
-            tokens = _tokenizer.Tokenize(source);
-        }
-        catch (InvalidOperationException)
-        {
-            // The user may simply be halfway through typing
-            // something such as a string literal.
-            return;
-        }
+        var tokens = _tokenizer.Tokenize(source,allowIncomplete: true);
 
         foreach (var token in tokens)
         {

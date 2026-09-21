@@ -32,4 +32,18 @@ public sealed class BasicProgram
 
     public IEnumerable<string> SourceLines => _lines.Values.Select(line => line.Source);
 
+    public int GetMemoryUsage()
+    {
+        const int lineOverhead = 4;
+
+        var bytes = 0;
+
+        foreach (var line in Lines)
+        {
+            bytes += line.Source.Length;
+            bytes += lineOverhead;
+        }
+
+        return bytes;
+    }
 }

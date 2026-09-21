@@ -16,6 +16,9 @@ namespace Centauri64.Machine;
 
 public sealed partial class CentauriMachine
 {
+    public const int SYSTEM_MEMORY_BYTES = 64 * 1024;
+    public const int BASIC_MEMORY_BYTES = 48 * 1024;
+
     private readonly TextConsole _console;
     private readonly TextConsole _programConsole;
 
@@ -48,6 +51,10 @@ public sealed partial class CentauriMachine
     private CentauriDisplayMode _displayMode = CentauriDisplayMode.HighResolution;
 
     public CentauriDisplayMode DisplayMode => _displayMode;
+
+    public int SystemMemoryBytes => SYSTEM_MEMORY_BYTES;
+
+    public int BasicMemoryBytes => BASIC_MEMORY_BYTES;
 
     public int ScreenWidth => _displayMode switch
     {
