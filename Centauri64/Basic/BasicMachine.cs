@@ -9,6 +9,8 @@ namespace Centauri64.Basic;
 
 public sealed partial class BasicMachine
 {
+    private const int INSTRUCTIONS_PER_FRAME = 1000;
+
     private readonly TextConsole _console;
 
     private readonly Tokenizer _tokenizer   = new();
@@ -18,8 +20,6 @@ public sealed partial class BasicMachine
     private readonly BasicProgram _program  = new();
 
     private readonly Interpreter _interpreter;
-
-    private const int INSTRUCTIONS_PER_FRAME = 1000;
 
     public bool IsRunning =>_interpreter.IsRunning;
 
@@ -178,71 +178,6 @@ public sealed partial class BasicMachine
         {
             _console.WriteLine($"?{exception.Message.ToUpperInvariant()}");
         }
-    }
-
-    private void RunProgram()
-    {
-        _interpreter.Start(_program);
-
-        if (!_interpreter.IsRunning)
-        {
-            OnProgramFinished();
-        }
-    }
-
-    public void Stop()
-    {
-        if (!_interpreter.IsRunning)
-            return;
-
-        _interpreter.Stop();
-
-        _machine.HideAllSprites();
-        _machine.ResetDisplay();
-
-        _console.WriteLine("BREAK");
-        _console.WriteLine("");
-        _console.WriteLine("READY.");
-    }
-
-    public void Update()
-    {
-        if (!_interpreter.IsRunning)
-            return;
-
-        try
-        {
-            for (var i = 0; i < INSTRUCTIONS_PER_FRAME && _interpreter.IsRunning; i++)
-            {
-                var action = _interpreter.ExecuteNextInstruction();
-
-                if (action == ExecutionAction.Yield ||
-                    action == ExecutionAction.Wait)
-                {
-                    break;
-                }
-            }
-
-            if (!_interpreter.IsRunning)
-            {
-                OnProgramFinished();
-            }
-        }
-        catch (Exception exception)
-        {
-            _interpreter.Stop();
-
-            _console.WriteLine(
-                $"?{exception.Message.ToUpperInvariant()}");
-
-            OnProgramFinished();
-        }
-    }
-
-    private void OnProgramFinished()
-    {
-        _console.WriteLine("");
-        _console.WriteLine("READY.");
     }
 
 }
