@@ -512,7 +512,6 @@ public sealed class TextConsole
         foreach (var character in text)
         {
             PutCharacter(character);
-            InputChanged?.Invoke();
         }
     }
 
