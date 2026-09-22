@@ -25,7 +25,9 @@ public sealed class ProgrammingManual
     private enum ManualPage
     {
         Contents,
-        GettingStarted
+        GettingStarted1,
+        GettingStarted2,
+        GettingStarted3
     }
 
     private ManualPage _currentPage = ManualPage.Contents;
@@ -42,29 +44,67 @@ public sealed class ProgrammingManual
     {
         var keyboard = Keyboard.GetState();
 
-        if (Pressed(keyboard, Keys.Escape))
+        switch (_currentPage)
         {
-            ExitSelected?.Invoke();
-        }
-
-        if (_currentPage == ManualPage.Contents)
-        {
-            if (Pressed(keyboard, Keys.D1) ||
-                Pressed(keyboard, Keys.NumPad1))
+            case ManualPage.Contents:
             {
-                _currentPage = ManualPage.GettingStarted;
+                if (Pressed(keyboard, Keys.D1) ||
+                    Pressed(keyboard, Keys.NumPad1))
+                {
+                    _currentPage = ManualPage.GettingStarted1;
+                }
+                else if (Pressed(keyboard, Keys.Escape))
+                {
+                    ExitSelected?.Invoke();
+                }
+
+                break;
             }
 
-            if (Pressed(keyboard, Keys.Escape))
+            case ManualPage.GettingStarted1:
             {
-                ExitSelected?.Invoke();
+                if (Pressed(keyboard, Keys.Right))
+                {
+                    _currentPage = ManualPage.GettingStarted2;
+                }
+                else if (Pressed(keyboard, Keys.Escape))
+                {
+                    _currentPage = ManualPage.Contents;
+                }
+
+                break;
             }
-        }
-        else
-        {
-            if (Pressed(keyboard, Keys.Escape))
+
+            case ManualPage.GettingStarted2:
             {
-                _currentPage = ManualPage.Contents;
+                if (Pressed(keyboard, Keys.Left))
+                {
+                    _currentPage = ManualPage.GettingStarted1;
+                }
+                else if (Pressed(keyboard, Keys.Right))
+                {
+                    _currentPage = ManualPage.GettingStarted3;
+                }
+                else if (Pressed(keyboard, Keys.Escape))
+                {
+                    _currentPage = ManualPage.Contents;
+                }
+
+                break;
+            }
+
+            case ManualPage.GettingStarted3:
+            {
+                if (Pressed(keyboard, Keys.Left))
+                {
+                    _currentPage = ManualPage.GettingStarted2;
+                }
+                else if (Pressed(keyboard, Keys.Escape))
+                {
+                    _currentPage = ManualPage.Contents;
+                }
+
+                break;
             }
         }
 
@@ -147,7 +187,139 @@ public sealed class ProgrammingManual
             Color.White);
     }
 
-    private void DrawGettingStarted(SpriteBatch spriteBatch)
+    private void DrawGettingStarted1(SpriteBatch spriteBatch)
+    {
+        DrawManualHeader(
+            spriteBatch,
+            "1. GETTING STARTED",
+            "YOUR FIRST PROGRAM");
+
+        DrawText(spriteBatch,
+            "WHEN YOU SEE READY. TYPE:",
+            48, 88, Ink);
+
+        DrawText(spriteBatch,
+            "10 PRINT \"HELLO WORLD\"",
+            80, 120, Header);
+
+        DrawText(spriteBatch,
+            "PRESS ENTER. NOW TYPE:",
+            48, 152, Ink);
+
+        DrawText(spriteBatch,
+            "RUN",
+            80, 176, Header);
+
+        DrawText(spriteBatch,
+            "YOUR CENTAURI64 WILL DISPLAY:",
+            48, 208, Ink);
+
+        DrawText(spriteBatch,
+            "HELLO WORLD",
+            80, 232, Header);
+
+        DrawText(spriteBatch,
+            "PRESS ANY KEY TO RETURN TO THE EDITOR.",
+            48, 264, Ink);
+
+        DrawText(spriteBatch,
+            "PROGRAM LINES START WITH A LINE NUMBER.",
+            48, 296, Muted);
+
+        DrawManualFooter(
+            spriteBatch,
+            "RIGHT NEXT                 ESC CONTENTS");
+    }
+
+    private void DrawGettingStarted2(SpriteBatch spriteBatch)
+    {
+        DrawManualHeader(
+            spriteBatch,
+            "1. GETTING STARTED",
+            "MORE THAN ONE LINE");
+
+        DrawText(spriteBatch,
+            "TRY THIS:",
+            48, 88, Ink);
+
+        DrawText(spriteBatch,
+            "10 PRINT \"HELLO\"",
+            80, 120, Header);
+
+        DrawText(spriteBatch,
+            "20 PRINT \"WELCOME TO CENTAURI64\"",
+            80, 144, Header);
+
+        DrawText(spriteBatch,
+            "30 PRINT \"READY TO CODE?\"",
+            80, 168, Header);
+
+        DrawText(spriteBatch,
+            "NOW TYPE RUN.",
+            48, 208, Ink);
+
+        DrawText(spriteBatch,
+            "CENTAURI BASIC RUNS LINES IN",
+            48, 240, Ink);
+
+        DrawText(spriteBatch,
+            "LINE NUMBER ORDER.",
+            48, 264, Ink);
+
+        DrawText(spriteBatch,
+            "TRY CHANGING THE WORDS AND RUN IT AGAIN.",
+            48, 296, Muted);
+
+        DrawManualFooter(
+            spriteBatch,
+            "LEFT PREVIOUS   RIGHT NEXT   ESC CONTENTS");
+    }
+
+    private void DrawGettingStarted3(SpriteBatch spriteBatch)
+    {
+        DrawManualHeader(
+            spriteBatch,
+            "1. GETTING STARTED",
+            "MAKING A LOOP");
+
+        DrawText(spriteBatch,
+            "TRY THIS:",
+            48, 88, Ink);
+
+        DrawText(spriteBatch,
+            "10 PRINT \"CENTAURI64\"",
+            80, 120, Header);
+
+        DrawText(spriteBatch,
+            "20 GOTO 10",
+            80, 144, Header);
+
+        DrawText(spriteBatch,
+            "GOTO TELLS THE COMPUTER TO CONTINUE",
+            48, 184, Ink);
+
+        DrawText(spriteBatch,
+            "FROM ANOTHER LINE.",
+            48, 208, Ink);
+
+        DrawText(spriteBatch,
+            "LINE 20 SENDS THE PROGRAM BACK TO LINE 10,",
+            48, 240, Ink);
+
+        DrawText(spriteBatch,
+            "SO IT WILL KEEP RUNNING.",
+            48, 264, Ink);
+
+        DrawText(spriteBatch,
+            "PRESS ESC TO BREAK A RUNNING PROGRAM.",
+            48, 296, Header);
+
+        DrawManualFooter(
+            spriteBatch,
+            "LEFT PREVIOUS              ESC CONTENTS");
+    }
+
+    private void DrawManualHeader(SpriteBatch spriteBatch,string title,string subtitle)
     {
         DrawBox(
             spriteBatch,
@@ -156,50 +328,23 @@ public sealed class ProgrammingManual
 
         DrawText(
             spriteBatch,
-            "1. GETTING STARTED",
+            title,
             224,
             24,
             Color.White);
 
         DrawText(
             spriteBatch,
-            "YOUR FIRST PROGRAM",
+            subtitle,
             232,
             44,
             Cyan);
+    }
 
-        DrawText(spriteBatch,
-            "WHEN THE CENTAURI64 IS READY, TYPE:",
-            48, 88, Ink);
-
-        DrawText(spriteBatch,
-            "10 PRINT \"HELLO WORLD\"",
-            80, 120, Header);
-
-        DrawText(spriteBatch,
-            "PRESS ENTER, THEN TYPE:",
-            48, 152, Ink);
-
-        DrawText(spriteBatch,
-            "RUN",
-            80, 176, Header);
-
-        DrawText(spriteBatch,
-            "THE COMPUTER WILL PRINT:",
-            48, 208, Ink);
-
-        DrawText(spriteBatch,
-            "HELLO WORLD",
-            80, 232, Header);
-
-        DrawText(spriteBatch,
-            "TRY CHANGING THE MESSAGE AND RUN IT AGAIN.",
-            48, 272, Ink);
-
-        DrawText(spriteBatch,
-            "YOU HAVE WRITTEN YOUR FIRST CENTAURI BASIC PROGRAM!",
-            48, 296, Muted);
-
+    private void DrawManualFooter(
+        SpriteBatch spriteBatch,
+        string text)
+    {
         DrawBox(
             spriteBatch,
             new Rectangle(16, 344, 608, 24),
@@ -207,7 +352,7 @@ public sealed class ProgrammingManual
 
         DrawText(
             spriteBatch,
-            "ESC CONTENTS",
+            text,
             48,
             352,
             Color.White);
@@ -229,8 +374,16 @@ public sealed class ProgrammingManual
                 DrawContents(spriteBatch);
                 break;
 
-            case ManualPage.GettingStarted:
-                DrawGettingStarted(spriteBatch);
+            case ManualPage.GettingStarted1:
+                DrawGettingStarted1(spriteBatch);
+                break;
+
+            case ManualPage.GettingStarted2:
+                DrawGettingStarted2(spriteBatch);
+                break;
+
+            case ManualPage.GettingStarted3:
+                DrawGettingStarted3(spriteBatch);
                 break;
         }
 
