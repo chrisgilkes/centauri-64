@@ -51,6 +51,14 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     private ProgrammingManual _programmingManual = null!;
 
+    private static readonly Color EditorBackground = new(205, 198, 170);
+
+    private static readonly Color EditorFrame = CentauriPalette.Get(17); // Navy
+
+    private static readonly Color EditorText = CentauriPalette.Get(16); // Midnight Blue
+
+    private static readonly Color EditorAccent = CentauriPalette.Get(3); // Teal
+
     public Game1()
     {
         _graphics = new GraphicsDeviceManager(this);
@@ -95,6 +103,12 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         _console        = new TextConsole();
         _programConsole = new TextConsole();
+
+        // Development editor palette.
+        _console.Foreground = 16; // Midnight Blue
+        _console.Background = 31; // Warm White
+        _console.Clear();
+
 
         _machine = new CentauriMachine(_console,_programConsole);
 
@@ -483,12 +497,9 @@ public class Game1 : Microsoft.Xna.Framework.Game
         }
         else
         {
-            _console.Draw(
-                _spriteBatch,
-                _font,
-                _pixel,
-                Color.White,
-                new Color(40, 40, 160));
+            DrawEditorChrome();
+
+           _console.Draw(_spriteBatch,_font,_pixel,EditorText,EditorBackground,drawBackground: false,drawCursor: true,offsetY: 24);
 
             _machine.DrawSprites(
                 _spriteBatch,
@@ -607,5 +618,76 @@ public class Game1 : Microsoft.Xna.Framework.Game
             prompt,
             new Vector2(224, 376),
             new Color(160, 160, 160));
+    }
+
+    private void DrawEditorChrome()
+    {
+        // Main editor background.
+        _spriteBatch.Draw(
+            _pixel,
+            new Rectangle(
+                0,
+                0,
+                CentauriMachine.DEVELOPMENT_WIDTH,
+                CentauriMachine.DEVELOPMENT_HEIGHT),
+            EditorBackground);
+
+        // Header.
+        _spriteBatch.Draw(
+            _pixel,
+            new Rectangle(
+                0,
+                0,
+                CentauriMachine.DEVELOPMENT_WIDTH,
+                24),
+            EditorFrame);
+
+        _font.Draw(
+            _spriteBatch,
+            "CENTAURI64 BASIC",
+            new Vector2(16, 8),
+            Color.White);
+
+        _font.Draw(
+            _spriteBatch,
+            "64K",
+            new Vector2(
+                CentauriMachine.DEVELOPMENT_WIDTH - 40,
+                8),
+            EditorAccent);
+
+        // Footer.
+        _spriteBatch.Draw(
+            _pixel,
+            new Rectangle(
+                0,
+                CentauriMachine.DEVELOPMENT_HEIGHT - 16,
+                CentauriMachine.DEVELOPMENT_WIDTH,
+                16),
+            EditorFrame);
+
+        _font.Draw(
+            _spriteBatch,
+            "EDIT",
+            new Vector2(
+                16,
+                CentauriMachine.DEVELOPMENT_HEIGHT - 12),
+            EditorAccent);
+
+        _font.Draw(
+            _spriteBatch,
+            "F5 SPRITES",
+            new Vector2(
+                248,
+                CentauriMachine.DEVELOPMENT_HEIGHT - 12),
+            Color.White);
+
+        _font.Draw(
+            _spriteBatch,
+            "F12 BEDROOM",
+            new Vector2(
+                520,
+                CentauriMachine.DEVELOPMENT_HEIGHT - 12),
+            Color.White);
     }
 }

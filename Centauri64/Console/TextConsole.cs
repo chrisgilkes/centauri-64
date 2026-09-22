@@ -672,8 +672,8 @@ public sealed class TextConsole
             _background);
     }
 
-    public void Draw(SpriteBatch spriteBatch,BitmapFont font,Texture2D pixel,Color foregroundColor,
-            Color backgroundColor,bool drawBackground = true, bool drawCursor = true)
+    public void Draw(SpriteBatch spriteBatch,BitmapFont font,Texture2D pixel,Color foregroundColor,Color backgroundColor,
+        bool drawBackground = true,bool drawCursor = true,int offsetY = 0)
     {
         for (var row = 0; row < ROWS; row++)
         {
@@ -691,9 +691,7 @@ public sealed class TextConsole
                     SCREEN_OFFSET_X +
                     column * CHARACTER_WIDTH;
 
-                var drawY =
-                    SCREEN_OFFSET_Y +
-                    row * CHARACTER_HEIGHT;
+                var drawY = SCREEN_OFFSET_Y + offsetY + row * CHARACTER_HEIGHT;
 
                 var cellRectangle = new Rectangle(
                     drawX,
@@ -726,9 +724,7 @@ public sealed class TextConsole
                 SCREEN_OFFSET_X +
                 _cursorColumn * CHARACTER_WIDTH;
 
-            var cursorY =
-                SCREEN_OFFSET_Y +
-                _cursorRow * CHARACTER_HEIGHT;
+            var cursorY = SCREEN_OFFSET_Y + offsetY + _cursorRow * CHARACTER_HEIGHT;
 
             var cursorPosition =
                 new Vector2(cursorX, cursorY);
