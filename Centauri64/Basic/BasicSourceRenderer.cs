@@ -132,6 +132,7 @@ public sealed class BasicSourceRenderer
             TokenType.Circle or
             TokenType.Fill or
             TokenType.Dim or
-            TokenType.Rem;
+            TokenType.Rem or 
+            TokenType.End;
     }
 }

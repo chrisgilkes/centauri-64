@@ -36,6 +36,8 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     private KeyboardState _previousKeyboardState;
 
+    private bool _finishedProgramInputArmed;
+
     private GameMode _gameMode = GameMode.ComputerRoom;
 
     private bool _waitForInputRelease;
@@ -218,8 +220,6 @@ public class Game1 : Microsoft.Xna.Framework.Game
             return;
         }
 
-        _machine.UpdateInput();
-
         if (KeyPressed(keyboardState, Keys.F12))
         {
             _gameMode = GameMode.ComputerRoom;
@@ -229,6 +229,57 @@ public class Game1 : Microsoft.Xna.Framework.Game
             base.Update(gameTime);
             return;
         }
+
+        if (_basicMachine.IsRunning &&
+            keyboardState.IsKeyDown(Keys.Escape))
+        {
+            _basicMachine.Stop();
+
+            _previousKeyboardState = keyboardState;
+
+            base.Update(gameTime);
+            return;
+        }
+
+        if (_basicMachine.ProgramFinished)
+        {
+            // The key that launched RUN may still be held.
+            // Don't allow dismissal until every key has been released.
+            if (!_finishedProgramInputArmed)
+            {
+                if (keyboardState.GetPressedKeyCount() == 0)
+                {
+                    _finishedProgramInputArmed = true;
+                }
+
+                _previousKeyboardState = keyboardState;
+
+                base.Update(gameTime);
+                return;
+            }
+
+            // We've seen a completely released keyboard.
+            // The next key press dismisses the finished program.
+            if (keyboardState.GetPressedKeyCount() > 0)
+            {
+                _basicMachine.DismissFinishedProgram();
+
+                _finishedProgramInputArmed = false;
+                _waitForInputRelease = true;
+
+                _previousKeyboardState = keyboardState;
+
+                base.Update(gameTime);
+                return;
+            }
+
+            _previousKeyboardState = keyboardState;
+
+            base.Update(gameTime);
+            return;
+        }
+
+        _machine.UpdateInput();
 
         if (KeyPressed(keyboardState, Keys.F1))
             SetWindowScale(1);
@@ -258,15 +309,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
             ToggleFullscreen();
         }
 
-        if (_basicMachine.IsRunning)
-        {
-            if (keyboardState.IsKeyDown(Keys.Escape) &&
-                _previousKeyboardState.IsKeyUp(Keys.Escape))
-            {
-                _basicMachine.Stop();
-            }
-        }
-        else if (!_machine.SpriteEditor.IsActive)
+        if (!_basicMachine.IsRunning && !_machine.SpriteEditor.IsActive)
         {
             _console.Update(gameTime);
         }
@@ -356,7 +399,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
             return;
         }
 
-        if (_basicMachine.IsRunning)
+        if (_basicMachine.IsRunning || _basicMachine.ProgramFinished)
         {
             switch (_machine.DisplayMode)
             {
@@ -406,6 +449,11 @@ public class Game1 : Microsoft.Xna.Framework.Game
         _machine.DrawText(
             _spriteBatch,
             _font);
+
+        if (_basicMachine.ProgramFinished)
+        {
+            DrawProgramFinishedPrompt();
+        }
 
         _spriteBatch.End();
 
@@ -548,5 +596,16 @@ public class Game1 : Microsoft.Xna.Framework.Game
             Color.White);
 
         _spriteBatch.End();
+    }
+
+    private void DrawProgramFinishedPrompt()
+    {
+        const string prompt = "[PRESS ANY KEY TO RETURN]";
+
+        _font.Draw(
+            _spriteBatch,
+            prompt,
+            new Vector2(224, 376),
+            new Color(160, 160, 160));
     }
 }

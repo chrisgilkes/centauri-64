@@ -237,6 +237,7 @@ public sealed class Tokenizer
             "SPRITEHIDE" => TokenType.SpriteHide,
             "DIM" => TokenType.Dim,
             "REM" => TokenType.Rem,
+            "END" => TokenType.End,
             _ => TokenType.Identifier
         };
 

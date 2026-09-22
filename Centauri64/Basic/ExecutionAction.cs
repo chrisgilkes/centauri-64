@@ -6,4 +6,5 @@ public enum ExecutionAction
     Wait,
     Return,
     JumpToProgramCounter,
+    End
 }

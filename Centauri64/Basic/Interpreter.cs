@@ -15,11 +15,9 @@ public sealed partial class Interpreter
     private readonly Dictionary<string, int[]> _arrays = new();
     private readonly Random _random = new();
 
-    private const int MAX_INSTRUCTIONS_WITHOUT_YIELD  = 100_000;
-
     private IReadOnlyList<ProgramLine> _lines = [];
     private int _programCounter;
-    private int _instructionCount;
+
     private long? _waitUntil;
     private bool _isRunning;
 
@@ -69,7 +67,6 @@ public sealed partial class Interpreter
 
         _lines = program.GetLines();
         _programCounter = 0;
-        _instructionCount = 0;
 
         _isRunning = _lines.Count > 0;
     }
@@ -95,13 +92,6 @@ public sealed partial class Interpreter
             return ExecutionAction.Continue;
         }
 
-        if (++_instructionCount > MAX_INSTRUCTIONS_WITHOUT_YIELD)
-        {
-            Stop();
-
-            throw new InvalidOperationException("Program execution limit exceeded.");
-        }
-
         var line = _lines[_programCounter];
 
         var result = Execute(line.Statement);
@@ -118,16 +108,18 @@ public sealed partial class Interpreter
 
             case ExecutionAction.Yield:
                 _programCounter++;
-                _instructionCount = 0;
                 break;
                 
             case ExecutionAction.Wait:
                 _programCounter++;
-                _instructionCount = 0;
                 break;
 
             case ExecutionAction.Return:
                 _programCounter = _returnStack.Pop();
+                break;
+
+            case ExecutionAction.End:
+                Stop();
                 break;
 
             case ExecutionAction.JumpToProgramCounter:
@@ -161,15 +153,9 @@ public sealed partial class Interpreter
         var lines = program.GetLines();
 
         var programCounter = 0;
-        var instructionCount = 0;
 
         while(programCounter < lines.Count)
         {
-            if(++instructionCount > MAX_INSTRUCTIONS_WITHOUT_YIELD)
-            {
-                throw new InvalidOperationException("Program execution limit exceeded.");    
-            }
-
             var line   = lines[programCounter];
 
             var result = Execute(line.Statement);
@@ -402,6 +388,11 @@ public sealed partial class Interpreter
         if (statement is RemStatement)
         {
             return ExecutionResult.Continue();
+        }
+
+        if (statement is EndStatement)
+        {
+            return ExecutionResult.End();
         }
 
         throw new InvalidOperationException($"Unsupported statement: {statement.GetType().Name}");

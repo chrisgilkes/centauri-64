@@ -4,8 +4,28 @@ namespace Centauri64.Basic;
 
 public sealed partial class BasicMachine
 {
+    private bool _programFinished;
+
+    public bool ProgramFinished => _programFinished;
+
+    public void DismissFinishedProgram()
+    {
+        if (!_programFinished)
+            return;
+
+        _programFinished = false;
+
+        _machine.HideAllSprites();
+        _machine.ResetDisplay();
+
+        _console.WriteLine("");
+        _console.WriteLine("READY.");
+    }
+
     private void RunProgram()
     {
+        _programFinished = false;
+
         _interpreter.Start(_program);
 
         if (!_interpreter.IsRunning)
@@ -20,6 +40,8 @@ public sealed partial class BasicMachine
             return;
 
         _interpreter.Stop();
+
+        _programFinished = false;
 
         _machine.HideAllSprites();
         _machine.ResetDisplay();
@@ -69,7 +91,7 @@ public sealed partial class BasicMachine
 
     private void OnProgramFinished()
     {
-        _console.WriteLine("");
-        _console.WriteLine("READY.");
+        _programFinished = true;
     }
+    
 }

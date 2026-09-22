@@ -182,6 +182,11 @@ public sealed class Parser
             return ParseRemStatement();
         }
 
+        if (token.Type == TokenType.End)
+        {
+            return ParseEndStatement();
+        }
+
         if (token.Type == TokenType.Identifier)
         {
             if (Peek().Type == TokenType.LeftParenthesis)
@@ -193,6 +198,13 @@ public sealed class Parser
         }
 
         throw new InvalidOperationException($"Unexpected token: {token.Type}");
+    }
+
+    private EndStatement ParseEndStatement()
+    {
+        Expect(TokenType.End);
+
+        return new EndStatement();
     }
 
     private Statement ParseRemStatement()

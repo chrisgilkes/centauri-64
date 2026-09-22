@@ -42,6 +42,12 @@ public readonly struct ExecutionResult
             ExecutionAction.Wait);
     }
 
+    public static ExecutionResult End()
+    {
+        return new ExecutionResult(
+            ExecutionAction.End);
+    }
+
     public static ExecutionResult JumpToProgramCounter(int programCounter)
     {
         return new ExecutionResult(
