@@ -23,6 +23,8 @@ public sealed class ComputerRoom
 
     public event Action? ComputerSelected;
 
+    public event Action? ManualSelected;
+
     private bool _computerPoweredOn;
 
     public bool ComputerPoweredOn => _computerPoweredOn;
@@ -46,6 +48,12 @@ public sealed class ComputerRoom
             Pressed(keyboard, Keys.NumPad1))
         {
             ComputerSelected?.Invoke();
+        }
+
+        if (Pressed(keyboard, Keys.D2) ||
+            Pressed(keyboard, Keys.NumPad2))
+        {
+            ManualSelected?.Invoke();
         }
 
         _previousKeyboard = keyboard;

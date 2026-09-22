@@ -47,6 +47,8 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     private ComputerRoom _computerRoom;
 
+    private ProgrammingManual _programmingManual = null!;
+
     public Game1()
     {
         _graphics = new GraphicsDeviceManager(this);
@@ -98,7 +100,19 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         _computerRoom = new ComputerRoom(_font,_pixel);
 
+        _programmingManual = new ProgrammingManual(_font,_pixel);
+
         _computerRoom.ComputerSelected += OnComputerSelected;
+
+        _computerRoom.ManualSelected += () =>
+        {
+            _gameMode = GameMode.ProgrammingManual;
+        };
+
+        _programmingManual.ExitSelected += () =>
+        {
+            _gameMode = GameMode.ComputerRoom;
+        };
 
     }
 
@@ -156,6 +170,16 @@ public class Game1 : Microsoft.Xna.Framework.Game
         if (_gameMode == GameMode.ComputerRoom)
         {
             _computerRoom.Update();
+
+            _previousKeyboardState = keyboardState;
+
+            base.Update(gameTime);
+            return;
+        }
+
+        if (_gameMode == GameMode.ProgrammingManual)
+        {
+            _programmingManual.Update();
 
             _previousKeyboardState = keyboardState;
 
@@ -291,6 +315,21 @@ public class Game1 : Microsoft.Xna.Framework.Game
             _developmentRenderTarget);
     }
 
+    private void DrawProgrammingManual()
+    {
+        GraphicsDevice.SetRenderTarget(
+            _developmentRenderTarget);
+
+        GraphicsDevice.Clear(Color.Black);
+
+        _programmingManual.Draw(_spriteBatch);
+
+        GraphicsDevice.SetRenderTarget(null);
+
+        DrawRenderTargetToWindow(
+            _developmentRenderTarget);
+    }
+
     protected override void Draw(GameTime gameTime)
     {
         if (_computerPoweringOn)
@@ -304,6 +343,14 @@ public class Game1 : Microsoft.Xna.Framework.Game
         if (_gameMode == GameMode.ComputerRoom)
         {
             DrawComputerRoom();
+
+            base.Draw(gameTime);
+            return;
+        }
+
+        if (_gameMode == GameMode.ProgrammingManual)
+        {
+            DrawProgrammingManual();
 
             base.Draw(gameTime);
             return;
