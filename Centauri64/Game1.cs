@@ -86,30 +86,42 @@ public class Game1 : Microsoft.Xna.Framework.Game
         _pixel.SetData(new[] { Color.White });
 
         var fontTexture = Content.Load<Texture2D>("Fonts/centauri64-font");
+
         _font           = new BitmapFont(fontTexture);
 
-        _computerRoom   = new ComputerRoom(_font);
-
-        _computerRoom.ComputerSelected += () =>
-        {
-            _gameMode = GameMode.Computer;
-            _computerPoweringOn = true;
-            _powerOnTimer = 0.0;
-            _waitForInputRelease = true;
-
-            _machine.ResetDisplay();
-
-            // Power-on sound.
-            _machine.Beep(440, 100);
-        };
-
-        _console = new TextConsole();
+        _console        = new TextConsole();
         _programConsole = new TextConsole();
 
-        _machine = new CentauriMachine(_console, _programConsole);
+        _machine = new CentauriMachine(_console,_programConsole);
 
-        _basicMachine = new BasicMachine(_console, _machine);
+        _basicMachine = new BasicMachine(_console,_machine);
 
+        _computerRoom = new ComputerRoom(_font,_pixel);
+
+        _computerRoom.ComputerSelected += OnComputerSelected;
+
+    }
+
+    private void OnComputerSelected()
+    {
+        _gameMode = GameMode.Computer;
+        _waitForInputRelease = true;
+
+        // Already powered on - simply return to the computer.
+        if (_computerRoom.ComputerPoweredOn)
+        {
+            return;
+        }
+
+        // First use - perform the real power-on sequence.
+        _computerRoom.SetComputerPoweredOn();
+
+        _computerPoweringOn = true;
+        _powerOnTimer = 0.0;
+
+        _machine.ResetDisplay();
+
+        _machine.Beep(440, 100);
     }
 
     private void SetWindowScale(int scale)
@@ -151,11 +163,16 @@ public class Game1 : Microsoft.Xna.Framework.Game
             return;
         }
 
-        if (_waitForInputRelease)
+        if (_computerPoweringOn)
         {
-            if (keyboardState.GetPressedKeyCount() == 0)
+            _powerOnTimer +=
+                gameTime.ElapsedGameTime.TotalSeconds;
+
+            if (_powerOnTimer >= POWER_ON_DELAY)
             {
-                _waitForInputRelease = false;
+                _computerPoweringOn = false;
+
+                _basicMachine.ShowBootMessage();
             }
 
             _previousKeyboardState = keyboardState;
@@ -164,15 +181,11 @@ public class Game1 : Microsoft.Xna.Framework.Game
             return;
         }
 
-        if (_computerPoweringOn)
+        if (_waitForInputRelease)
         {
-            _powerOnTimer += gameTime.ElapsedGameTime.TotalSeconds;
-
-            if (_powerOnTimer >= POWER_ON_DELAY)
+            if (keyboardState.GetPressedKeyCount() == 0)
             {
-                _computerPoweringOn = false;
-
-                _basicMachine.ShowBootMessage();
+                _waitForInputRelease = false;
             }
 
             _previousKeyboardState = keyboardState;
