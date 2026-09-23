@@ -77,7 +77,7 @@ public sealed partial class BasicMachine
 
         foreach (var program in programs)
         {
-            _console.WriteLine(program, 3);
+            _console.WriteLine(program, 18);
         }
 
         _console.WriteLine("");
