@@ -59,6 +59,8 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     private static readonly Color EditorAccent = CentauriPalette.Get(3); // Teal
 
+    private const int CODE_EDITOR_ROWS = 55;
+
     public Game1()
     {
         _graphics = new GraphicsDeviceManager(this);
@@ -101,8 +103,8 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         _font           = new BitmapFont(fontTexture);
 
-        _console        = new TextConsole();
-        _programConsole = new TextConsole();
+        _console        = new TextConsole(80, CODE_EDITOR_ROWS);
+        _programConsole = new TextConsole(80, 60);
 
         // Development editor palette.
         _console.Foreground = 16; // Midnight Blue
@@ -446,11 +448,14 @@ public class Game1 : Microsoft.Xna.Framework.Game
             samplerState: SamplerState.PointClamp);
 
         _programConsole.Draw(
-            _spriteBatch,
-            _font,
-            _pixel,
-            Color.White,
-            new Color(40, 40, 160), true, !_basicMachine.IsRunning);
+                                _spriteBatch,
+                                _font,
+                                _pixel,
+                                Color.White,
+                                new Color(40, 40, 160),
+                                true,
+                                !_basicMachine.IsRunning,
+                                visibleRows: 60);
 
         _machine.DrawGraphics(
             _spriteBatch,
@@ -499,7 +504,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
         {
             DrawEditorChrome();
 
-           _console.Draw(_spriteBatch,_font,_pixel,EditorText,EditorBackground,drawBackground: false,drawCursor: true,offsetY: 24,  visibleRows: 55);
+           _console.Draw(_spriteBatch,_font,_pixel,EditorText,EditorBackground,drawBackground: false,drawCursor: true,offsetY: 24,  visibleRows: CODE_EDITOR_ROWS );
 
             _machine.DrawSprites(
                 _spriteBatch,
@@ -641,11 +646,24 @@ public class Game1 : Microsoft.Xna.Framework.Game
                 24),
             EditorFrame);
 
-        _font.Draw(
+       _font.Draw(
             _spriteBatch,
             "CENTAURI64 BASIC",
             new Vector2(16, 8),
             Color.White);
+
+        var memoryText =
+            $"{_basicMachine.BasicMemoryFree} BASIC BYTES FREE";
+
+        var memoryX =
+            (CentauriMachine.DEVELOPMENT_WIDTH -
+            memoryText.Length * 8) / 2;
+
+        _font.Draw(
+            _spriteBatch,
+            memoryText,
+            new Vector2(memoryX, 8),
+            EditorAccent);
 
         _font.Draw(
             _spriteBatch,

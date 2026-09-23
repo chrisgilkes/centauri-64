@@ -61,16 +61,6 @@ public sealed partial class BasicMachine
 
     public  void ShowBootMessage()
     {
-        var systemMemoryK = _machine.SystemMemoryBytes / 1024;
-
-        _console.WriteLine("       CENTAURI64 PERSONAL COMPUTER");
-        _console.WriteLine("");
-
-        _console.WriteLine(
-            $"       {systemMemoryK}K RAM   " +
-            $"{_machine.BasicMemoryBytes} BASIC BYTES FREE");
-
-        _console.WriteLine("");
         _console.WriteLine("READY.");
     }
 

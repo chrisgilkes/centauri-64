@@ -4,18 +4,20 @@ namespace Centauri64.Basic;
 
 public sealed partial class BasicMachine
 {
-    private int GetBasicMemoryFree()
+    public int BasicMemoryFree
     {
-        var used = _program.GetMemoryUsage();
+        get
+        {
+            var used = _program.GetMemoryUsage();
 
-        return Math.Max(0,_machine.BasicMemoryBytes - used);
-        
+            return Math.Max(0, _machine.BasicMemoryBytes - used);
+        }
     }
 
     private void ShowMemory()
     {
         var programBytes = _program.GetMemoryUsage();
-        var freeBytes = GetBasicMemoryFree();
+        var freeBytes = BasicMemoryFree;
 
         _console.WriteLine("");
         _console.WriteLine("BASIC MEMORY");

@@ -10,11 +10,14 @@ namespace Centauri64.Console;
 
 public sealed class TextConsole
 {
-    public const int COLUMNS = 80;
-    public const int ROWS = 55;
+    public const int DEFAULT_COLUMNS = 80;
+    public const int DEFAULT_ROWS = 60;
 
     private const int CHARACTER_WIDTH = 8;
     private const int CHARACTER_HEIGHT = 8;
+
+    private readonly int _columns;
+    private readonly int _rows;
 
     private readonly ScreenCell[,] _cells;
 
@@ -58,7 +61,6 @@ public sealed class TextConsole
         };
     }
 
-
     private static bool CanRepeat(Keys key)
     {
         if (key >= Keys.A && key <= Keys.Z)
@@ -68,22 +70,22 @@ public sealed class TextConsole
             return true;
 
         return key == Keys.Space ||
-            key == Keys.Left ||
-            key == Keys.Right ||
-            key == Keys.Up ||
-            key == Keys.Down ||
-            key == Keys.Back ||
-            key == Keys.Delete ||
-            key == Keys.OemPeriod ||
-            key == Keys.OemComma ||
-            key == Keys.OemQuestion ||
-            key == Keys.OemSemicolon ||
-            key == Keys.OemQuotes ||
-            key == Keys.OemOpenBrackets ||
-            key == Keys.OemCloseBrackets ||
-            key == Keys.OemPipe ||
-            key == Keys.OemMinus ||
-            key == Keys.OemPlus;
+               key == Keys.Left ||
+               key == Keys.Right ||
+               key == Keys.Up ||
+               key == Keys.Down ||
+               key == Keys.Back ||
+               key == Keys.Delete ||
+               key == Keys.OemPeriod ||
+               key == Keys.OemComma ||
+               key == Keys.OemQuestion ||
+               key == Keys.OemSemicolon ||
+               key == Keys.OemQuotes ||
+               key == Keys.OemOpenBrackets ||
+               key == Keys.OemCloseBrackets ||
+               key == Keys.OemPipe ||
+               key == Keys.OemMinus ||
+               key == Keys.OemPlus;
     }
 
     public event Action<string>? LineEntered;
@@ -105,7 +107,6 @@ public sealed class TextConsole
     }
 
     private const int SCREEN_OFFSET_X = 0;
-
     private const int SCREEN_OFFSET_Y = 0;
 
     public const int ScreenMargin = 16;
@@ -114,6 +115,9 @@ public sealed class TextConsole
 
     public int CursorColumn => _cursorColumn;
     public int CursorRow => _cursorRow;
+
+    public int Columns => _columns;
+    public int Rows => _rows;
 
     private readonly List<string> _inputHistory = new();
 
@@ -127,20 +131,26 @@ public sealed class TextConsole
 
     private const int PAGE_SCROLL_LINES = 50;
 
-    public TextConsole()
+    public TextConsole(
+        int columns = DEFAULT_COLUMNS,
+        int rows = DEFAULT_ROWS)
     {
-        _cells = new ScreenCell[ROWS, COLUMNS];
+        _columns = columns;
+        _rows = rows;
+
+        _cells = new ScreenCell[_rows, _columns];
 
         Clear();
     }
 
     public string GetCurrentLine()
     {
-        var characters = new char[COLUMNS];
+        var characters = new char[_columns];
 
-        for (var column = 0; column < COLUMNS; column++)
+        for (var column = 0; column < _columns; column++)
         {
-            characters[column] = _cells[_cursorRow, column].Character;
+            characters[column] =
+                _cells[_cursorRow, column].Character;
         }
 
         return new string(characters).TrimEnd();
@@ -148,7 +158,8 @@ public sealed class TextConsole
 
     public void Update(GameTime gameTime)
     {
-        _cursorTimer += gameTime.ElapsedGameTime.TotalSeconds;
+        _cursorTimer +=
+            gameTime.ElapsedGameTime.TotalSeconds;
 
         if (_cursorTimer >= CURSOR_FLASH_TIME)
         {
@@ -186,12 +197,20 @@ public sealed class TextConsole
             }
         }
 
-        UpdateKeyRepeat(keyboardState,shift,control,gameTime.ElapsedGameTime.TotalSeconds);
+        UpdateKeyRepeat(
+            keyboardState,
+            shift,
+            control,
+            gameTime.ElapsedGameTime.TotalSeconds);
 
         _previousKeyboardState = keyboardState;
     }
 
-    private void UpdateKeyRepeat(KeyboardState keyboardState,bool shift,bool control,double deltaTime)
+    private void UpdateKeyRepeat(
+        KeyboardState keyboardState,
+        bool shift,
+        bool control,
+        double deltaTime)
     {
         if (!_repeatingKey.HasValue)
             return;
@@ -210,21 +229,30 @@ public sealed class TextConsole
         if (_keyRepeatTimer <= 0.0)
         {
             HandleKey(key, shift, control);
+
             _keyRepeatTimer += KEY_REPEAT_INTERVAL;
         }
     }
 
-    private void HandleKey(Keys key,  bool shift, bool control)
+    private void HandleKey(
+        Keys key,
+        bool shift,
+        bool control)
     {
-        if (_scrollbackOffset > 0 && key != Keys.PageUp && key != Keys.PageDown)
+        if (_scrollbackOffset > 0 &&
+            key != Keys.PageUp &&
+            key != Keys.PageDown)
         {
             _scrollbackOffset = 0;
         }
 
         if (key >= Keys.A && key <= Keys.Z)
         {
-            var character = (char)('A' + (key - Keys.A));
+            var character =
+                (char)('A' + (key - Keys.A));
+
             PutCharacter(character);
+
             ResetCursorFlash();
             InputChanged?.Invoke();
             return;
@@ -234,21 +262,28 @@ public sealed class TextConsole
         {
             var offset = key - Keys.D0;
 
-            var character = shift? ShiftedNumbers[offset]: (char)('0' + offset);
+            var character =
+                shift
+                    ? ShiftedNumbers[offset]
+                    : (char)('0' + offset);
 
             PutCharacter(character);
+
             ResetCursorFlash();
             InputChanged?.Invoke();
             return;
         }
 
-        var punctuation = GetPunctuation(key, shift);
+        var punctuation =
+            GetPunctuation(key, shift);
 
         if (punctuation.HasValue)
         {
             PutCharacter(punctuation.Value);
+
             ResetCursorFlash();
             InputChanged?.Invoke();
+            return;
         }
 
         if (key == Keys.Left)
@@ -298,6 +333,7 @@ public sealed class TextConsole
         if (key == Keys.Space)
         {
             PutCharacter(' ');
+
             ResetCursorFlash();
             InputChanged?.Invoke();
             return;
@@ -339,13 +375,16 @@ public sealed class TextConsole
         if (key == Keys.Home)
         {
             _cursorColumn = 0;
+
             ResetCursorFlash();
             return;
         }
 
         if (key == Keys.End)
         {
-            _cursorColumn = GetLineLength(_cursorRow);
+            _cursorColumn =
+                GetLineLength(_cursorRow);
+
             ResetCursorFlash();
             return;
         }
@@ -353,6 +392,7 @@ public sealed class TextConsole
         if (key == Keys.PageUp)
         {
             PageUp();
+
             ResetCursorFlash();
             return;
         }
@@ -360,10 +400,10 @@ public sealed class TextConsole
         if (key == Keys.PageDown)
         {
             PageDown();
+
             ResetCursorFlash();
             return;
         }
-        
     }
 
     private void PageUp()
@@ -400,7 +440,8 @@ public sealed class TextConsole
         if (_inputHistory.Count == 0)
             return;
 
-        if (_historyIndex < _inputHistory.Count - 1)
+        if (_historyIndex <
+            _inputHistory.Count - 1)
         {
             _historyIndex++;
 
@@ -410,16 +451,17 @@ public sealed class TextConsole
             return;
         }
 
-        _historyIndex = _inputHistory.Count;
+        _historyIndex =
+            _inputHistory.Count;
 
         SetCurrentLine(string.Empty);
     }
 
     private int GetLineLength(int row)
     {
-        for (var column = COLUMNS - 1;
-            column >= 0;
-            column--)
+        for (var column = _columns - 1;
+             column >= 0;
+             column--)
         {
             if (_cells[row, column].Character != ' ')
                 return column + 1;
@@ -438,7 +480,7 @@ public sealed class TextConsole
 
     private void MoveCursorRight()
     {
-        if (_cursorColumn < COLUMNS - 1)
+        if (_cursorColumn < _columns - 1)
         {
             _cursorColumn++;
         }
@@ -454,7 +496,7 @@ public sealed class TextConsole
 
     private void MoveCursorDown()
     {
-        if (_cursorRow < ROWS - 1)
+        if (_cursorRow < _rows - 1)
         {
             _cursorRow++;
         }
@@ -473,14 +515,14 @@ public sealed class TextConsole
     private void Delete()
     {
         for (var column = _cursorColumn;
-            column < COLUMNS - 1;
-            column++)
+             column < _columns - 1;
+             column++)
         {
             _cells[_cursorRow, column] =
                 _cells[_cursorRow, column + 1];
         }
 
-        _cells[_cursorRow, COLUMNS - 1] =
+        _cells[_cursorRow, _columns - 1] =
             new ScreenCell(
                 ' ',
                 _foreground,
@@ -497,16 +539,27 @@ public sealed class TextConsole
 
     public void Clear()
     {
-        for (var row = 0; row < ROWS; row++)
+        for (var row = 0;
+             row < _rows;
+             row++)
         {
-            for (var column = 0; column < COLUMNS; column++)
+            for (var column = 0;
+                 column < _columns;
+                 column++)
             {
-                _cells[row, column] = new ScreenCell(' ',_foreground, _background);
+                _cells[row, column] =
+                    new ScreenCell(
+                        ' ',
+                        _foreground,
+                        _background);
             }
         }
 
         _cursorColumn = 0;
         _cursorRow = 0;
+
+        // Always return to the live console after a clear.
+        _scrollbackOffset = 0;
     }
 
     public void Write(string text)
@@ -517,15 +570,19 @@ public sealed class TextConsole
         }
     }
 
-    public void Write(string text, int foreground)
+    public void Write(
+        string text,
+        int foreground)
     {
-        var previousForeground = _foreground;
+        var previousForeground =
+            _foreground;
 
         _foreground = foreground;
 
         Write(text);
 
-        _foreground = previousForeground;
+        _foreground =
+            previousForeground;
     }
 
     public void WriteLine(string text)
@@ -534,49 +591,72 @@ public sealed class TextConsole
         NewLine();
     }
 
-    public void WriteLine(string text, int foreground)
+    public void WriteLine(
+        string text,
+        int foreground)
     {
         Write(text, foreground);
         NewLine();
     }
-    
 
-    public void WriteAt(int x,int y,string text)
+    public void WriteAt(
+        int x,
+        int y,
+        string text)
     {
-        for (var i = 0; i < text.Length; i++)
+        for (var i = 0;
+             i < text.Length;
+             i++)
         {
             var column = x + i;
 
-            if (column < 0 || column >= COLUMNS ||
-                y < 0 || y >= ROWS)
+            if (column < 0 ||
+                column >= _columns ||
+                y < 0 ||
+                y >= _rows)
             {
                 continue;
             }
 
-            _cells[y, column] = new ScreenCell(text[i], _foreground, _background);
+            _cells[y, column] =
+                new ScreenCell(
+                    text[i],
+                    _foreground,
+                    _background);
         }
     }
 
-    public void SetCellForeground(int column,int row,int foreground)
+    public void SetCellForeground(
+        int column,
+        int row,
+        int foreground)
     {
-        if (column < 0 || column >= COLUMNS ||
-            row < 0 || row >= ROWS)
+        if (column < 0 ||
+            column >= _columns ||
+            row < 0 ||
+            row >= _rows)
         {
             return;
         }
 
-        var cell = _cells[row, column];
+        var cell =
+            _cells[row, column];
 
-        _cells[row, column] =new ScreenCell(cell.Character,foreground,cell.Background);
+        _cells[row, column] =
+            new ScreenCell(
+                cell.Character,
+                foreground,
+                cell.Background);
     }
 
-    private void PutCharacter(char character)
+    private void PutCharacter(
+        char character)
     {
         // Shift everything to the right of the cursor
         // one character to make room.
-        for (var column = COLUMNS - 1;
-            column > _cursorColumn;
-            column--)
+        for (var column = _columns - 1;
+             column > _cursorColumn;
+             column--)
         {
             _cells[_cursorRow, column] =
                 _cells[_cursorRow, column - 1];
@@ -590,7 +670,7 @@ public sealed class TextConsole
 
         _cursorColumn++;
 
-        if (_cursorColumn >= COLUMNS)
+        if (_cursorColumn >= _columns)
         {
             NewLine();
         }
@@ -601,54 +681,85 @@ public sealed class TextConsole
         _cursorColumn = 0;
         _cursorRow++;
 
-        if (_cursorRow >= ROWS)
+        if (_cursorRow >= _rows)
         {
             Scroll();
-            _cursorRow = ROWS - 1;
+
+            _cursorRow =
+                _rows - 1;
         }
     }
 
     private void Scroll()
     {
-        var scrolledLine = new ScreenCell[COLUMNS];
+        var scrolledLine =
+            new ScreenCell[_columns];
 
-        for (var column = 0; column < COLUMNS; column++)
+        for (var column = 0;
+             column < _columns;
+             column++)
         {
-            var cell = _cells[0, column];
+            var cell =
+                _cells[0, column];
 
-            scrolledLine[column] =new ScreenCell(cell.Character,cell.Foreground,cell.Background);
+            scrolledLine[column] =
+                new ScreenCell(
+                    cell.Character,
+                    cell.Foreground,
+                    cell.Background);
         }
 
         _scrollback.Add(scrolledLine);
 
-        if (_scrollback.Count > MAX_SCROLLBACK_LINES)
+        if (_scrollback.Count >
+            MAX_SCROLLBACK_LINES)
         {
             _scrollback.RemoveAt(0);
         }
 
-        for (var row = 1; row < ROWS; row++)
+        for (var row = 1;
+             row < _rows;
+             row++)
         {
-            for (var column = 0; column < COLUMNS; column++)
+            for (var column = 0;
+                 column < _columns;
+                 column++)
             {
-                var sourceCell = _cells[row, column];
-                _cells[row - 1, column] = new ScreenCell(sourceCell.Character,sourceCell.Foreground,sourceCell.Background);
+                var sourceCell =
+                    _cells[row, column];
+
+                _cells[row - 1, column] =
+                    new ScreenCell(
+                        sourceCell.Character,
+                        sourceCell.Foreground,
+                        sourceCell.Background);
             }
         }
 
-        for (var column = 0; column < COLUMNS; column++)
+        for (var column = 0;
+             column < _columns;
+             column++)
         {
-            _cells[ROWS - 1, column] =new ScreenCell(' ',_foreground,_background);
+            _cells[_rows - 1, column] =
+                new ScreenCell(
+                    ' ',
+                    _foreground,
+                    _background);
         }
     }
 
-    private ScreenCell GetDisplayCell(int row,int column)
+    private ScreenCell GetDisplayCell(
+        int row,
+        int column)
     {
         if (_scrollbackOffset == 0)
         {
             return _cells[row, column];
         }
 
-        var historyStart = _scrollback.Count - _scrollbackOffset;
+        var historyStart =
+            _scrollback.Count -
+            _scrollbackOffset;
 
         var historyIndex =
             historyStart + row;
@@ -660,10 +771,11 @@ public sealed class TextConsole
         }
 
         var liveRow =
-            historyIndex - _scrollback.Count;
+            historyIndex -
+            _scrollback.Count;
 
         if (liveRow >= 0 &&
-            liveRow < ROWS)
+            liveRow < _rows)
         {
             return _cells[liveRow, column];
         }
@@ -674,37 +786,61 @@ public sealed class TextConsole
             _background);
     }
 
-    public void Draw(SpriteBatch spriteBatch,BitmapFont font,Texture2D pixel,Color foregroundColor,Color backgroundColor,
-        bool drawBackground = true,bool drawCursor = true,int offsetY = 0,  int visibleRows = ROWS  )
+    public void Draw(
+        SpriteBatch spriteBatch,
+        BitmapFont font,
+        Texture2D pixel,
+        Color foregroundColor,
+        Color backgroundColor,
+        bool drawBackground = true,
+        bool drawCursor = true,
+        int offsetY = 0,
+        int? visibleRows = null)
     {
-        visibleRows = Math.Min(visibleRows, ROWS);
+        var rowsToDraw =
+            Math.Min(
+                visibleRows ?? _rows,
+                _rows);
 
-        for (var row = 0; row < visibleRows; row++)
+        for (var row = 0;
+             row < rowsToDraw;
+             row++)
         {
-            for (var column = 0; column < COLUMNS; column++)
+            for (var column = 0;
+                 column < _columns;
+                 column++)
             {
-                var cell = GetDisplayCell(row, column);
+                var cell =
+                    GetDisplayCell(
+                        row,
+                        column);
 
                 var foreground =
-                    CentauriPalette.Get(cell.Foreground);
+                    CentauriPalette.Get(
+                        cell.Foreground);
 
                 var background =
-                    CentauriPalette.Get(cell.Background);
+                    CentauriPalette.Get(
+                        cell.Background);
 
                 var drawX =
                     SCREEN_OFFSET_X +
                     column * CHARACTER_WIDTH;
 
-                var drawY = SCREEN_OFFSET_Y + offsetY + row * CHARACTER_HEIGHT;
+                var drawY =
+                    SCREEN_OFFSET_Y +
+                    offsetY +
+                    row * CHARACTER_HEIGHT;
 
-                var cellRectangle = new Rectangle(
-                    drawX,
-                    drawY,
-                    CHARACTER_WIDTH,
-                    CHARACTER_HEIGHT);
+                var cellRectangle =
+                    new Rectangle(
+                        drawX,
+                        drawY,
+                        CHARACTER_WIDTH,
+                        CHARACTER_HEIGHT);
 
                 if (drawBackground)
-                {       
+                {
                     spriteBatch.Draw(
                         pixel,
                         cellRectangle,
@@ -717,27 +853,40 @@ public sealed class TextConsole
                 font.DrawCharacter(
                     spriteBatch,
                     cell.Character,
-                    new Vector2(drawX, drawY),
+                    new Vector2(
+                        drawX,
+                        drawY),
                     foreground);
             }
         }
 
-        if (drawCursor && _cursorVisible && _scrollbackOffset == 0 && _cursorRow < visibleRows)
+        if (drawCursor &&
+            _cursorVisible &&
+            _scrollbackOffset == 0 &&
+            _cursorRow < rowsToDraw)
         {
             var cursorX =
                 SCREEN_OFFSET_X +
-                _cursorColumn * CHARACTER_WIDTH;
+                _cursorColumn *
+                CHARACTER_WIDTH;
 
-            var cursorY = SCREEN_OFFSET_Y + offsetY + _cursorRow * CHARACTER_HEIGHT;
+            var cursorY =
+                SCREEN_OFFSET_Y +
+                offsetY +
+                _cursorRow *
+                CHARACTER_HEIGHT;
 
             var cursorPosition =
-                new Vector2(cursorX, cursorY);
+                new Vector2(
+                    cursorX,
+                    cursorY);
 
-            var cursorRectangle = new Rectangle(
-                cursorX,
-                cursorY,
-                CHARACTER_WIDTH,
-                CHARACTER_HEIGHT);
+            var cursorRectangle =
+                new Rectangle(
+                    cursorX,
+                    cursorY,
+                    CHARACTER_WIDTH,
+                    CHARACTER_HEIGHT);
 
             spriteBatch.Draw(
                 pixel,
@@ -745,7 +894,10 @@ public sealed class TextConsole
                 foregroundColor);
 
             var character =
-                _cells[_cursorRow, _cursorColumn].Character;
+                _cells[
+                    _cursorRow,
+                    _cursorColumn]
+                .Character;
 
             if (character != ' ')
             {
@@ -766,10 +918,13 @@ public sealed class TextConsole
         WriteLine("READY.");
     }
 
-    public void SetCurrentLine(string text)
+    public void SetCurrentLine(
+        string text)
     {
         // Clear the current row.
-        for (var column = 0; column < COLUMNS; column++)
+        for (var column = 0;
+             column < _columns;
+             column++)
         {
             _cells[_cursorRow, column] =
                 new ScreenCell(
@@ -779,9 +934,14 @@ public sealed class TextConsole
         }
 
         // Write the new text directly into the row.
-        var length = Math.Min(text.Length, COLUMNS);
+        var length =
+            Math.Min(
+                text.Length,
+                _columns);
 
-        for (var column = 0; column < length; column++)
+        for (var column = 0;
+             column < length;
+             column++)
         {
             _cells[_cursorRow, column] =
                 new ScreenCell(
@@ -791,7 +951,10 @@ public sealed class TextConsole
         }
 
         // Put the cursor at the end of the line.
-        _cursorColumn = Math.Min(length, COLUMNS - 1);
+        _cursorColumn =
+            Math.Min(
+                length,
+                _columns - 1);
 
         ResetCursorFlash();
         InputChanged?.Invoke();
