@@ -24,4 +24,17 @@ public sealed class SpriteAnimation
 
         return frame;
     }
+
+    public bool RemoveFrame(int index)
+    {
+        // An animation must always have at least one frame.
+        if (_frames.Count <= 1)
+            return false;
+
+        if (index < 0 || index >= _frames.Count)
+            return false;
+
+        _frames.RemoveAt(index);
+        return true;
+    }
 }

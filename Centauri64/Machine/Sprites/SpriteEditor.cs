@@ -28,13 +28,25 @@ public sealed class SpriteEditor
     private const int PaletteX = 440;
     private const int PaletteY = 60;
 
-    private const int PaletteCellSize = 24;
-    private const int PaletteColumns = 4;
+    private const int PaletteCellSize = 18;
+    private const int PaletteColumns = 8;
 
     private int _currentAssetIndex;
 
     private bool _enteringSpriteName;
     private string _newSpriteName = "";
+
+    private const int PreviewX = 425;
+    private const int PreviewY = 400;
+    private const int PreviewWidth = 190;
+    private const int PreviewHeight = 64;
+
+    private int _currentFrameIndex;
+
+    private int _previewFrameIndex;
+    private float _previewTimer;
+
+    private const float PreviewFrameTime = 0.125f;
 
     public SpriteEditor(SpriteAssetStore assets)
     {
@@ -94,14 +106,20 @@ public sealed class SpriteEditor
                 "Sprite has no frames.");
         }
 
-        _frame =
-            _animation.Frames[0];
+        _currentFrameIndex = 0;
+
+        _frame = _animation.Frames[_currentFrameIndex];
+
+        _previewFrameIndex = 0;
+        _previewTimer = 0.0f;
     }
 
-    public void Update( MouseState mouse,KeyboardState keyboard,KeyboardState previousKeyboard)
+    public void Update(GameTime gameTime,MouseState mouse,KeyboardState keyboard,KeyboardState previousKeyboard)
     {
         if (!IsActive || _frame == null)
-        return;
+            return;
+
+        UpdatePreviewAnimation(gameTime);
 
         if (_enteringSpriteName)
         {
@@ -148,6 +166,31 @@ public sealed class SpriteEditor
             return;
         }
 
+        if (keyboard.IsKeyDown(Keys.OemOpenBrackets) && previousKeyboard.IsKeyUp(Keys.OemOpenBrackets))
+        {
+            SelectPreviousFrame();
+            return;
+        }
+
+        if (keyboard.IsKeyDown(Keys.OemCloseBrackets) &&
+            previousKeyboard.IsKeyUp(Keys.OemCloseBrackets))
+        {
+            SelectNextFrame();
+            return;
+        }
+
+        if (keyboard.IsKeyDown(Keys.A) && previousKeyboard.IsKeyUp(Keys.A))
+        {
+            AddFrame();
+            return;
+        }
+
+        if (keyboard.IsKeyDown(Keys.D) && previousKeyboard.IsKeyUp(Keys.D))
+        {
+            DeleteCurrentFrame();
+            return;
+        }
+
         if (mouse.LeftButton == ButtonState.Pressed)
         {
             if (TrySelectPaletteColour(
@@ -191,6 +234,134 @@ public sealed class SpriteEditor
         }
     }
 
+    private void UpdatePreviewAnimation(GameTime gameTime)
+    {
+        if (_animation == null ||
+            _animation.Frames.Count <= 1)
+        {
+            _previewFrameIndex = 0;
+            _previewTimer = 0.0f;
+            return;
+        }
+
+        _previewTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+        if (_previewTimer >= PreviewFrameTime)
+        {
+            _previewTimer -= PreviewFrameTime;
+
+            _previewFrameIndex++;
+
+            if (_previewFrameIndex >=
+                _animation.Frames.Count)
+            {
+                _previewFrameIndex = 0;
+            }
+        }
+    }
+
+    private void AddFrame()
+    {
+        if (_animation == null ||
+            _frame == null)
+        {
+            return;
+        }
+
+        var sourceFrame = _frame;
+
+        var newFrame =
+            _animation.AddFrame();
+
+        for (var y = 0;
+            y < CentauriSprite.HEIGHT;
+            y++)
+        {
+            for (var x = 0;
+                x < CentauriSprite.WIDTH;
+                x++)
+            {
+                newFrame.Pixels[y, x] =
+                    sourceFrame.Pixels[y, x];
+            }
+        }
+
+        _currentFrameIndex =
+            _animation.Frames.Count - 1;
+
+        _frame =
+            _animation.Frames[_currentFrameIndex];
+    }
+    
+    private void DeleteCurrentFrame()
+    {
+        if (_animation == null ||
+            _animation.Frames.Count <= 1)
+        {
+            return;
+        }
+
+        _animation.Frames.RemoveAt(_currentFrameIndex);
+
+        // If we deleted the last frame, move back to the new last frame.
+        if (_currentFrameIndex >= _animation.Frames.Count)
+        {
+            _currentFrameIndex =
+                _animation.Frames.Count - 1;
+        }
+
+        _frame =
+            _animation.Frames[_currentFrameIndex];
+
+        // Keep the animated preview valid too.
+        if (_previewFrameIndex >= _animation.Frames.Count)
+        {
+            _previewFrameIndex = 0;
+        }
+
+        _previewTimer = 0.0f;
+    }
+
+    private void SelectPreviousFrame()
+    {
+        if (_animation == null ||
+            _animation.Frames.Count == 0)
+        {
+            return;
+        }
+
+        _currentFrameIndex--;
+
+        if (_currentFrameIndex < 0)
+        {
+            _currentFrameIndex =
+                _animation.Frames.Count - 1;
+        }
+
+        _frame =
+            _animation.Frames[_currentFrameIndex];
+    }
+
+    private void SelectNextFrame()
+    {
+        if (_animation == null ||
+            _animation.Frames.Count == 0)
+        {
+            return;
+        }
+
+        _currentFrameIndex++;
+
+        if (_currentFrameIndex >=
+            _animation.Frames.Count)
+        {
+            _currentFrameIndex = 0;
+        }
+
+        _frame =
+            _animation.Frames[_currentFrameIndex];
+    }
+
     private void SelectPreviousAsset()
     {
         var assets =
@@ -227,11 +398,9 @@ public sealed class SpriteEditor
 
     private bool TrySelectPaletteColour(int mouseX,int mouseY)
     {
-        var paletteWidth =
-            PaletteColumns * PaletteCellSize;
+        var paletteWidth = PaletteColumns * PaletteCellSize;
 
-        var paletteRows =
-            16 / PaletteColumns;
+        var paletteRows  = CentauriPalette.MAX_COLORS / PaletteColumns;
 
         var paletteHeight =
             paletteRows * PaletteCellSize;
@@ -253,7 +422,7 @@ public sealed class SpriteEditor
         var colourIndex =
             row * PaletteColumns + column;
 
-        if (colourIndex >= 16)
+        if (colourIndex >= CentauriPalette.MAX_COLORS)
             return false;
 
         SelectedColour = colourIndex;
@@ -271,24 +440,19 @@ public sealed class SpriteEditor
             new Rectangle(0, 0, 640, 400),
             Color.Black);
 
-        DrawGrid(
-            spriteBatch,
-            pixel);
+        DrawGrid(spriteBatch,pixel);
 
-        DrawPalette(
-            spriteBatch,
-            pixel);
+        DrawPreview(spriteBatch,pixel);
 
-        DrawEditorText(
-            spriteBatch,
-            font);
+        DrawPalette(spriteBatch,pixel);
+
+        DrawEditorText(spriteBatch,font);
+
     }
 
     private void DrawPalette(SpriteBatch spriteBatch,Texture2D pixel)
     {
-        for (var colourIndex = 0;
-            colourIndex < 16;
-            colourIndex++)
+        for (var colourIndex = 0;colourIndex < CentauriPalette.MAX_COLORS;colourIndex++)
         {
             var column =
                 colourIndex % PaletteColumns;
@@ -302,16 +466,31 @@ public sealed class SpriteEditor
             var y =
                 PaletteY + row * PaletteCellSize;
 
+            var rectangle = new Rectangle(
+                x,
+                y,
+                PaletteCellSize,
+                PaletteCellSize);
+
+            // Draw colour with a 1px inset so the
+            // palette grid remains visible.
             spriteBatch.Draw(
                 pixel,
                 new Rectangle(
-                    x,
-                    y,
-                    PaletteCellSize - 2,
-                    PaletteCellSize - 2),
+                    rectangle.X + 1,
+                    rectangle.Y + 1,
+                    rectangle.Width - 2,
+                    rectangle.Height - 2),
                 CentauriPalette.Get(colourIndex));
 
-            // Highlight currently selected colour.
+            // Grid around every colour.
+            DrawRectangle(
+                spriteBatch,
+                pixel,
+                rectangle,
+                Color.Gray);
+
+            // Stronger highlight around selected colour.
             if (colourIndex == SelectedColour)
             {
                 DrawRectangle(
@@ -320,9 +499,67 @@ public sealed class SpriteEditor
                     new Rectangle(
                         x - 2,
                         y - 2,
-                        PaletteCellSize + 2,
-                        PaletteCellSize + 2),
+                        PaletteCellSize + 4,
+                        PaletteCellSize + 4),
                     Color.White);
+            }
+        }
+    }
+
+    private void DrawPreview(SpriteBatch spriteBatch,Texture2D pixel)
+    {
+        if (_animation == null || _animation.Frames.Count == 0)
+        {
+            return;
+        }
+
+        var previewFrame =_animation.Frames[_previewFrameIndex];
+
+        var previewRect = new Rectangle(
+            PreviewX,
+            PreviewY,
+            PreviewWidth,
+            PreviewHeight);
+
+        DrawRectangle(
+            spriteBatch,
+            pixel,
+            previewRect,
+            Color.Gray);
+
+        var spriteX =
+            PreviewX +
+            (PreviewWidth - CentauriSprite.WIDTH) / 2;
+
+        var spriteY =
+            PreviewY +
+            (PreviewHeight - CentauriSprite.HEIGHT) / 2;
+
+        for (var y = 0;
+            y < CentauriSprite.HEIGHT;
+            y++)
+        {
+            for (var x = 0;
+                x < CentauriSprite.WIDTH;
+                x++)
+            {
+                var colourIndex = previewFrame.Pixels[y, x];
+
+                if (colourIndex ==
+                    CentauriSprite.TRANSPARENT)
+                {
+                    continue;
+                }
+
+                spriteBatch.Draw(
+                    pixel,
+                    new Rectangle(
+                        spriteX + x,
+                        spriteY + y,
+                        1,
+                        1),
+                    CentauriPalette.Get(
+                        colourIndex));
             }
         }
     }
@@ -435,91 +672,97 @@ public sealed class SpriteEditor
         }
     }
 
-    private void DrawEditorText(
-        SpriteBatch spriteBatch,
-        BitmapFont font)
+    private void DrawEditorText(SpriteBatch spriteBatch,BitmapFont font)
     {
-        if (_asset == null ||
-            _animation == null)
+        if (_asset == null || _animation == null)
         {
             return;
         }
 
+        // Title.
+        font.Draw(spriteBatch,"SPRITE EDITOR",new Vector2(440, 20),Color.White);
+
+        // Palette heading.
+        font.Draw(spriteBatch,"PALETTE",new Vector2(440, 42),Color.White);
+
+        // New sprite name entry.
         if (_enteringSpriteName)
         {
             font.Draw(
                 spriteBatch,
                 "NEW SPRITE:",
-                new Vector2(440, 250),
+                new Vector2(440, 200),
                 Color.White);
 
             font.Draw(
                 spriteBatch,
                 _newSpriteName + "_",
-                new Vector2(440, 270),
+                new Vector2(440, 220),
                 Color.White);
 
             font.Draw(
                 spriteBatch,
                 "ENTER - CREATE",
-                new Vector2(440, 300),
+                new Vector2(440, 240),
                 Color.White);
 
             font.Draw(
                 spriteBatch,
                 "ESC - CANCEL",
-                new Vector2(440, 320),
+                new Vector2(440, 260),
                 Color.White);
 
             return;
         }
 
-        font.Draw(
-            spriteBatch,
-            "SPRITE EDITOR",
-            new Vector2(440, 20),
-            Color.White);
-
+        // Current sprite information.
         font.Draw(
             spriteBatch,
             $"SPRITE: {_asset.Name}",
-            new Vector2(440, 180),
-            Color.White);
-
-        font.Draw(
-            spriteBatch,
-            $"ANIM: {_animation.Name}",
             new Vector2(440, 200),
             Color.White);
 
         font.Draw(
             spriteBatch,
-            "FRAME: 1/1",
+            $"ANIM: {_animation.Name}",
             new Vector2(440, 220),
             Color.White);
 
         font.Draw(
             spriteBatch,
+            $"FRAME: {_currentFrameIndex + 1}/{_animation.Frames.Count}",
+            new Vector2(440, 240),
+            Color.White);
+
+        // Controls.
+        font.Draw(
+            spriteBatch,
             "N - NEW SPRITE",
-            new Vector2(440, 250),
+            new Vector2(440, 260),
             Color.White);
 
         font.Draw(
             spriteBatch,
             "< > - CHANGE",
-            new Vector2(440, 270),
+            new Vector2(440, 280),
+            Color.White);
+
+         font.Draw(
+            spriteBatch,
+            "A - ADD FRAME",
+            new Vector2(440, 300),
+            Color.White);
+
+        font.Draw(
+            spriteBatch,
+            "D - DELETE FRAME",
+            new Vector2(440, 320),
             Color.White);
 
         font.Draw(
             spriteBatch,
             "C - CLEAR",
-            new Vector2(440, 290),
-            Color.White);
-
-        font.Draw(
-            spriteBatch,
-            "ESC - EXIT",
-            new Vector2(440, 310),
+            new Vector2(440, 340),
             Color.White);
     }
 

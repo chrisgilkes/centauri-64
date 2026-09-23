@@ -351,7 +351,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
                     mouse.XButton1,
                     mouse.XButton2);
 
-            _machine.UpdateSpriteEditor(virtualMouse,keyboardState,_previousKeyboardState);
+            _machine.UpdateSpriteEditor(gameTime, virtualMouse,keyboardState,_previousKeyboardState);
         }
 
         _previousKeyboardState = keyboardState;

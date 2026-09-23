@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Input;
 
 using Centauri64.Graphics;
 using Centauri64.Machine.Sprites;
+using Microsoft.Xna.Framework;
 
 namespace Centauri64.Machine;
 
@@ -57,9 +58,9 @@ public sealed partial class CentauriMachine
         }
     }
 
-     public void UpdateSpriteEditor(MouseState mouse,KeyboardState keyboard,KeyboardState previousKeyboard)
+     public void UpdateSpriteEditor(GameTime gameTime, MouseState mouse,KeyboardState keyboard,KeyboardState previousKeyboard)
     {
-        _spriteEditor.Update(mouse,keyboard,previousKeyboard);
+        _spriteEditor.Update(gameTime, mouse,keyboard,previousKeyboard);
     }
 
     public void DrawSpriteEditor(SpriteBatch spriteBatch,BitmapFont font, Texture2D pixel)
