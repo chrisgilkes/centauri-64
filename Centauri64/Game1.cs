@@ -19,7 +19,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     private const int WINDOW_SCALE   = 2;
 
-    private RenderTarget2D _developmentRenderTarget = null!;
+    private RenderTarget2D _codeEditorRenderTarget = null!;
 
     private RenderTarget2D _gameRenderTarget = null!;
 
@@ -84,7 +84,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
     {
         _spriteBatch    = new SpriteBatch(GraphicsDevice);
 
-        _developmentRenderTarget =new RenderTarget2D(
+        _codeEditorRenderTarget =new RenderTarget2D(
         GraphicsDevice,
         CentauriMachine.DEVELOPMENT_WIDTH,
         CentauriMachine.DEVELOPMENT_HEIGHT);
@@ -360,7 +360,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
     private void DrawComputerRoom()
     {
         GraphicsDevice.SetRenderTarget(
-            _developmentRenderTarget);
+            _codeEditorRenderTarget);
 
         GraphicsDevice.Clear(Color.Black);
 
@@ -369,13 +369,13 @@ public class Game1 : Microsoft.Xna.Framework.Game
         GraphicsDevice.SetRenderTarget(null);
 
         DrawRenderTargetToWindow(
-            _developmentRenderTarget);
+            _codeEditorRenderTarget);
     }
 
     private void DrawProgrammingManual()
     {
         GraphicsDevice.SetRenderTarget(
-            _developmentRenderTarget);
+            _codeEditorRenderTarget);
 
         GraphicsDevice.Clear(Color.Black);
 
@@ -384,7 +384,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
         GraphicsDevice.SetRenderTarget(null);
 
         DrawRenderTargetToWindow(
-            _developmentRenderTarget);
+            _codeEditorRenderTarget);
     }
 
     protected override void Draw(GameTime gameTime)
@@ -428,7 +428,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
         }
         else
         {
-            DrawDevelopment();
+            DrawCodeEditor();
         }
 
         base.Draw(gameTime);
@@ -437,7 +437,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
     private void DrawTextMode()
     {
         GraphicsDevice.SetRenderTarget(
-            _developmentRenderTarget);
+            _codeEditorRenderTarget);
 
         GraphicsDevice.Clear(
             CentauriPalette.Get(_machine.PaperColour));
@@ -474,13 +474,13 @@ public class Game1 : Microsoft.Xna.Framework.Game
         GraphicsDevice.SetRenderTarget(null);
 
         DrawRenderTargetToWindow(
-            _developmentRenderTarget);
+            _codeEditorRenderTarget);
     }
 
-    private void DrawDevelopment()
+    private void DrawCodeEditor()
     {
         GraphicsDevice.SetRenderTarget(
-            _developmentRenderTarget);
+            _codeEditorRenderTarget);
 
         GraphicsDevice.Clear(
             CentauriPalette.Get(_machine.PaperColour));
@@ -499,7 +499,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
         {
             DrawEditorChrome();
 
-           _console.Draw(_spriteBatch,_font,_pixel,EditorText,EditorBackground,drawBackground: false,drawCursor: true,offsetY: 24);
+           _console.Draw(_spriteBatch,_font,_pixel,EditorText,EditorBackground,drawBackground: false,drawCursor: true,offsetY: 24,  visibleRows: 55);
 
             _machine.DrawSprites(
                 _spriteBatch,
@@ -510,7 +510,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         GraphicsDevice.SetRenderTarget(null);
 
-        DrawRenderTargetToWindow(_developmentRenderTarget);
+        DrawRenderTargetToWindow(_codeEditorRenderTarget);
     }
 
     private void DrawGame()
@@ -534,7 +534,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
                 CentauriMachine.ARCADE_HEIGHT),
             CentauriPalette.Get(_programConsole.Background));
 
-        _programConsole.Draw(_spriteBatch,_font,_pixel,Color.White,CentauriPalette.Get(_programConsole.Background),drawBackground: false, drawCursor: !_basicMachine.IsRunning);
+        _programConsole.Draw(_spriteBatch,_font,_pixel,Color.White,CentauriPalette.Get(_programConsole.Background),drawBackground: false, drawCursor: !_basicMachine.IsRunning, visibleRows: 30);
 
         // GRAPHICS
         _machine.DrawGraphics(

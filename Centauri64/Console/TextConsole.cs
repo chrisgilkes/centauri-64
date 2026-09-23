@@ -11,7 +11,7 @@ namespace Centauri64.Console;
 public sealed class TextConsole
 {
     public const int COLUMNS = 80;
-    public const int ROWS = 50;
+    public const int ROWS = 55;
 
     private const int CHARACTER_WIDTH = 8;
     private const int CHARACTER_HEIGHT = 8;
@@ -124,6 +124,8 @@ public sealed class TextConsole
     private readonly List<ScreenCell[]> _scrollback = new();
 
     private int _scrollbackOffset;
+
+    private const int PAGE_SCROLL_LINES = 50;
 
     public TextConsole()
     {
@@ -370,7 +372,7 @@ public sealed class TextConsole
             return;
 
         _scrollbackOffset = Math.Min(
-            _scrollbackOffset + 40,
+            _scrollbackOffset + PAGE_SCROLL_LINES,
             _scrollback.Count);
     }
 
@@ -378,7 +380,7 @@ public sealed class TextConsole
     {
         _scrollbackOffset = Math.Max(
             0,
-            _scrollbackOffset - 40);
+            _scrollbackOffset - PAGE_SCROLL_LINES);
     }
 
     private void PreviousHistory()
@@ -673,9 +675,11 @@ public sealed class TextConsole
     }
 
     public void Draw(SpriteBatch spriteBatch,BitmapFont font,Texture2D pixel,Color foregroundColor,Color backgroundColor,
-        bool drawBackground = true,bool drawCursor = true,int offsetY = 0)
+        bool drawBackground = true,bool drawCursor = true,int offsetY = 0,  int visibleRows = ROWS  )
     {
-        for (var row = 0; row < ROWS; row++)
+        visibleRows = Math.Min(visibleRows, ROWS);
+
+        for (var row = 0; row < visibleRows; row++)
         {
             for (var column = 0; column < COLUMNS; column++)
             {
@@ -718,7 +722,7 @@ public sealed class TextConsole
             }
         }
 
-        if (drawCursor && _cursorVisible && _scrollbackOffset == 0)
+        if (drawCursor && _cursorVisible && _scrollbackOffset == 0 && _cursorRow < visibleRows)
         {
             var cursorX =
                 SCREEN_OFFSET_X +
