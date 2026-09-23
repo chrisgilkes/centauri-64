@@ -104,9 +104,9 @@ public sealed class TextConsole
         set => _background = value;
     }
 
-    private const int SCREEN_OFFSET_X = CentauriMachine.BORDER_SIZE;
+    private const int SCREEN_OFFSET_X = 0;
 
-    private const int SCREEN_OFFSET_Y = CentauriMachine.BORDER_SIZE;
+    private const int SCREEN_OFFSET_Y = 0;
 
     public const int ScreenMargin = 16;
 

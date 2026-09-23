@@ -29,7 +29,6 @@ public enum TokenType
     Cls,
     Ink,
     Paper,
-    Border,
     Sprite,
     SpritePosition,
     Reset,

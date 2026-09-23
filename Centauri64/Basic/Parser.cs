@@ -87,11 +87,6 @@ public sealed class Parser
             return ParsePaperStatement();
         }
 
-        if (token.Type == TokenType.Border)
-        {
-            return ParseBorderStatement();
-        }
-
         if (token.Type == TokenType.Sprite)
         {
             return ParseSpriteStatement();
@@ -476,13 +471,6 @@ public sealed class Parser
         var y = ParseExpression();
 
         return new SpritePositionStatement(spriteIndex,x,y);
-    }
-
-    private BorderStatement ParseBorderStatement()
-    {
-        Expect(TokenType.Border);
-
-        return new BorderStatement(ParseExpression());
     }
 
     private PaperStatement ParsePaperStatement()

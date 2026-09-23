@@ -41,20 +41,6 @@ public sealed partial class Interpreter
         return ExecutionResult.Continue();
     }
 
-    private ExecutionResult ExecuteBorder(BorderStatement statement)
-    {
-        var colour = Evaluate(statement.Colour);
-
-        if (!colour.IsInteger)
-        {
-            throw new InvalidOperationException("BORDER expects a number.");
-        }
-
-        _machine.SetBorder(colour.Integer);
-
-        return ExecutionResult.Continue();
-    }
-
     private ExecutionResult ExecuteMode(ModeStatement statement)
     {
         var value = Evaluate(statement.Mode);

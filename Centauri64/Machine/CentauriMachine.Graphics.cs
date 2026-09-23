@@ -115,7 +115,7 @@ public sealed partial class CentauriMachine
     {
         foreach (var point in _plotPoints)
         {
-            spriteBatch.Draw(pixel,new Rectangle(point.X + BORDER_SIZE,point.Y + BORDER_SIZE,1,1),CentauriPalette.Get(point.Colour));
+            spriteBatch.Draw(pixel,new Rectangle(point.X,point.Y,1,1),CentauriPalette.Get(point.Colour));
         }
 
         foreach (var line in _lines)
@@ -129,7 +129,7 @@ public sealed partial class CentauriMachine
 
             if (rect.Filled)
             {
-                spriteBatch.Draw(pixel,new Rectangle(rect.X + BORDER_SIZE,rect.Y + BORDER_SIZE,rect.Width,rect.Height),colour);
+                spriteBatch.Draw(pixel,new Rectangle(rect.X,rect.Y,rect.Width,rect.Height),colour);
             }
             else
             {
@@ -174,7 +174,7 @@ public sealed partial class CentauriMachine
 
         while (true)
         {
-            spriteBatch.Draw(pixel,new Rectangle(x1 + BORDER_SIZE,y1 + BORDER_SIZE,1,1),colour);
+            spriteBatch.Draw(pixel,new Rectangle(x1,y1,1,1),colour);
 
             if (x1 == x2 && y1 == y2)
             {
@@ -199,7 +199,7 @@ public sealed partial class CentauriMachine
 
     private static void DrawPixel(SpriteBatch spriteBatch,Texture2D pixel,int x,int y,Color colour)
     {
-        spriteBatch.Draw(pixel,new Rectangle(x + BORDER_SIZE,y + BORDER_SIZE,1,1),colour);
+        spriteBatch.Draw(pixel,new Rectangle(x,y,1,1),colour);
     }
 
     private static void DrawCircle(SpriteBatch spriteBatch,Texture2D pixel,int centreX,int centreY,int radius,Color colour)
@@ -247,7 +247,7 @@ public sealed partial class CentauriMachine
             (x1, x2) = (x2, x1);
         }
 
-        spriteBatch.Draw(pixel,new Rectangle(x1 + BORDER_SIZE,y + BORDER_SIZE,x2 - x1 + 1,1),colour);
+        spriteBatch.Draw(pixel,new Rectangle(x1,y,x2 - x1 + 1,1),colour);
     }
 
     private static void DrawFilledCircle(SpriteBatch spriteBatch,Texture2D pixel,int centreX,int centreY,int radius,Color colour)

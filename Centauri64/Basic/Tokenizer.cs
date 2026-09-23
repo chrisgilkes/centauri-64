@@ -215,7 +215,6 @@ public sealed class Tokenizer
             "CLS" => TokenType.Cls,
             "INK" => TokenType.Ink,
             "PAPER" => TokenType.Paper,
-            "BORDER" => TokenType.Border,
             "SPRITE" => TokenType.Sprite,
             "SPRITEPOS" => TokenType.SpritePosition,
             "RESET" => TokenType.Reset,

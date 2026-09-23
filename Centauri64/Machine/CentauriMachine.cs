@@ -28,25 +28,20 @@ public sealed partial class CentauriMachine
     private KeyboardState _previousKeyboardState;
 
     public const int SCREEN_WIDTH = 640;
-    public const int SCREEN_HEIGHT = 400;
+    public const int SCREEN_HEIGHT = 480;
 
-    public const int BORDER_SIZE = 8;
-
-    public const int DEVELOPMENT_WIDTH = SCREEN_WIDTH + BORDER_SIZE * 2;
-    public const int DEVELOPMENT_HEIGHT = SCREEN_HEIGHT + BORDER_SIZE * 2;
+    public const int DEVELOPMENT_WIDTH = SCREEN_WIDTH;
+    public const int DEVELOPMENT_HEIGHT = SCREEN_HEIGHT;
 
     public const int ARCADE_WIDTH = 320;
-    public const int ARCADE_HEIGHT = 180;
+    public const int ARCADE_HEIGHT = 240;
 
-    public const int GAME_WIDTH = ARCADE_WIDTH + BORDER_SIZE * 2;
+    public const int GAME_WIDTH = ARCADE_WIDTH;
 
-    public const int GAME_HEIGHT =ARCADE_HEIGHT + BORDER_SIZE * 2;
-
-    public int BorderColour { get; private set; } = DEFAULT_BORDER;
+    public const int GAME_HEIGHT =ARCADE_HEIGHT;
 
     public const int DEFAULT_INK = 1;
     public const int DEFAULT_PAPER = 0;
-    public const int DEFAULT_BORDER = 6;
 
     private CentauriDisplayMode _displayMode = CentauriDisplayMode.HighResolution;
 
@@ -69,6 +64,8 @@ public sealed partial class CentauriMachine
         CentauriDisplayMode.Arcade => ARCADE_HEIGHT,
         _ => SCREEN_HEIGHT
     };
+
+    public int PaperColour => DEFAULT_PAPER;
 
     public CentauriMachine(TextConsole console, TextConsole programConsole)
     {
@@ -143,13 +140,6 @@ public sealed partial class CentauriMachine
         _programConsole.Foreground = colour;
     }
 
-    public void SetBorder(int colour)
-    {
-        ValidateColour(colour);
-
-        BorderColour = colour;
-    }
-
     public void SetPaper(int colour)
     {
         ValidateColour(colour);
@@ -171,7 +161,6 @@ public sealed partial class CentauriMachine
     {
         _console.Foreground = DEFAULT_INK;
         _console.Background = DEFAULT_PAPER;
-        BorderColour        = DEFAULT_BORDER;
 
         _console.Clear();
     }
@@ -180,7 +169,6 @@ public sealed partial class CentauriMachine
     {
         _programConsole.Foreground  = DEFAULT_INK;
         _programConsole.Background  = DEFAULT_PAPER;
-        BorderColour                = DEFAULT_BORDER;
 
         _programConsole.Clear();
         _positionedText.Clear();

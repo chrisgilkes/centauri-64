@@ -440,7 +440,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
             _developmentRenderTarget);
 
         GraphicsDevice.Clear(
-            CentauriPalette.Get(_machine.BorderColour));
+            CentauriPalette.Get(_machine.PaperColour));
 
         _spriteBatch.Begin(
             samplerState: SamplerState.PointClamp);
@@ -483,7 +483,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
             _developmentRenderTarget);
 
         GraphicsDevice.Clear(
-            CentauriPalette.Get(_machine.BorderColour));
+            CentauriPalette.Get(_machine.PaperColour));
 
         _spriteBatch.Begin(
             samplerState: SamplerState.PointClamp);
@@ -520,7 +520,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         // BORDER
         GraphicsDevice.Clear(
-            CentauriPalette.Get(_machine.BorderColour));
+            CentauriPalette.Get(_machine.PaperColour));
 
         _spriteBatch.Begin(
             samplerState: SamplerState.PointClamp);
@@ -529,8 +529,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
         _spriteBatch.Draw(
             _pixel,
             new Rectangle(
-                CentauriMachine.BORDER_SIZE,
-                CentauriMachine.BORDER_SIZE,
+                0,0,
                 CentauriMachine.ARCADE_WIDTH,
                 CentauriMachine.ARCADE_HEIGHT),
             CentauriPalette.Get(_programConsole.Background));

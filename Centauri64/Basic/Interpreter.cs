@@ -215,11 +215,6 @@ public sealed partial class Interpreter
             return ExecutePaper(paper);
         }
 
-        if (statement is BorderStatement border)
-        {
-            return ExecuteBorder(border);
-        }
-
         if (statement is ModeStatement mode)
         {    
             return ExecuteMode(mode);

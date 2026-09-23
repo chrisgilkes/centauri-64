@@ -111,7 +111,6 @@ public sealed class BasicSourceRenderer
             TokenType.Cls or
             TokenType.Ink or
             TokenType.Paper or
-            TokenType.Border or
             TokenType.Sprite or
             TokenType.SpritePosition or
             TokenType.SpriteShow or
