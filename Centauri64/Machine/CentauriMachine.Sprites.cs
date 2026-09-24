@@ -76,26 +76,31 @@ public sealed partial class CentauriMachine
     {
         ValidateSpriteIndex(index);
 
-        var asset = _spriteAssets.Get(assetName);
+        var asset =
+            _spriteAssets.Get(assetName);
 
-        var animation = asset.GetAnimation("DEFAULT");
+        var animation =
+            asset.GetAnimation("DEFAULT");
 
         if (animation.Frames.Count == 0)
         {
-            throw new InvalidOperationException($"Sprite {assetName} has no frames.");
+            throw new InvalidOperationException(
+                $"Sprite {assetName} has no frames.");
         }
-
-        var frame = animation.Frames[0];
 
         var sprite = _sprites[index];
 
-        for (var y = 0;y < CentauriSprite.HEIGHT;y++)
-        {
-            for (var x = 0;x < CentauriSprite.WIDTH;x++)
-            {
-                sprite.Pixels[y, x] = frame.Pixels[y, x];
-            }
-        }
+        sprite.AssetName = assetName;
+
+        sprite.AnimationName = "DEFAULT";
+
+        sprite.AnimationFrame = 0;
+        sprite.AnimationTimer = 0.0f;
+        sprite.AnimationPlaying = true;
+        sprite.AnimationLoop = true;
+        sprite.PreviousAnimationName = null;
+
+        CopyFrameToSprite(animation.Frames[0],sprite);
 
         sprite.Visible = true;
     }
@@ -206,6 +211,154 @@ public sealed partial class CentauriMachine
         if (index < 0 || index >= MAX_SPRITES)
         {
             throw new InvalidOperationException($"Sprite must be between 0 and {MAX_SPRITES - 1}.");
+        }
+    }
+
+    private static void CopyFrameToSprite(SpriteFrame frame,CentauriSprite sprite)
+    {
+        for (var y = 0;
+            y < CentauriSprite.HEIGHT;
+            y++)
+        {
+            for (var x = 0;
+                x < CentauriSprite.WIDTH;
+                x++)
+            {
+                sprite.Pixels[y, x] =
+                    frame.Pixels[y, x];
+            }
+        }
+    }
+
+    public void SetSpriteAnimation(int index,string animationName,bool loop)
+    {
+        ValidateSpriteIndex(index);
+
+        var sprite = _sprites[index];
+
+        if (sprite.AssetName == null)
+        {
+            throw new InvalidOperationException($"Sprite {index} has no asset.");
+        }
+
+        var asset =_spriteAssets.Get(sprite.AssetName);
+
+        var animation = asset.GetAnimation(animationName);
+
+        if (animation.Frames.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"Animation {animationName} has no frames.");
+        }
+
+        // Don't restart the same looping animation
+        // every BASIC update.
+        if (sprite.AnimationName == animationName &&
+            sprite.AnimationPlaying &&
+            sprite.AnimationLoop == loop)
+        {
+            return;
+        }
+
+        if (loop)
+        {
+            // A new looping animation cancels any
+            // pending return from a one-shot.
+            sprite.PreviousAnimationName = null;
+        }
+        else
+        {
+            // A one-shot returns to whatever
+            // animation was playing before it.
+            sprite.PreviousAnimationName =
+                sprite.AnimationName;
+        }
+
+        sprite.AnimationName =
+            animationName;
+
+        sprite.AnimationFrame = 0;
+        sprite.AnimationTimer = 0.0f;
+        sprite.AnimationPlaying = true;
+        sprite.AnimationLoop = loop;
+
+        CopyFrameToSprite(animation.Frames[0],sprite);
+    }
+
+    public void UpdateSprites(GameTime gameTime)
+    {
+        const float frameTime = 0.125f;
+
+        var deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+        for (var i = 0; i < _sprites.Length;i++)
+        {
+            var sprite = _sprites[i];
+
+            if (!sprite.Visible ||
+                !sprite.AnimationPlaying ||
+                sprite.AssetName == null)
+            {
+                continue;
+            }
+
+            var asset = _spriteAssets.Get(sprite.AssetName);
+
+            var animation = asset.GetAnimation(sprite.AnimationName);
+
+            if (animation.Frames.Count <= 1)
+            {
+                continue;
+            }
+
+            sprite.AnimationTimer += deltaTime;
+
+            while (sprite.AnimationTimer >=frameTime)
+            {
+                sprite.AnimationTimer -= frameTime;
+
+                sprite.AnimationFrame++;
+
+                if (sprite.AnimationFrame >=
+                    animation.Frames.Count)
+                {
+                    // Looping animation.
+                    if (sprite.AnimationLoop)
+                    {
+                        sprite.AnimationFrame = 0;
+                    }
+                    // One-shot animation.
+                    else if (sprite.PreviousAnimationName != null)
+                    {
+                        var previousAnimation =
+                            sprite.PreviousAnimationName;
+
+                        sprite.PreviousAnimationName =
+                            null;
+
+                        SetSpriteAnimation(
+                            i,
+                            previousAnimation,
+                            true);
+
+                        break;
+                    }
+                    // One-shot with nowhere to return.
+                    else
+                    {
+                        sprite.AnimationFrame =
+                            animation.Frames.Count - 1;
+
+                        sprite.AnimationPlaying =
+                            false;
+                    }
+                }
+
+                CopyFrameToSprite(
+                    animation.Frames[
+                        sprite.AnimationFrame],
+                    sprite);
+            }
         }
     }
 

@@ -217,6 +217,7 @@ public sealed class Tokenizer
             "PAPER" => TokenType.Paper,
             "SPRITE" => TokenType.Sprite,
             "SPRITEPOS" => TokenType.SpritePosition,
+            "SPRITEANIM" => TokenType.SpriteAnimation,
             "RESET" => TokenType.Reset,
             "GOSUB" => TokenType.Gosub,
             "RETURN" => TokenType.Return,

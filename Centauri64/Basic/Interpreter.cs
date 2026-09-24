@@ -260,6 +260,11 @@ public sealed partial class Interpreter
             return ExecuteSprite(sprite);
         }
 
+        if (statement is SpriteAnimationStatement spriteAnimation)
+        {
+            return ExecuteSpriteAnimation(spriteAnimation);
+        }
+
         if (statement is SpritePositionStatement spritePosition)
         {
             return ExecuteSpritePosition(spritePosition);

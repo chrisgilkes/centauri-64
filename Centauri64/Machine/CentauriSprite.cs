@@ -12,6 +12,20 @@ public sealed class CentauriSprite
 
     public int[,] Pixels { get; }
 
+    public string? AssetName { get; set; }
+
+    public string AnimationName { get; set; } = "DEFAULT";
+
+    public int AnimationFrame { get; set; }
+
+    public float AnimationTimer { get; set; }
+
+    public bool AnimationPlaying { get; set; } = true;
+
+    public bool AnimationLoop { get; set; } = true;
+
+    public string? PreviousAnimationName { get; set; }
+
     public const int TRANSPARENT = -1;
 
     public CentauriSprite()
@@ -26,4 +40,5 @@ public sealed class CentauriSprite
             }
         }
     }
+    
 }

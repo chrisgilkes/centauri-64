@@ -30,6 +30,50 @@ public sealed partial class Interpreter
         return ExecutionResult.Continue();
     }
 
+    private ExecutionResult ExecuteSpriteAnimation(SpriteAnimationStatement statement)
+    {
+        var spriteIndex =
+            Evaluate(statement.SpriteIndex);
+
+        var animationName =
+            Evaluate(statement.AnimationName);
+
+        var loop =
+            Evaluate(statement.Loop);
+
+        if (!spriteIndex.IsInteger)
+        {
+            throw new InvalidOperationException(
+                "SPRITEANIM index must be numeric.");
+        }
+
+        if (!animationName.IsString)
+        {
+            throw new InvalidOperationException(
+                "SPRITEANIM name must be a string.");
+        }
+
+        if (!loop.IsInteger)
+        {
+            throw new InvalidOperationException(
+                "SPRITEANIM loop must be numeric.");
+        }
+
+        if (loop.Integer != 0 &&
+            loop.Integer != 1)
+        {
+            throw new InvalidOperationException(
+                "SPRITEANIM loop must be 0 or 1.");
+        }
+
+        _machine.SetSpriteAnimation(
+            spriteIndex.Integer,
+            animationName.String!,
+            loop.Integer != 0);
+
+        return ExecutionResult.Continue();
+    }
+
     private ExecutionResult ExecuteSpritePosition(SpritePositionStatement statement)
     {
         var spriteIndex = Evaluate(statement.SpriteIndex);

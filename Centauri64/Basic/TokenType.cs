@@ -31,6 +31,7 @@ public enum TokenType
     Paper,
     Sprite,
     SpritePosition,
+    SpriteAnimation,
     Reset,
     Gosub,
     Return,

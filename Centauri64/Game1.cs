@@ -296,6 +296,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
         }
 
         _machine.UpdateInput();
+        _machine.UpdateSprites(gameTime);
 
         if (KeyPressed(keyboardState, Keys.F1))
             SetWindowScale(1);

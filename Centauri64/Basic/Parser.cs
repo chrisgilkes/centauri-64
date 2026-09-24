@@ -167,6 +167,11 @@ public sealed class Parser
             return ParseSpriteHideStatement();
         }
 
+        if (token.Type == TokenType.SpriteAnimation)
+        {
+            return ParseSpriteAnimationStatement();
+        }
+
         if (token.Type == TokenType.Dim)
         {
             return ParseDimStatement();
@@ -193,6 +198,29 @@ public sealed class Parser
         }
 
         throw new InvalidOperationException($"Unexpected token: {token.Type}");
+    }
+
+    private SpriteAnimationStatement ParseSpriteAnimationStatement()
+    {
+        Expect(TokenType.SpriteAnimation);
+
+        var spriteIndex =
+            ParseExpression();
+
+        Expect(TokenType.Comma);
+
+        var animationName =
+            ParseExpression();
+
+        Expect(TokenType.Comma);
+
+        var loop =
+            ParseExpression();
+
+        return new SpriteAnimationStatement(
+            spriteIndex,
+            animationName,
+            loop);
     }
 
     private EndStatement ParseEndStatement()
