@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using Centauri64.Machine.Sprites;
 
@@ -38,6 +39,50 @@ public sealed class SpriteAsset
             throw new InvalidOperationException(
                 $"Unknown animation {name}.");
         }
+
+        return animation;
+    }
+
+    public bool ContainsAnimation(string name)
+    {
+        return _animations.ContainsKey(name);
+    }
+
+    public bool RemoveAnimation(string name)
+    {
+        // A sprite must always have at least one animation.
+        if (_animations.Count <= 1)
+            return false;
+
+        return _animations.Remove(name);
+    }
+
+    public IReadOnlyList<SpriteAnimation> AnimationList =>
+        _animations.Values
+            .OrderBy(animation => animation.Name)
+            .ToList();
+
+
+    public SpriteAnimation? DuplicateAnimation(string sourceName,string newName)
+    {
+        if (!_animations.TryGetValue(
+                sourceName,
+                out var source))
+        {
+            return null;
+        }
+
+        if (_animations.ContainsKey(newName))
+        {
+            return null;
+        }
+
+        var animation =
+            source.Clone(newName);
+
+        _animations.Add(
+            newName,
+            animation);
 
         return animation;
     }

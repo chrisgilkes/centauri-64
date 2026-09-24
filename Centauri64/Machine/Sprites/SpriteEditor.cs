@@ -36,17 +36,25 @@ public sealed class SpriteEditor
     private bool _enteringSpriteName;
     private string _newSpriteName = "";
 
-    private const int PreviewX = 425;
+    private const int PreviewX = 150;
     private const int PreviewY = 400;
     private const int PreviewWidth = 190;
     private const int PreviewHeight = 64;
 
     private int _currentFrameIndex;
+    private int _currentAnimationIndex;
 
     private int _previewFrameIndex;
     private float _previewTimer;
 
     private const float PreviewFrameTime = 0.125f;
+
+    private bool _enteringAnimationName;
+    private string _newAnimationName = "";
+
+    private bool _copyingAnimation;
+
+    private bool _onionSkinEnabled;
 
     public SpriteEditor(SpriteAssetStore assets)
     {
@@ -97,18 +105,48 @@ public sealed class SpriteEditor
         _asset =
             assets[_currentAssetIndex];
 
+        var animations = _asset.AnimationList;
+
+        if (animations.Count == 0)
+        {
+            throw new InvalidOperationException(
+                "Sprite has no animations.");
+        }
+
+        _currentAnimationIndex = 0;
+
+        SelectAnimation(_currentAnimationIndex);
+    }
+
+    private void SelectAnimation(int index)
+    {
+        if (_asset == null)
+            return;
+
+        var animations =
+            _asset.AnimationList;
+
+        if (index < 0 ||
+            index >= animations.Count)
+        {
+            return;
+        }
+
+        _currentAnimationIndex = index;
+
         _animation =
-            _asset.GetAnimation("DEFAULT");
+            animations[_currentAnimationIndex];
 
         if (_animation.Frames.Count == 0)
         {
             throw new InvalidOperationException(
-                "Sprite has no frames.");
+                "Animation has no frames.");
         }
 
         _currentFrameIndex = 0;
 
-        _frame = _animation.Frames[_currentFrameIndex];
+        _frame =
+            _animation.Frames[_currentFrameIndex];
 
         _previewFrameIndex = 0;
         _previewTimer = 0.0f;
@@ -130,11 +168,44 @@ public sealed class SpriteEditor
             return;
         }
 
-        if (keyboard.IsKeyDown(Keys.N) &&
-            previousKeyboard.IsKeyUp(Keys.N))
+        if (_enteringAnimationName)
+        {
+            UpdateAnimationNameEntry(keyboard,previousKeyboard);
+
+            return;
+        }
+
+        if (keyboard.IsKeyDown(Keys.N) && previousKeyboard.IsKeyUp(Keys.N))
         {
             _enteringSpriteName = true;
             _newSpriteName = "";
+            return;
+        }
+
+        if (keyboard.IsKeyDown(Keys.O) &&
+            previousKeyboard.IsKeyUp(Keys.O))
+        {
+            _onionSkinEnabled =
+                !_onionSkinEnabled;
+
+            return;
+        }
+
+        var shiftDown = keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift);
+
+        if (shiftDown && keyboard.IsKeyDown(Keys.M) && previousKeyboard.IsKeyUp(Keys.M))
+        {
+            _copyingAnimation = true;
+            _enteringAnimationName = true;
+            _newAnimationName = "";
+            return;
+        }
+
+        if (!shiftDown && keyboard.IsKeyDown(Keys.M) && previousKeyboard.IsKeyUp(Keys.M))
+        {
+            _copyingAnimation = false;
+            _enteringAnimationName = true;
+            _newAnimationName = "";
             return;
         }
 
@@ -152,19 +223,77 @@ public sealed class SpriteEditor
             return;
         }
 
-        if (keyboard.IsKeyDown(Keys.Left) &&
+        if (!shiftDown && keyboard.IsKeyDown(Keys.Left) &&
             previousKeyboard.IsKeyUp(Keys.Left))
         {
             SelectPreviousAsset();
             return;
         }
 
-        if (keyboard.IsKeyDown(Keys.Right) &&
+        if (!shiftDown && keyboard.IsKeyDown(Keys.Right) &&
             previousKeyboard.IsKeyUp(Keys.Right))
         {
             SelectNextAsset();
             return;
         }
+
+        if (!shiftDown && keyboard.IsKeyDown(Keys.Up) && previousKeyboard.IsKeyUp(Keys.Up))
+        {
+            SelectPreviousAnimation();
+            return;
+        }
+
+        if (!shiftDown && keyboard.IsKeyDown(Keys.Down) &&
+            previousKeyboard.IsKeyUp(Keys.Down))
+        {
+            SelectNextAnimation();
+            return;
+        }
+
+        if (shiftDown &&keyboard.IsKeyDown(Keys.Left) && previousKeyboard.IsKeyUp(Keys.Left))
+        {
+            ShiftFrame(-1, 0);
+            return;
+        }
+
+        if (shiftDown &&
+            keyboard.IsKeyDown(Keys.Right) &&
+            previousKeyboard.IsKeyUp(Keys.Right))
+        {
+            ShiftFrame(1, 0);
+            return;
+        }
+
+        if (shiftDown &&
+            keyboard.IsKeyDown(Keys.Up) &&
+            previousKeyboard.IsKeyUp(Keys.Up))
+        {
+            ShiftFrame(0, -1);
+            return;
+        }
+
+        if (shiftDown &&
+            keyboard.IsKeyDown(Keys.Down) &&
+            previousKeyboard.IsKeyUp(Keys.Down))
+        {
+            ShiftFrame(0, 1);
+            return;
+        }
+
+        if (keyboard.IsKeyDown(Keys.H) &&
+            previousKeyboard.IsKeyUp(Keys.H))
+        {
+            FlipFrameHorizontal();
+            return;
+        }
+
+        if (keyboard.IsKeyDown(Keys.V) &&
+            previousKeyboard.IsKeyUp(Keys.V))
+        {
+            FlipFrameVertical();
+            return;
+        }
+
 
         if (keyboard.IsKeyDown(Keys.OemOpenBrackets) && previousKeyboard.IsKeyUp(Keys.OemOpenBrackets))
         {
@@ -185,7 +314,13 @@ public sealed class SpriteEditor
             return;
         }
 
-        if (keyboard.IsKeyDown(Keys.D) && previousKeyboard.IsKeyUp(Keys.D))
+        if (shiftDown && keyboard.IsKeyDown(Keys.D) && previousKeyboard.IsKeyUp(Keys.D))
+        {
+            DeleteCurrentAnimation();
+            return;
+        }
+
+        if (!shiftDown && keyboard.IsKeyDown(Keys.D) && previousKeyboard.IsKeyUp(Keys.D))
         {
             DeleteCurrentFrame();
             return;
@@ -232,6 +367,311 @@ public sealed class SpriteEditor
             _frame.Pixels[spriteY, spriteX] =
                 CentauriSprite.TRANSPARENT;
         }
+    }
+
+    private void FlipFrameHorizontal()
+    {
+        if (_frame == null)
+            return;
+
+        var width =
+            CentauriSprite.WIDTH;
+
+        var height =
+            CentauriSprite.HEIGHT;
+
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width / 2; x++)
+            {
+                var oppositeX =
+                    width - 1 - x;
+
+                var temp =
+                    _frame.Pixels[y, x];
+
+                _frame.Pixels[y, x] =
+                    _frame.Pixels[y, oppositeX];
+
+                _frame.Pixels[y, oppositeX] =
+                    temp;
+            }
+        }
+    }
+
+    private void FlipFrameVertical()
+    {
+        if (_frame == null)
+            return;
+
+        var width =
+            CentauriSprite.WIDTH;
+
+        var height =
+            CentauriSprite.HEIGHT;
+
+        for (var y = 0; y < height / 2; y++)
+        {
+            var oppositeY =
+                height - 1 - y;
+
+            for (var x = 0; x < width; x++)
+            {
+                var temp =
+                    _frame.Pixels[y, x];
+
+                _frame.Pixels[y, x] =
+                    _frame.Pixels[oppositeY, x];
+
+                _frame.Pixels[oppositeY, x] =
+                    temp;
+            }
+        }
+    }
+
+    private void ShiftFrame(int offsetX, int offsetY)
+    {
+        if (_frame == null)
+            return;
+
+        var width =
+            CentauriSprite.WIDTH;
+
+        var height =
+            CentauriSprite.HEIGHT;
+
+        var shiftedPixels =
+            new int[height, width];
+
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                var newX =
+                    (x + offsetX + width) % width;
+
+                var newY =
+                    (y + offsetY + height) % height;
+
+                shiftedPixels[newY, newX] =
+                    _frame.Pixels[y, x];
+            }
+        }
+
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                _frame.Pixels[y, x] =
+                    shiftedPixels[y, x];
+            }
+        }
+    }
+
+    private void DeleteCurrentAnimation()
+    {
+        if (_asset == null ||
+            _animation == null)
+        {
+            return;
+        }
+
+        var animationName =
+            _animation.Name;
+
+        if (!_asset.RemoveAnimation(animationName))
+        {
+            return;
+        }
+
+        var animations =
+            _asset.AnimationList;
+
+        // If we deleted the last animation in the list,
+        // move back to the new final animation.
+        if (_currentAnimationIndex >= animations.Count)
+        {
+            _currentAnimationIndex =
+                animations.Count - 1;
+        }
+
+        SelectAnimation(
+            _currentAnimationIndex);
+    }
+
+    private void UpdateAnimationNameEntry(KeyboardState keyboard,KeyboardState previousKeyboard)
+    {
+        if (keyboard.IsKeyDown(Keys.Escape) &&
+            previousKeyboard.IsKeyUp(Keys.Escape))
+        {
+            _enteringAnimationName = false;
+            _copyingAnimation = false;
+            _newAnimationName = "";
+            return;
+        }
+
+        if (keyboard.IsKeyDown(Keys.Back) &&
+            previousKeyboard.IsKeyUp(Keys.Back))
+        {
+            if (_newAnimationName.Length > 0)
+            {
+                _newAnimationName =
+                    _newAnimationName[..^1];
+            }
+
+            return;
+        }
+
+        if (keyboard.IsKeyDown(Keys.Enter) &&
+            previousKeyboard.IsKeyUp(Keys.Enter))
+        {
+            CreateAnimation();
+            return;
+        }
+
+        foreach (var key in keyboard.GetPressedKeys())
+        {
+            if (!previousKeyboard.IsKeyUp(key))
+                continue;
+
+            if (key >= Keys.A &&
+                key <= Keys.Z)
+            {
+                var character =
+                    (char)('A' + (key - Keys.A));
+
+                if (_newAnimationName.Length < 12)
+                {
+                    _newAnimationName += character;
+                }
+
+                return;
+            }
+
+            if (key >= Keys.D0 &&
+                key <= Keys.D9)
+            {
+                var character =
+                    (char)('0' + (key - Keys.D0));
+
+                if (_newAnimationName.Length < 12)
+                {
+                    _newAnimationName += character;
+                }
+
+                return;
+            }
+        }
+    }
+
+    private void CreateAnimation()
+    {
+        if (_asset == null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(
+                _newAnimationName))
+        {
+            return;
+        }
+
+        if (_asset.ContainsAnimation(_newAnimationName))
+        {
+            _enteringAnimationName = false;
+            _copyingAnimation = false;
+            _newAnimationName = "";
+            return;
+        }
+
+        SpriteAnimation animation;
+
+        if (_copyingAnimation &&
+            _animation != null)
+        {
+            var duplicate =
+                _asset.DuplicateAnimation(
+                    _animation.Name,
+                    _newAnimationName);
+
+            if (duplicate == null)
+                return;
+
+            animation = duplicate;
+        }
+        else
+        {
+            animation =
+                _asset.AddAnimation(
+                    _newAnimationName);
+
+            animation.AddFrame();
+        }
+
+        var name =
+            _newAnimationName;
+
+        _enteringAnimationName = false;
+        _newAnimationName = "";
+
+        var animations =
+            _asset.AnimationList;
+
+        for (var i = 0;
+            i < animations.Count;
+            i++)
+        {
+            if (animations[i].Name == name)
+            {
+                SelectAnimation(i);
+                break;
+            }
+        }
+
+        _copyingAnimation = false;
+    }
+
+    private void SelectPreviousAnimation()
+    {
+        if (_asset == null)
+            return;
+
+        var animations =
+            _asset.AnimationList;
+
+        if (animations.Count == 0)
+            return;
+
+        var index =
+            _currentAnimationIndex - 1;
+
+        if (index < 0)
+        {
+            index = animations.Count - 1;
+        }
+
+        SelectAnimation(index);
+    }
+
+    private void SelectNextAnimation()
+    {
+        if (_asset == null)
+            return;
+
+        var animations =
+            _asset.AnimationList;
+
+        if (animations.Count == 0)
+            return;
+
+        var index =
+            _currentAnimationIndex + 1;
+
+        if (index >= animations.Count)
+        {
+            index = 0;
+        }
+
+        SelectAnimation(index);
     }
 
     private void UpdatePreviewAnimation(GameTime gameTime)
@@ -295,15 +735,12 @@ public sealed class SpriteEditor
     
     private void DeleteCurrentFrame()
     {
-        if (_animation == null ||
-            _animation.Frames.Count <= 1)
-        {
+        if (_animation == null)
             return;
-        }
 
-        _animation.Frames.RemoveAt(_currentFrameIndex);
+        if (!_animation.RemoveFrame(_currentFrameIndex))
+            return;
 
-        // If we deleted the last frame, move back to the new last frame.
         if (_currentFrameIndex >= _animation.Frames.Count)
         {
             _currentFrameIndex =
@@ -313,7 +750,6 @@ public sealed class SpriteEditor
         _frame =
             _animation.Frames[_currentFrameIndex];
 
-        // Keep the animated preview valid too.
         if (_previewFrameIndex >= _animation.Frames.Count)
         {
             _previewFrameIndex = 0;
@@ -608,6 +1044,27 @@ public sealed class SpriteEditor
         if (_frame == null)
             return;
 
+
+        SpriteFrame? onionFrame = null;
+
+        if (_onionSkinEnabled &&
+            _animation != null &&
+            _animation.Frames.Count > 1)
+        {
+            var onionFrameIndex =
+                _currentFrameIndex - 1;
+
+            if (onionFrameIndex < 0)
+            {
+                onionFrameIndex =
+                    _animation.Frames.Count - 1;
+            }
+
+            onionFrame =
+                _animation.Frames[onionFrameIndex];
+        }
+
+
         for (var y = 0;
             y < CentauriSprite.HEIGHT;
             y++)
@@ -616,13 +1073,37 @@ public sealed class SpriteEditor
                 x < CentauriSprite.WIDTH;
                 x++)
             {
-                var colourIndex =
-                    _frame.Pixels[y, x];
+                var colourIndex = _frame.Pixels[y, x];
 
-                var colour =
-                    colourIndex == CentauriSprite.TRANSPARENT
-                        ? new Color(32, 32, 32)
-                        : CentauriPalette.Get(colourIndex);
+                Color colour;
+
+                if (colourIndex != CentauriSprite.TRANSPARENT)
+                {
+                    colour =
+                        CentauriPalette.Get(colourIndex);
+                }
+                else if (onionFrame != null)
+                {
+                    var onionColourIndex =
+                        onionFrame.Pixels[y, x];
+
+                    if (onionColourIndex !=
+                        CentauriSprite.TRANSPARENT)
+                    {
+                        colour =
+                            CentauriPalette
+                                .Get(onionColourIndex) * 0.3f;
+                    }
+                    else
+                    {
+                        colour =
+                            new Color(32, 32, 32);
+                    }
+                }
+                else
+                {
+                    colour = new Color(32, 32, 32);
+                }
 
                 var rectangle = new Rectangle(
                     GridX + x * PixelSize,
@@ -679,11 +1160,21 @@ public sealed class SpriteEditor
             return;
         }
 
+        const int x = 440;
+
         // Title.
-        font.Draw(spriteBatch,"SPRITE EDITOR",new Vector2(440, 20),Color.White);
+        font.Draw(
+            spriteBatch,
+            "SPRITE EDITOR",
+            new Vector2(x, 20),
+            Color.White);
 
         // Palette heading.
-        font.Draw(spriteBatch,"PALETTE",new Vector2(440, 42),Color.White);
+        font.Draw(
+            spriteBatch,
+            "PALETTE",
+            new Vector2(x, 42),
+            Color.White);
 
         // New sprite name entry.
         if (_enteringSpriteName)
@@ -691,25 +1182,57 @@ public sealed class SpriteEditor
             font.Draw(
                 spriteBatch,
                 "NEW SPRITE:",
-                new Vector2(440, 200),
+                new Vector2(x, 185),
                 Color.White);
 
             font.Draw(
                 spriteBatch,
                 _newSpriteName + "_",
-                new Vector2(440, 220),
+                new Vector2(x, 205),
                 Color.White);
 
             font.Draw(
                 spriteBatch,
                 "ENTER - CREATE",
-                new Vector2(440, 240),
+                new Vector2(x, 225),
                 Color.White);
 
             font.Draw(
                 spriteBatch,
                 "ESC - CANCEL",
-                new Vector2(440, 260),
+                new Vector2(x, 245),
+                Color.White);
+
+            return;
+        }
+
+        // New/copy animation name entry.
+        if (_enteringAnimationName)
+        {
+            font.Draw(
+                spriteBatch,
+                _copyingAnimation
+                    ? "COPY ANIMATION:"
+                    : "NEW ANIMATION:",
+                new Vector2(x, 185),
+                Color.White);
+
+            font.Draw(
+                spriteBatch,
+                _newAnimationName + "_",
+                new Vector2(x, 205),
+                Color.White);
+
+            font.Draw(
+                spriteBatch,
+                "ENTER - CREATE",
+                new Vector2(x, 225),
+                Color.White);
+
+            font.Draw(
+                spriteBatch,
+                "ESC - CANCEL",
+                new Vector2(x, 245),
                 Color.White);
 
             return;
@@ -719,50 +1242,115 @@ public sealed class SpriteEditor
         font.Draw(
             spriteBatch,
             $"SPRITE: {_asset.Name}",
-            new Vector2(440, 200),
+            new Vector2(x, 180),
             Color.White);
 
         font.Draw(
             spriteBatch,
             $"ANIM: {_animation.Name}",
-            new Vector2(440, 220),
+            new Vector2(x, 195),
             Color.White);
 
         font.Draw(
             spriteBatch,
             $"FRAME: {_currentFrameIndex + 1}/{_animation.Frames.Count}",
-            new Vector2(440, 240),
+            new Vector2(x, 210),
             Color.White);
 
-        // Controls.
+        font.Draw(
+            spriteBatch,
+            $"ONION: {(_onionSkinEnabled ? "ON" : "OFF")}",
+            new Vector2(x, 225),
+            _onionSkinEnabled
+                ? Color.Yellow
+                : Color.Gray);
+
+        // Sprite controls.
         font.Draw(
             spriteBatch,
             "N - NEW SPRITE",
-            new Vector2(440, 260),
+            new Vector2(x, 245),
             Color.White);
 
         font.Draw(
             spriteBatch,
-            "< > - CHANGE",
-            new Vector2(440, 280),
+            "< > - SPRITE",
+            new Vector2(x, 260),
             Color.White);
 
-         font.Draw(
+        // Animation controls.
+        font.Draw(
             spriteBatch,
-            "A - ADD FRAME",
-            new Vector2(440, 300),
+            "M - NEW ANIM",
+            new Vector2(x, 280),
+            Color.White);
+
+        font.Draw(
+            spriteBatch,
+            "SHIFT+M - COPY ANIM",
+            new Vector2(x, 295),
+            Color.White);
+
+        font.Draw(
+            spriteBatch,
+            "UP/DOWN - ANIM",
+            new Vector2(x, 310),
+            Color.White);
+
+        font.Draw(
+            spriteBatch,
+            "SHIFT+D - DELETE ANIM",
+            new Vector2(x, 325),
+            Color.White);
+
+        // Frame controls.
+        font.Draw(
+            spriteBatch,
+            "[ ] - FRAME",
+            new Vector2(x, 345),
+            Color.White);
+
+        font.Draw(
+            spriteBatch,
+            "A - DUP FRAME",
+            new Vector2(x, 360),
             Color.White);
 
         font.Draw(
             spriteBatch,
             "D - DELETE FRAME",
-            new Vector2(440, 320),
+            new Vector2(x, 375),
+            Color.White);
+
+        // Editing controls.
+        font.Draw(
+            spriteBatch,
+            "O - ONION",
+            new Vector2(x, 395),
+            Color.White);
+
+        font.Draw(
+            spriteBatch,
+            "SHIFT+ARROWS - MOVE",
+            new Vector2(x, 410),
+            Color.White);
+
+        font.Draw(
+            spriteBatch,
+            "H/V - FLIP",
+            new Vector2(x, 425),
             Color.White);
 
         font.Draw(
             spriteBatch,
             "C - CLEAR",
-            new Vector2(440, 340),
+            new Vector2(x, 440),
+            Color.White);
+
+        font.Draw(
+            spriteBatch,
+            "ESC - EXIT",
+            new Vector2(x, 455),
             Color.White);
     }
 

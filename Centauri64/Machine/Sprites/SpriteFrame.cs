@@ -28,4 +28,25 @@ public sealed class SpriteFrame
             }
         }
     }
+
+    public SpriteFrame Clone()
+    {
+        var frame =
+            new SpriteFrame();
+
+        for (var y = 0;
+            y < CentauriSprite.HEIGHT;
+            y++)
+        {
+            for (var x = 0;
+                x < CentauriSprite.WIDTH;
+                x++)
+            {
+                frame.Pixels[y, x] =
+                    Pixels[y, x];
+            }
+        }
+
+        return frame;
+    }
 }

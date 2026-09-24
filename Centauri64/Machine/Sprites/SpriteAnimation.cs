@@ -37,4 +37,18 @@ public sealed class SpriteAnimation
         _frames.RemoveAt(index);
         return true;
     }
+
+    public SpriteAnimation Clone(string name)
+    {
+        var animation =
+            new SpriteAnimation(name);
+
+        foreach (var frame in _frames)
+        {
+            animation._frames.Add(
+                frame.Clone());
+        }
+
+        return animation;
+    }
 }
