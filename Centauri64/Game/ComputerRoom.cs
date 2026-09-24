@@ -4,6 +4,8 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
+using Centauri64.Machine;
+
 namespace Centauri64.Game;
 
 public sealed class ComputerRoom
@@ -61,13 +63,18 @@ public sealed class ComputerRoom
 
     public void Draw(SpriteBatch spriteBatch)
     {
+        
         spriteBatch.Begin(
             samplerState: SamplerState.PointClamp);
 
         // Background.
         DrawBox(
             spriteBatch,
-            new Rectangle(0, 0, 640, 400),
+            new Rectangle(
+            0,
+            0,
+            CentauriMachine.DEVELOPMENT_WIDTH,
+            CentauriMachine.DEVELOPMENT_HEIGHT),
             Background);
 
         // ---------------------------------------------------------
@@ -86,9 +93,13 @@ public sealed class ComputerRoom
             24,
             Cream);
 
+        var dayText = DateTime.Now
+            .ToString("dddd")
+            .ToUpperInvariant();
+
         DrawText(
             spriteBatch,
-            "SATURDAY",
+            dayText,
             64,
             44,
             Yellow);
@@ -100,10 +111,14 @@ public sealed class ComputerRoom
             44,
             Cyan);
 
+
+        var timeText = DateTime.Now.ToString("h:mm tt").ToUpperInvariant();
+        var timeX = 576 - (timeText.Length * 8);
+
         DrawText(
             spriteBatch,
-            "10:42 AM",
-            504,
+            timeText,
+            timeX,
             44,
             Yellow);
 
@@ -188,19 +203,19 @@ public sealed class ComputerRoom
             spriteBatch,
             "0101010101010101010101010101010101010101010101010101010101010101010101",
             24,
-            328,
+            408,
             Cyan);
 
         DrawBox(
             spriteBatch,
-            new Rectangle(16, 344, 608, 24),
+            new Rectangle(16, 424, 608, 24),
             Cyan);
 
         DrawText(
             spriteBatch,
             "[1]-[5] SELECT",
             48,
-            352,
+            432,
             Dark);
 
         spriteBatch.End();

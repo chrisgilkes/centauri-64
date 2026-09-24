@@ -4,6 +4,8 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
+using Centauri64.Machine;
+
 namespace Centauri64.Game;
 
 public sealed class ProgrammingManual
@@ -116,10 +118,14 @@ public sealed class ProgrammingManual
     {
          DrawBox(
             spriteBatch,
-            new Rectangle(0, 0, 640, 400),
+            new Rectangle(
+            0,
+            0,
+            CentauriMachine.DEVELOPMENT_WIDTH,
+            CentauriMachine.DEVELOPMENT_HEIGHT),
             Background);
 
-        // Header.
+            // Header.
         DrawBox(
             spriteBatch,
             new Rectangle(16, 16, 608, 48),
@@ -176,14 +182,14 @@ public sealed class ProgrammingManual
         // Footer.
         DrawBox(
             spriteBatch,
-            new Rectangle(16, 344, 608, 24),
+            new Rectangle(16, 424, 608, 24),
             Header);
 
         DrawText(
             spriteBatch,
             "[1]-[8] SELECT       ESC BACK",
             48,
-            352,
+            432,
             Color.White);
     }
 
@@ -341,20 +347,18 @@ public sealed class ProgrammingManual
             Cyan);
     }
 
-    private void DrawManualFooter(
-        SpriteBatch spriteBatch,
-        string text)
+    private void DrawManualFooter(SpriteBatch spriteBatch,string text)
     {
         DrawBox(
             spriteBatch,
-            new Rectangle(16, 344, 608, 24),
+            new Rectangle(16, 424, 608, 24),
             Header);
 
         DrawText(
             spriteBatch,
             text,
             48,
-            352,
+            432,
             Color.White);
     }
 
@@ -365,7 +369,11 @@ public sealed class ProgrammingManual
 
         DrawBox(
             spriteBatch,
-            new Rectangle(0, 0, 640, 400),
+            new Rectangle(
+            0,
+            0,
+            CentauriMachine.DEVELOPMENT_WIDTH,
+            CentauriMachine.DEVELOPMENT_HEIGHT),
             Background);
 
         switch (_currentPage)

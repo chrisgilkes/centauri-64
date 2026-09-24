@@ -185,6 +185,31 @@ public class Game1 : Microsoft.Xna.Framework.Game
     {
         var keyboardState = Keyboard.GetState();
 
+        if (KeyPressed(keyboardState, Keys.F1))
+            SetWindowScale(1);
+
+        if (KeyPressed(keyboardState, Keys.F2))
+            SetWindowScale(2);
+
+        if (KeyPressed(keyboardState, Keys.F3))
+            SetWindowScale(3);
+
+        if (KeyPressed(keyboardState, Keys.F4))
+            SetWindowScale(4);
+
+        if (KeyPressed(keyboardState, Keys.F11))
+            ToggleFullscreen();
+
+        var altDown =
+            keyboardState.IsKeyDown(Keys.LeftAlt) ||
+            keyboardState.IsKeyDown(Keys.RightAlt);
+
+        if (altDown &&
+            KeyPressed(keyboardState, Keys.Enter))
+        {
+            ToggleFullscreen();
+        }
+
         if (_gameMode == GameMode.ComputerRoom)
         {
             _computerRoom.Update();
@@ -297,34 +322,6 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         _machine.UpdateInput();
         _machine.UpdateSprites(gameTime);
-
-        if (KeyPressed(keyboardState, Keys.F1))
-            SetWindowScale(1);
-
-        if (KeyPressed(keyboardState, Keys.F2))
-            SetWindowScale(2);
-
-        if (KeyPressed(keyboardState, Keys.F3))
-            SetWindowScale(3);
-
-        if (KeyPressed(keyboardState, Keys.F4))
-            SetWindowScale(4);
-
-        if ( KeyPressed(keyboardState, Keys.F5))
-            _machine.SpriteEditor.Open("PLAYER");
-
-        if (KeyPressed(keyboardState, Keys.F11))
-            ToggleFullscreen();
-
-        var altDown =
-            keyboardState.IsKeyDown(Keys.LeftAlt) ||
-            keyboardState.IsKeyDown(Keys.RightAlt);
-
-        if (altDown &&
-            KeyPressed(keyboardState, Keys.Enter))
-        {
-            ToggleFullscreen();
-        }
 
         if (!_basicMachine.IsRunning && !_machine.SpriteEditor.IsActive)
         {
