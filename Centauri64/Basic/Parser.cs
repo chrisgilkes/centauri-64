@@ -9,18 +9,40 @@ public sealed class Parser
     private IReadOnlyList<Token> _tokens = [];
     private int _position;
 
+    private string _source = string.Empty;
+    private int _lineNumber;
+
     public ProgramLine ParseLine(IReadOnlyList<Token> tokens, string source)
     {
-        _tokens     = tokens;
-        _position   = 0;
+        _tokens = tokens;
+        _position = 0;
+        _source = source;
+        _lineNumber = 0;
 
-        var lineNumber = ParseLineNumber();
-        var statement  = ParseStatement();
+        try
+        {
+            _lineNumber = ParseLineNumber();
 
-        Expect(TokenType.EndOfLine);
+            var statement = ParseStatement();
 
-        return new ProgramLine(lineNumber, statement, source);
-    }
+            Expect(TokenType.EndOfLine);
+
+            return new ProgramLine(
+                _lineNumber,
+                statement,
+                source);
+        }
+        catch (Exception ex)
+        {
+            var lineText = _lineNumber > 0
+                ? $" IN LINE {_lineNumber}"
+                : string.Empty;
+
+            throw new InvalidOperationException(
+                $"SYNTAX ERROR{lineText}\n{_source}\n{ex.Message}",
+                ex);
+        }
+    } 
 
     private Token Expect(TokenType type)
     {
@@ -28,7 +50,7 @@ public sealed class Parser
 
         if (token.Type != type)
         {
-            throw new InvalidOperationException($"Expected {type}, but found {token.Type}.");
+            throw new InvalidOperationException($"Expected {type}, but found {token.Type} at position {token.Start}.");
         }
 
         Advance();

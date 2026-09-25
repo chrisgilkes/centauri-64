@@ -77,17 +77,20 @@ public sealed partial class CentauriMachine
         }
     }
     
-    private readonly List<PlotPoint> _plotPoints = new();
+    private readonly Dictionary<(int X, int Y), PlotPoint> _plotPoints = new();
     private readonly List<LinePrimitive> _lines = new();
 
     private readonly List<RectPrimitive> _rectangles = new();
     private readonly List<CirclePrimitive> _circles = new();
 
-    public void Plot(int x, int y, int colour)
+   public void Plot(int x, int y, int colour)
     {
         ValidateColour(colour);
 
-        _plotPoints.Add(new PlotPoint(x, y, colour));
+        _plotPoints[(x, y)] = new PlotPoint(
+                x,
+                y,
+                colour);
     }
 
     public void Line(int x1,int y1,int x2,int y2,int colour)
@@ -113,7 +116,7 @@ public sealed partial class CentauriMachine
 
     public void DrawGraphics(SpriteBatch spriteBatch, Texture2D pixel)
     {
-        foreach (var point in _plotPoints)
+        foreach (var point in _plotPoints.Values)
         {
             spriteBatch.Draw(pixel,new Rectangle(point.X,point.Y,1,1),CentauriPalette.Get(point.Colour));
         }

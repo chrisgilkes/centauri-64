@@ -9,7 +9,7 @@ namespace Centauri64.Basic;
 
 public sealed partial class BasicMachine
 {
-    private const int INSTRUCTIONS_PER_FRAME = 100;
+    private const int MAX_INSTRUCTIONS_PER_FRAME = 350;
 
     private readonly TextConsole _console;
 

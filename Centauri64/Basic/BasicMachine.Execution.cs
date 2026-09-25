@@ -59,7 +59,7 @@ public sealed partial class BasicMachine
         try
         {
             for (var i = 0;
-                 i < INSTRUCTIONS_PER_FRAME &&
+                 i < MAX_INSTRUCTIONS_PER_FRAME &&
                  _interpreter.IsRunning;
                  i++)
             {
