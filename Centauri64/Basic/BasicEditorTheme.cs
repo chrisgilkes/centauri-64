@@ -8,6 +8,8 @@ public sealed class BasicEditorTheme
 
     public int KeywordColour { get; init; } = 9;
 
+    public int FunctionColour { get; init; } = 6;
+
     public int StringColour { get; init; } = 11;
 
     public int CommentColour { get; init; } = 18;

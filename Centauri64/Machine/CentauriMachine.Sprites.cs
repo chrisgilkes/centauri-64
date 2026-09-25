@@ -230,6 +230,28 @@ public sealed partial class CentauriMachine
         }
     }
 
+    public bool IsSpriteAnimationPlaying(int index,string? animationName = null)
+    {
+        ValidateSpriteIndex(index);
+
+        var sprite = _sprites[index];
+
+        if (!sprite.AnimationPlaying)
+        {
+            return false;
+        }
+
+        if (animationName == null)
+        {
+            return true;
+        }
+
+        return string.Equals(
+            sprite.AnimationName,
+            animationName,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
     public void SetSpriteAnimation(int index,string animationName,bool loop)
     {
         ValidateSpriteIndex(index);

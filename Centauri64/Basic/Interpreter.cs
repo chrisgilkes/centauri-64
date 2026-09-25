@@ -477,8 +477,53 @@ public sealed partial class Interpreter
             "SWIDTH" => EvaluateScreenWidthFunction(function),
             "SHEIGHT" => EvaluateScreenHeightFunction(function),
             "KEYPRESSED" => EvaluateKeyPressedFunction(function),
+            "ANIMPLAYING" => EvaluateAnimPlayingFunction(function),
             _ => throw new InvalidOperationException($"Unknown function {function.Name}.")
         };
+    }
+
+    private BasicValue EvaluateAnimPlayingFunction(FunctionCallExpression function)
+    {
+        if (function.Arguments.Count < 1 ||
+            function.Arguments.Count > 2)
+        {
+            throw new InvalidOperationException(
+                "ANIMPLAYING expects one or two arguments.");
+        }
+
+        var spriteIndex =
+            Evaluate(function.Arguments[0]);
+
+        if (!spriteIndex.IsInteger)
+        {
+            throw new InvalidOperationException(
+                "ANIMPLAYING expects a sprite number.");
+        }
+
+        string? animationName = null;
+
+        if (function.Arguments.Count == 2)
+        {
+            var animation =
+                Evaluate(function.Arguments[1]);
+
+            if (!animation.IsString)
+            {
+                throw new InvalidOperationException(
+                    "ANIMPLAYING animation name must be a string.");
+            }
+
+            animationName =
+                animation.String;
+        }
+
+        var playing =
+            _machine.IsSpriteAnimationPlaying(
+                spriteIndex.Integer,
+                animationName);
+
+        return new BasicValue(
+            playing ? 1 : 0);
     }
 
     private BasicValue EvaluateKeyPressedFunction(FunctionCallExpression function)

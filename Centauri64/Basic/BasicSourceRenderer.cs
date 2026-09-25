@@ -39,7 +39,7 @@ public sealed class BasicSourceRenderer
                 source.Substring(
                     token.Start,
                     token.Length),
-                GetTokenColour(token.Type));
+                GetTokenColour(token));
 
             position = token.Start + token.Length;
         }
@@ -73,7 +73,7 @@ public sealed class BasicSourceRenderer
             if (token.Type == TokenType.EndOfLine)
                 break;
 
-            var colour = GetTokenColour(token.Type);
+            var colour = GetTokenColour(token);
 
             for (var i = 0; i < token.Length; i++)
             {
@@ -85,18 +85,36 @@ public sealed class BasicSourceRenderer
         }
     }
 
-    private int GetTokenColour(TokenType type)
+    private int GetTokenColour(Token token)
     {
-        if (type == TokenType.String)
+        if (token.Type == TokenType.String)
             return _theme.StringColour;
 
-        if (type == TokenType.Rem)
+        if (token.Type == TokenType.Rem)
             return _theme.CommentColour;
 
-        if (IsKeyword(type))
+        if (IsFunction(token))
+            return _theme.FunctionColour;
+
+        if (IsKeyword(token.Type))
             return _theme.KeywordColour;
 
         return _theme.TextColour;
+    }
+
+    private static bool IsFunction(Token token)
+    {
+        if (token.Type != TokenType.Identifier)
+            return false;
+
+        return token.Text is
+            "KEY" or
+            "KEYPRESSED" or
+            "RND" or
+            "COLLIDE" or
+            "SWIDTH" or
+            "SHEIGHT" or
+            "ANIMPLAYING";
     }
 
     private static bool IsKeyword(TokenType type)

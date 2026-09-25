@@ -710,7 +710,8 @@ public sealed class Parser
             "RND" or
             "COLLIDE" or
             "SWIDTH" or
-            "SHEIGHT";
+            "SHEIGHT" or 
+            "ANIMPLAYING";
     }
 
     private Expression ParsePrimaryExpression()

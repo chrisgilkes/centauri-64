@@ -197,6 +197,9 @@ public class Game1 : Microsoft.Xna.Framework.Game
         if (KeyPressed(keyboardState, Keys.F4))
             SetWindowScale(4);
 
+        if ( KeyPressed(keyboardState, Keys.F5))
+            _machine.SpriteEditor.Open("PLAYER");
+
         if (KeyPressed(keyboardState, Keys.F11))
             ToggleFullscreen();
 
