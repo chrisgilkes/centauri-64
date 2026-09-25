@@ -61,6 +61,26 @@ public sealed class SpriteEditor
         _assets = assets;
     }
 
+    public void Open()
+    {
+        var assets = _assets.Assets;
+
+        if (assets.Count == 0)
+        {
+            return;
+        }
+
+        if (_currentAssetIndex < 0 ||
+            _currentAssetIndex >= assets.Count)
+        {
+            _currentAssetIndex = 0;
+        }
+
+        SelectAsset(_currentAssetIndex);
+
+        IsActive = true;
+    }
+
     public void Open(string assetName)
     {
         var assets =
