@@ -65,7 +65,12 @@ public sealed partial class Interpreter
             throw new InvalidOperationException("WAIT duration cannot be negative.");
         }
 
-        var ticks = (long)(duration.Integer / 1000.0 * Stopwatch.Frequency);
+        return BeginWait(duration.Integer);
+    }
+
+    private ExecutionResult BeginWait(int durationMs)
+    {
+        var ticks = (long)(durationMs / 1000.0 * Stopwatch.Frequency);
 
         _waitUntil = Stopwatch.GetTimestamp() + ticks;
 

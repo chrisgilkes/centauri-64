@@ -7,8 +7,13 @@ public sealed class CentauriAudio
 {
     private const int SampleRate = 44100;
 
+    private SoundEffect? _effect;
+    private SoundEffectInstance? _voice;
+
     public void Beep(int frequency, int durationMs)
     {
+        Silence();
+
         if (frequency <= 0 || durationMs <= 0)
             return;
 
@@ -44,12 +49,29 @@ public sealed class CentauriAudio
             0,
             data.Length);
 
-        var sound =
+        _effect =
             new SoundEffect(
                 data,
                 SampleRate,
                 AudioChannels.Mono);
 
-        sound.Play();
+        _voice = _effect.CreateInstance();
+        _voice.Play();
+    }
+
+    public void Silence()
+    {
+        if (_voice != null)
+        {
+            _voice.Stop();
+            _voice.Dispose();
+            _voice = null;
+        }
+
+        if (_effect != null)
+        {
+            _effect.Dispose();
+            _effect = null;
+        }
     }
 }

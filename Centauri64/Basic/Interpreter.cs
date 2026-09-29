@@ -157,6 +157,7 @@ public sealed partial class Interpreter
         _waitUntil = null;
         ClearPendingInput();
         _machine.CancelInput();
+        _machine.Silence();
     }
 
     public void Run(BasicProgram program)
@@ -355,19 +356,7 @@ public sealed partial class Interpreter
 
         if (statement is BeepStatement beep)
         {
-            var frequency = Evaluate(beep.Frequency);
-
-            var duration = Evaluate(beep.Duration);
-
-            if (!frequency.IsInteger ||
-                !duration.IsInteger)
-            {
-                throw new InvalidOperationException("BEEP expects numeric values.");
-            }
-
-            _machine.Beep(frequency.Integer,duration.Integer);
-
-            return ExecutionResult.Continue();
+            return ExecuteBeep(beep);
         }
 
         if (statement is WaitStatement wait)

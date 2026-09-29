@@ -10,4 +10,9 @@ public sealed partial class CentauriMachine
     {
         _audio.Beep(frequency, durationMs);
     }
+
+    public void Silence()
+    {
+        _audio.Silence();
+    }
 }
