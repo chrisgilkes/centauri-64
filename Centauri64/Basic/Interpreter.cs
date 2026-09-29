@@ -233,7 +233,10 @@ public sealed partial class Interpreter
                     Syntax.SpriteShowStatement or
                     Syntax.SpriteHideStatement or
                     Syntax.SpriteFlipStatement or
-                    Syntax.SpriteAnimationStatement,
+                    Syntax.SpriteAnimationStatement or
+                    Syntax.ForStatement or
+                    Syntax.NextStatement or
+                    Syntax.IfStatement,
 
             _ => false
         };
