@@ -40,6 +40,7 @@ public sealed partial class BasicMachine
         }
 
         _spriteStorage.Load(name,_machine.SpriteAssets);
+        _machine.SpriteEditor.MarkSaved();
 
         _console.WriteLine("");
         _console.WriteLine($"LOADED {name}");
@@ -63,6 +64,7 @@ public sealed partial class BasicMachine
         _storage.Save(name, _program);
 
         _spriteStorage.Save(name,_machine.SpriteAssets);
+        _machine.SpriteEditor.MarkSaved();
 
         var label = _storage.LoadLabel(name);
         label.MachineVersion = TapeLabel.CurrentMachineVersion;

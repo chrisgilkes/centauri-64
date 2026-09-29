@@ -32,6 +32,29 @@ public sealed class SpriteAssetStore
         return _assets.ContainsKey(name);
     }
 
+    public bool Remove(string name)
+    {
+        return _assets.Remove(name);
+    }
+
+    public bool Rename(string oldName, string newName)
+    {
+        if (oldName == newName)
+            return true;
+
+        if (!_assets.TryGetValue(oldName, out var asset))
+            return false;
+
+        if (_assets.ContainsKey(newName))
+            return false;
+
+        _assets.Remove(oldName);
+        asset.Rename(newName);
+        _assets[newName] = asset;
+
+        return true;
+    }
+
     public void Clear()
     {
         _assets.Clear();

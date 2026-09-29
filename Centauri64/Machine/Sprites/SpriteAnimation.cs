@@ -25,6 +25,22 @@ public sealed class SpriteAnimation
         return frame;
     }
 
+    public SpriteFrame InsertFrameAfter(int index)
+    {
+        var frame = new SpriteFrame();
+        var insertAt = index + 1;
+
+        if (insertAt < 0)
+            insertAt = 0;
+
+        if (insertAt > _frames.Count)
+            insertAt = _frames.Count;
+
+        _frames.Insert(insertAt, frame);
+
+        return frame;
+    }
+
     public bool RemoveFrame(int index)
     {
         // An animation must always have at least one frame.

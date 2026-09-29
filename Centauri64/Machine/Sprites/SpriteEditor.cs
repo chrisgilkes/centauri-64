@@ -8,7 +8,7 @@ using Centauri64.Graphics;
 
 namespace Centauri64.Machine.Sprites;
 
-public sealed class SpriteEditor
+public sealed partial class SpriteEditor
 {
     private readonly SpriteAssetStore _assets;
 
@@ -65,8 +65,18 @@ public sealed class SpriteEditor
     {
         var assets = _assets.Assets;
 
+        IsActive = true;
+        _showingHelp = false;
+        _confirm = ConfirmKind.None;
+        _message = "";
+        ClearUndo();
+
         if (assets.Count == 0)
         {
+            _currentAssetIndex = 0;
+            _asset = null;
+            _animation = null;
+            _frame = null;
             return;
         }
 
@@ -77,8 +87,6 @@ public sealed class SpriteEditor
         }
 
         SelectAsset(_currentAssetIndex);
-
-        IsActive = true;
     }
 
     public void Open(string assetName)
@@ -125,6 +133,8 @@ public sealed class SpriteEditor
         _asset =
             assets[_currentAssetIndex];
 
+        ClearUndo();
+
         var animations = _asset.AnimationList;
 
         if (animations.Count == 0)
@@ -168,13 +178,15 @@ public sealed class SpriteEditor
         _frame =
             _animation.Frames[_currentFrameIndex];
 
+        ClearUndo();
+
         _previewFrameIndex = 0;
         _previewTimer = 0.0f;
     }
 
     public void Update(GameTime gameTime,MouseState mouse,KeyboardState keyboard,KeyboardState previousKeyboard)
     {
-        if (!IsActive || _frame == null)
+        if (!IsActive)
             return;
 
         UpdatePreviewAnimation(gameTime);
@@ -195,15 +207,89 @@ public sealed class SpriteEditor
             return;
         }
 
-        if (keyboard.IsKeyDown(Keys.N) && previousKeyboard.IsKeyUp(Keys.N))
+        if (_confirm != ConfirmKind.None)
         {
-            _enteringSpriteName = true;
-            _newSpriteName = "";
+            UpdateConfirm(keyboard, previousKeyboard);
             return;
         }
 
-        if (keyboard.IsKeyDown(Keys.O) &&
-            previousKeyboard.IsKeyUp(Keys.O))
+        if (Pressed(keyboard, previousKeyboard, Keys.OemQuestion))
+        {
+            _showingHelp = !_showingHelp;
+            return;
+        }
+
+        if (_showingHelp)
+        {
+            if (Pressed(keyboard, previousKeyboard, Keys.Escape))
+                _showingHelp = false;
+
+            return;
+        }
+
+        if (Pressed(keyboard, previousKeyboard, Keys.Escape))
+        {
+            Close();
+            return;
+        }
+
+        if (Pressed(keyboard, previousKeyboard, Keys.N) &&
+            !ShiftDown(keyboard))
+        {
+            _enteringSpriteName = true;
+            _copyingSprite = false;
+            _renamingSprite = false;
+            _newSpriteName = "";
+            _message = "";
+            return;
+        }
+
+        if (_frame == null)
+            return;
+
+        var controlDown =
+            keyboard.IsKeyDown(Keys.LeftControl) ||
+            keyboard.IsKeyDown(Keys.RightControl);
+
+        var shiftDown = ShiftDown(keyboard);
+
+        if ((controlDown &&
+             Pressed(keyboard, previousKeyboard, Keys.Z)) ||
+            (!controlDown &&
+             Pressed(keyboard, previousKeyboard, Keys.U)))
+        {
+            Undo();
+            return;
+        }
+
+        if (shiftDown &&
+            Pressed(keyboard, previousKeyboard, Keys.N))
+        {
+            _enteringSpriteName = true;
+            _copyingSprite = true;
+            _renamingSprite = false;
+            _newSpriteName = "";
+            _message = "";
+            return;
+        }
+
+        if (Pressed(keyboard, previousKeyboard, Keys.R))
+        {
+            _enteringSpriteName = true;
+            _copyingSprite = false;
+            _renamingSprite = true;
+            _newSpriteName = _asset?.Name ?? "";
+            _message = "";
+            return;
+        }
+
+        if (Pressed(keyboard, previousKeyboard, Keys.X))
+        {
+            _confirm = ConfirmKind.DeleteSprite;
+            return;
+        }
+
+        if (Pressed(keyboard, previousKeyboard, Keys.O))
         {
             _onionSkinEnabled =
                 !_onionSkinEnabled;
@@ -211,13 +297,12 @@ public sealed class SpriteEditor
             return;
         }
 
-        var shiftDown = keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift);
-
         if (shiftDown && keyboard.IsKeyDown(Keys.M) && previousKeyboard.IsKeyUp(Keys.M))
         {
             _copyingAnimation = true;
             _enteringAnimationName = true;
             _newAnimationName = "";
+            _message = "";
             return;
         }
 
@@ -226,20 +311,23 @@ public sealed class SpriteEditor
             _copyingAnimation = false;
             _enteringAnimationName = true;
             _newAnimationName = "";
+            _message = "";
             return;
         }
 
-        if (keyboard.IsKeyDown(Keys.Escape) &&
-            previousKeyboard.IsKeyUp(Keys.Escape))
+        if (shiftDown &&
+            Pressed(keyboard, previousKeyboard, Keys.C))
         {
-            Close();
-            return;
-        }
-
-        if (keyboard.IsKeyDown(Keys.C) &&
-            previousKeyboard.IsKeyUp(Keys.C))
-        {
+            PushUndo();
             _frame.Clear();
+            MarkDirty();
+            return;
+        }
+
+        if (!shiftDown &&
+            Pressed(keyboard, previousKeyboard, Keys.C))
+        {
+            ShowMessage("SHIFT+C CLEARS");
             return;
         }
 
@@ -272,7 +360,9 @@ public sealed class SpriteEditor
 
         if (shiftDown &&keyboard.IsKeyDown(Keys.Left) && previousKeyboard.IsKeyUp(Keys.Left))
         {
+            PushUndo();
             ShiftFrame(-1, 0);
+            MarkDirty();
             return;
         }
 
@@ -280,7 +370,9 @@ public sealed class SpriteEditor
             keyboard.IsKeyDown(Keys.Right) &&
             previousKeyboard.IsKeyUp(Keys.Right))
         {
+            PushUndo();
             ShiftFrame(1, 0);
+            MarkDirty();
             return;
         }
 
@@ -288,7 +380,9 @@ public sealed class SpriteEditor
             keyboard.IsKeyDown(Keys.Up) &&
             previousKeyboard.IsKeyUp(Keys.Up))
         {
+            PushUndo();
             ShiftFrame(0, -1);
+            MarkDirty();
             return;
         }
 
@@ -296,21 +390,27 @@ public sealed class SpriteEditor
             keyboard.IsKeyDown(Keys.Down) &&
             previousKeyboard.IsKeyUp(Keys.Down))
         {
+            PushUndo();
             ShiftFrame(0, 1);
+            MarkDirty();
             return;
         }
 
         if (keyboard.IsKeyDown(Keys.H) &&
             previousKeyboard.IsKeyUp(Keys.H))
         {
+            PushUndo();
             FlipFrameHorizontal();
+            MarkDirty();
             return;
         }
 
         if (keyboard.IsKeyDown(Keys.V) &&
             previousKeyboard.IsKeyUp(Keys.V))
         {
+            PushUndo();
             FlipFrameVertical();
+            MarkDirty();
             return;
         }
 
@@ -336,14 +436,34 @@ public sealed class SpriteEditor
 
         if (shiftDown && keyboard.IsKeyDown(Keys.D) && previousKeyboard.IsKeyUp(Keys.D))
         {
-            DeleteCurrentAnimation();
+            if (_animation != null &&
+                _animation.Name == "DEFAULT")
+            {
+                ShowMessage("CANNOT DELETE DEFAULT");
+                return;
+            }
+
+            _confirm = ConfirmKind.DeleteAnimation;
             return;
         }
 
         if (!shiftDown && keyboard.IsKeyDown(Keys.D) && previousKeyboard.IsKeyUp(Keys.D))
         {
-            DeleteCurrentFrame();
+            if (_animation != null &&
+                _animation.Frames.Count <= 1)
+            {
+                ShowMessage("LAST FRAME");
+                return;
+            }
+
+            _confirm = ConfirmKind.DeleteFrame;
             return;
+        }
+
+        if (mouse.LeftButton != ButtonState.Pressed &&
+            mouse.RightButton != ButtonState.Pressed)
+        {
+            _painting = false;
         }
 
         if (mouse.LeftButton == ButtonState.Pressed)
@@ -376,17 +496,45 @@ public sealed class SpriteEditor
         var spriteY =
             (mouse.Y - GridY) / PixelSize;
 
+        var altDown =
+            keyboard.IsKeyDown(Keys.LeftAlt) ||
+            keyboard.IsKeyDown(Keys.RightAlt);
+
+        if (mouse.MiddleButton == ButtonState.Pressed ||
+            (altDown && mouse.LeftButton == ButtonState.Pressed))
+        {
+            PickColourAt(spriteX, spriteY);
+            return;
+        }
+
         if (mouse.LeftButton == ButtonState.Pressed)
         {
+            BeginPaintStroke();
             _frame.Pixels[spriteY, spriteX] =
                 SelectedColour;
         }
 
         if (mouse.RightButton == ButtonState.Pressed)
         {
+            BeginPaintStroke();
             _frame.Pixels[spriteY, spriteX] =
                 CentauriSprite.TRANSPARENT;
         }
+    }
+
+    private static bool ShiftDown(KeyboardState keyboard)
+    {
+        return keyboard.IsKeyDown(Keys.LeftShift) ||
+            keyboard.IsKeyDown(Keys.RightShift);
+    }
+
+    private static bool Pressed(
+        KeyboardState keyboard,
+        KeyboardState previousKeyboard,
+        Keys key)
+    {
+        return keyboard.IsKeyDown(key) &&
+            previousKeyboard.IsKeyUp(key);
     }
 
     private void FlipFrameHorizontal()
@@ -467,11 +615,23 @@ public sealed class SpriteEditor
         {
             for (var x = 0; x < width; x++)
             {
-                var newX =
-                    (x + offsetX + width) % width;
+                shiftedPixels[y, x] =
+                    CentauriSprite.TRANSPARENT;
+            }
+        }
 
-                var newY =
-                    (y + offsetY + height) % height;
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                var newX = x + offsetX;
+                var newY = y + offsetY;
+
+                if (newX < 0 || newX >= width ||
+                    newY < 0 || newY >= height)
+                {
+                    continue;
+                }
 
                 shiftedPixels[newY, newX] =
                     _frame.Pixels[y, x];
@@ -495,6 +655,9 @@ public sealed class SpriteEditor
         {
             return;
         }
+
+        if (_animation.Name == "DEFAULT")
+            return;
 
         var animationName =
             _animation.Name;
@@ -527,6 +690,7 @@ public sealed class SpriteEditor
             _enteringAnimationName = false;
             _copyingAnimation = false;
             _newAnimationName = "";
+            _message = "";
             return;
         }
 
@@ -597,9 +761,7 @@ public sealed class SpriteEditor
 
         if (_asset.ContainsAnimation(_newAnimationName))
         {
-            _enteringAnimationName = false;
-            _copyingAnimation = false;
-            _newAnimationName = "";
+            ShowMessage("NAME TAKEN");
             return;
         }
 
@@ -648,6 +810,8 @@ public sealed class SpriteEditor
         }
 
         _copyingAnimation = false;
+        MarkDirty();
+        ClearUndo();
     }
 
     private void SelectPreviousAnimation()
@@ -731,7 +895,7 @@ public sealed class SpriteEditor
         var sourceFrame = _frame;
 
         var newFrame =
-            _animation.AddFrame();
+            _animation.InsertFrameAfter(_currentFrameIndex);
 
         for (var y = 0;
             y < CentauriSprite.HEIGHT;
@@ -746,11 +910,13 @@ public sealed class SpriteEditor
             }
         }
 
-        _currentFrameIndex =
-            _animation.Frames.Count - 1;
+        _currentFrameIndex++;
 
         _frame =
             _animation.Frames[_currentFrameIndex];
+
+        MarkDirty();
+        ClearUndo();
     }
     
     private void DeleteCurrentFrame()
@@ -796,6 +962,8 @@ public sealed class SpriteEditor
 
         _frame =
             _animation.Frames[_currentFrameIndex];
+
+        ClearUndo();
     }
 
     private void SelectNextFrame()
@@ -816,6 +984,8 @@ public sealed class SpriteEditor
 
         _frame =
             _animation.Frames[_currentFrameIndex];
+
+        ClearUndo();
     }
 
     private void SelectPreviousAsset()
@@ -888,22 +1058,24 @@ public sealed class SpriteEditor
 
     public void Draw(SpriteBatch spriteBatch,BitmapFont font,Texture2D pixel)
     {
-        if (!IsActive || _frame == null)
+        if (!IsActive)
             return;
 
         spriteBatch.Draw(
             pixel,
-            new Rectangle(0, 0, 640, 400),
+            new Rectangle(0, 0, 640, 480),
             Color.Black);
 
-        DrawGrid(spriteBatch,pixel);
+        if (_frame != null)
+        {
+            DrawGrid(spriteBatch,pixel);
 
-        DrawPreview(spriteBatch,pixel);
+            DrawPreview(spriteBatch,pixel);
 
-        DrawPalette(spriteBatch,pixel);
+            DrawPalette(spriteBatch,pixel);
+        }
 
         DrawEditorText(spriteBatch,font);
-
     }
 
     private void DrawPalette(SpriteBatch spriteBatch,Texture2D pixel)
@@ -983,13 +1155,16 @@ public sealed class SpriteEditor
             previewRect,
             Color.Gray);
 
+        var size =
+            CentauriSprite.WIDTH * PreviewScale;
+
         var spriteX =
             PreviewX +
-            (PreviewWidth - CentauriSprite.WIDTH) / 2;
+            (PreviewWidth - size) / 2;
 
         var spriteY =
             PreviewY +
-            (PreviewHeight - CentauriSprite.HEIGHT) / 2;
+            (PreviewHeight - size) / 2;
 
         for (var y = 0;
             y < CentauriSprite.HEIGHT;
@@ -1010,10 +1185,10 @@ public sealed class SpriteEditor
                 spriteBatch.Draw(
                     pixel,
                     new Rectangle(
-                        spriteX + x,
-                        spriteY + y,
-                        1,
-                        1),
+                        spriteX + x * PreviewScale,
+                        spriteY + y * PreviewScale,
+                        PreviewScale,
+                        PreviewScale),
                     CentauriPalette.Get(
                         colourIndex));
             }
@@ -1175,90 +1350,109 @@ public sealed class SpriteEditor
 
     private void DrawEditorText(SpriteBatch spriteBatch,BitmapFont font)
     {
-        if (_asset == null || _animation == null)
-        {
-            return;
-        }
-
         const int x = 440;
 
-        // Title.
         font.Draw(
             spriteBatch,
             "SPRITE EDITOR",
             new Vector2(x, 20),
             Color.White);
 
-        // Palette heading.
-        font.Draw(
-            spriteBatch,
-            "PALETTE",
-            new Vector2(x, 42),
-            Color.White);
-
-        // New sprite name entry.
-        if (_enteringSpriteName)
+        if (_frame != null)
         {
             font.Draw(
                 spriteBatch,
-                "NEW SPRITE:",
-                new Vector2(x, 185),
+                "PALETTE",
+                new Vector2(x, 42),
                 Color.White);
 
-            font.Draw(
+            if (SelectedColour == CentauriSprite.TRANSPARENT)
+            {
+                font.Draw(
+                    spriteBatch,
+                    "ERASE",
+                    new Vector2(x, 160),
+                    Color.Yellow);
+            }
+        }
+
+        if (_enteringSpriteName)
+        {
+            var title = "NEW SPRITE:";
+
+            if (_copyingSprite)
+                title = "COPY SPRITE:";
+            else if (_renamingSprite)
+                title = "RENAME SPRITE:";
+
+            DrawPrompt(
                 spriteBatch,
-                _newSpriteName + "_",
-                new Vector2(x, 205),
-                Color.White);
-
-            font.Draw(
-                spriteBatch,
-                "ENTER - CREATE",
-                new Vector2(x, 225),
-                Color.White);
-
-            font.Draw(
-                spriteBatch,
-                "ESC - CANCEL",
-                new Vector2(x, 245),
-                Color.White);
-
+                font,
+                x,
+                title,
+                _newSpriteName);
             return;
         }
 
-        // New/copy animation name entry.
         if (_enteringAnimationName)
         {
-            font.Draw(
+            DrawPrompt(
                 spriteBatch,
+                font,
+                x,
                 _copyingAnimation
                     ? "COPY ANIMATION:"
                     : "NEW ANIMATION:",
+                _newAnimationName);
+            return;
+        }
+
+        if (_confirm != ConfirmKind.None)
+        {
+            font.Draw(
+                spriteBatch,
+                ConfirmText(),
                 new Vector2(x, 185),
-                Color.White);
+                Color.Yellow);
 
             font.Draw(
                 spriteBatch,
-                _newAnimationName + "_",
+                "Y YES    N NO",
                 new Vector2(x, 205),
-                Color.White);
-
-            font.Draw(
-                spriteBatch,
-                "ENTER - CREATE",
-                new Vector2(x, 225),
-                Color.White);
-
-            font.Draw(
-                spriteBatch,
-                "ESC - CANCEL",
-                new Vector2(x, 245),
                 Color.White);
 
             return;
         }
 
-        // Current sprite information.
+        if (_showingHelp)
+        {
+            DrawHelp(spriteBatch, font, x);
+            return;
+        }
+
+        if (_asset == null || _animation == null)
+        {
+            font.Draw(
+                spriteBatch,
+                "NO SPRITES",
+                new Vector2(x, 185),
+                Color.White);
+
+            font.Draw(
+                spriteBatch,
+                "N NEW SPRITE",
+                new Vector2(x, 245),
+                Color.White);
+
+            font.Draw(
+                spriteBatch,
+                "ESC EXIT",
+                new Vector2(x, 260),
+                Color.White);
+
+            return;
+        }
+
         font.Draw(
             spriteBatch,
             $"SPRITE: {_asset.Name}",
@@ -1285,93 +1479,128 @@ public sealed class SpriteEditor
                 ? Color.Yellow
                 : Color.Gray);
 
-        // Sprite controls.
+        if (!string.IsNullOrEmpty(_message))
+        {
+            font.Draw(
+                spriteBatch,
+                _message,
+                new Vector2(x, 245),
+                Color.Yellow);
+        }
+
+        if (_dirty)
+        {
+            font.Draw(
+                spriteBatch,
+                "SAVE TAPE TO KEEP SPRITES",
+                new Vector2(x, 265),
+                Color.Yellow);
+        }
+
         font.Draw(
             spriteBatch,
-            "N - NEW SPRITE",
+            "N SPRITE  [ ] FRAME",
+            new Vector2(x, 300),
+            Color.White);
+
+        font.Draw(
+            spriteBatch,
+            "ESC EXIT    ? HELP",
+            new Vector2(x, 315),
+            Color.White);
+    }
+
+    private void DrawPrompt(
+        SpriteBatch spriteBatch,
+        BitmapFont font,
+        int x,
+        string title,
+        string value)
+    {
+        font.Draw(
+            spriteBatch,
+            title,
+            new Vector2(x, 185),
+            Color.White);
+
+        font.Draw(
+            spriteBatch,
+            value + "_",
+            new Vector2(x, 205),
+            Color.White);
+
+        font.Draw(
+            spriteBatch,
+            "ENTER - CREATE",
+            new Vector2(x, 225),
+            Color.White);
+
+        font.Draw(
+            spriteBatch,
+            "ESC - CANCEL",
             new Vector2(x, 245),
             Color.White);
 
-        font.Draw(
-            spriteBatch,
-            "< > - SPRITE",
-            new Vector2(x, 260),
-            Color.White);
+        if (!string.IsNullOrEmpty(_message))
+        {
+            font.Draw(
+                spriteBatch,
+                _message,
+                new Vector2(x, 265),
+                Color.Yellow);
+        }
+    }
 
-        // Animation controls.
-        font.Draw(
-            spriteBatch,
-            "M - NEW ANIM",
-            new Vector2(x, 280),
-            Color.White);
+    private string ConfirmText()
+    {
+        return _confirm switch
+        {
+            ConfirmKind.DeleteFrame => "DELETE FRAME?",
+            ConfirmKind.DeleteAnimation => "DELETE ANIM?",
+            ConfirmKind.DeleteSprite => "DELETE SPRITE?",
+            _ => ""
+        };
+    }
 
-        font.Draw(
-            spriteBatch,
-            "SHIFT+M - COPY ANIM",
-            new Vector2(x, 295),
-            Color.White);
+    private static void DrawHelp(
+        SpriteBatch spriteBatch,
+        BitmapFont font,
+        int x)
+    {
+        var lines = new[]
+        {
+            "N NEW SPRITE",
+            "SHIFT+N COPY SPRITE",
+            "R RENAME   X DELETE",
+            "< > SPRITE",
+            "M NEW ANIM",
+            "SHIFT+M COPY ANIM",
+            "UP DOWN ANIM",
+            "SHIFT+D DELETE ANIM",
+            "[ ] FRAME",
+            "A DUP FRAME",
+            "D DELETE FRAME",
+            "O ONION",
+            "SHIFT+ARROWS MOVE",
+            "H/V FLIP",
+            "SHIFT+C CLEAR",
+            "U UNDO",
+            "ALT CLICK COLOUR",
+            "? OR ESC CLOSE"
+        };
 
-        font.Draw(
-            spriteBatch,
-            "UP/DOWN - ANIM",
-            new Vector2(x, 310),
-            Color.White);
+        var y = 180;
 
-        font.Draw(
-            spriteBatch,
-            "SHIFT+D - DELETE ANIM",
-            new Vector2(x, 325),
-            Color.White);
+        foreach (var line in lines)
+        {
+            font.Draw(
+                spriteBatch,
+                line,
+                new Vector2(x, y),
+                Color.White);
 
-        // Frame controls.
-        font.Draw(
-            spriteBatch,
-            "[ ] - FRAME",
-            new Vector2(x, 345),
-            Color.White);
-
-        font.Draw(
-            spriteBatch,
-            "A - DUP FRAME",
-            new Vector2(x, 360),
-            Color.White);
-
-        font.Draw(
-            spriteBatch,
-            "D - DELETE FRAME",
-            new Vector2(x, 375),
-            Color.White);
-
-        // Editing controls.
-        font.Draw(
-            spriteBatch,
-            "O - ONION",
-            new Vector2(x, 395),
-            Color.White);
-
-        font.Draw(
-            spriteBatch,
-            "SHIFT+ARROWS - MOVE",
-            new Vector2(x, 410),
-            Color.White);
-
-        font.Draw(
-            spriteBatch,
-            "H/V - FLIP",
-            new Vector2(x, 425),
-            Color.White);
-
-        font.Draw(
-            spriteBatch,
-            "C - CLEAR",
-            new Vector2(x, 440),
-            Color.White);
-
-        font.Draw(
-            spriteBatch,
-            "ESC - EXIT",
-            new Vector2(x, 455),
-            Color.White);
+            y += 14;
+        }
     }
 
     private void UpdateSpriteNameEntry(
@@ -1382,7 +1611,10 @@ public sealed class SpriteEditor
             previousKeyboard.IsKeyUp(Keys.Escape))
         {
             _enteringSpriteName = false;
+            _copyingSprite = false;
+            _renamingSprite = false;
             _newSpriteName = "";
+            _message = "";
             return;
         }
 
@@ -1448,53 +1680,77 @@ public sealed class SpriteEditor
             return;
         }
 
-        if (_assets.Contains(
-                _newSpriteName))
+        var name = _newSpriteName;
+
+        if (_renamingSprite)
         {
+            if (_asset != null && _asset.Name == name)
+            {
+                _enteringSpriteName = false;
+                _renamingSprite = false;
+                _newSpriteName = "";
+                _message = "";
+                return;
+            }
+            if (_assets.Contains(name) &&
+                _asset != null &&
+                _asset.Name != name)
+            {
+                ShowMessage("NAME TAKEN");
+                return;
+            }
+
+            RenameCurrentSprite(name);
             _enteringSpriteName = false;
+            _renamingSprite = false;
             _newSpriteName = "";
+            _message = "";
             return;
         }
 
-        var asset =
-            new SpriteAsset(
-                _newSpriteName);
+        if (_assets.Contains(name))
+        {
+            ShowMessage("NAME TAKEN");
+            return;
+        }
 
-        var animation =
-            asset.AddAnimation(
-                "DEFAULT");
+        if (_copyingSprite)
+        {
+            CopyCurrentSprite(name);
+        }
+        else
+        {
+            var asset =
+                new SpriteAsset(name);
 
-        animation.AddFrame();
+            var animation =
+                asset.AddAnimation("DEFAULT");
 
-        _assets.Add(asset);
+            animation.AddFrame();
+
+            _assets.Add(asset);
+            MarkDirty();
+            SelectAssetByName(name);
+        }
 
         _enteringSpriteName = false;
-
-        var name =
-            _newSpriteName;
-
+        _copyingSprite = false;
+        _renamingSprite = false;
         _newSpriteName = "";
-
-        // Assets are sorted, so find the newly
-        // created asset's actual index.
-        var assets =
-            _assets.Assets;
-
-        for (var i = 0;
-            i < assets.Count;
-            i++)
-        {
-            if (assets[i].Name == name)
-            {
-                SelectAsset(i);
-                break;
-            }
-        }
+        _message = "";
     }
 
     public void Close()
     {
+        if (_dirty)
+        {
+            Notice?.Invoke("SAVE TO KEEP SPRITES");
+        }
+
         IsActive = false;
+        _showingHelp = false;
+        _confirm = ConfirmKind.None;
+        _painting = false;
 
         _asset = null;
         _animation = null;

@@ -10,7 +10,7 @@ public sealed class SpriteAsset
     private readonly Dictionary<string, SpriteAnimation>
         _animations = new();
 
-    public string Name { get; }
+    public string Name { get; private set; }
 
     public IReadOnlyDictionary<string, SpriteAnimation>
         Animations => _animations;
@@ -85,5 +85,23 @@ public sealed class SpriteAsset
             animation);
 
         return animation;
+    }
+
+    public void Rename(string name)
+    {
+        Name = name;
+    }
+
+    public SpriteAsset Clone(string newName)
+    {
+        var copy = new SpriteAsset(newName);
+
+        foreach (var animation in AnimationList)
+        {
+            copy._animations[animation.Name] =
+                animation.Clone(animation.Name);
+        }
+
+        return copy;
     }
 }

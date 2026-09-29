@@ -116,6 +116,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
 
         _machine = new CentauriMachine(_console,_programConsole);
+        _machine.SpriteEditor.Notice += OnSpriteEditorNotice;
 
         _basicMachine = new BasicMachine(_console,_machine);
 
@@ -153,6 +154,13 @@ public class Game1 : Microsoft.Xna.Framework.Game
     private void OnProgramInput(string line)
     {
         _basicMachine.SubmitInput(line);
+    }
+
+    private void OnSpriteEditorNotice(string text)
+    {
+        _console.WriteLine("");
+        _console.WriteLine(text);
+        _console.WriteLine("");
     }
 
     private void OnComputerSelected()
@@ -218,7 +226,10 @@ public class Game1 : Microsoft.Xna.Framework.Game
         if (KeyPressed(keyboardState, Keys.F4))
             SetWindowScale(4);
 
-        if (KeyPressed(keyboardState, Keys.F5))
+        if (KeyPressed(keyboardState, Keys.F5) &&
+            _gameMode == GameMode.Computer &&
+            !_basicMachine.IsRunning &&
+            !_machine.SpriteEditor.IsActive)
         {
             _machine.SpriteEditor.Open();
         }

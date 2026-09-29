@@ -172,7 +172,7 @@ public sealed partial class CentauriMachine
         {
             for (var x = 0; x < CentauriSprite.WIDTH; x++)
             {
-                if (sprite.Pixels[y, x] == 0)
+                if (sprite.Pixels[y, x] == CentauriSprite.TRANSPARENT)
                     continue;
 
                 var px = sprite.FlipX
