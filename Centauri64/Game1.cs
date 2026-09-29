@@ -269,7 +269,24 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         if (_gameMode == GameMode.Software)
         {
-            _softwareShelf.Update(gameTime);
+            var mouse = Mouse.GetState();
+            var scaleX =
+                GraphicsDevice.Viewport.Width /
+                (float)CentauriMachine.DEVELOPMENT_WIDTH;
+            var scaleY =
+                GraphicsDevice.Viewport.Height /
+                (float)CentauriMachine.DEVELOPMENT_HEIGHT;
+            var virtualMouse = new MouseState(
+                (int)(mouse.X / scaleX),
+                (int)(mouse.Y / scaleY),
+                mouse.ScrollWheelValue,
+                mouse.LeftButton,
+                mouse.MiddleButton,
+                mouse.RightButton,
+                mouse.XButton1,
+                mouse.XButton2);
+
+            _softwareShelf.Update(gameTime, virtualMouse);
 
             _previousKeyboardState = keyboardState;
 

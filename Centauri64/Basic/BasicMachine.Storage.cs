@@ -94,6 +94,22 @@ public sealed partial class BasicMachine
         _storage.SaveLabel(name, label);
     }
 
+    public TapeCover GetTapeCover(string name)
+    {
+        return _storage.LoadCover(name);
+    }
+
+    public void SaveTapeCover(string name, TapeCover cover)
+    {
+        if (cover.HasArt)
+        {
+            _storage.SaveCover(name, cover);
+            return;
+        }
+
+        _storage.DeleteCover(name);
+    }
+
     private void ListPrograms()
     {
         var programs = _storage.GetPrograms().ToList();

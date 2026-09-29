@@ -10,7 +10,7 @@ using Microsoft.Xna.Framework.Input;
 
 namespace Centauri64.Game;
 
-public sealed class SoftwareShelf
+public sealed partial class SoftwareShelf
 {
     private enum InlayField
     {
@@ -57,6 +57,7 @@ public sealed class SoftwareShelf
     private KeyboardState _previousKeyboard;
     private List<string> _tapes = new();
     private List<TapeLabel> _labels = new();
+    private List<TapeCover> _covers = new();
     private int _page;
     private int _selected;
     private bool _editing;
@@ -85,26 +86,34 @@ public sealed class SoftwareShelf
     {
         _tapes = new List<string>(tapeNames);
         _labels = new List<TapeLabel>(_tapes.Count);
+        _covers = new List<TapeCover>(_tapes.Count);
 
         foreach (var name in _tapes)
         {
             _labels.Add(_machine.GetTapeLabel(name));
+            _covers.Add(_machine.GetTapeCover(name));
         }
 
         _page = 0;
         _selected = 0;
         _editing = false;
+        _paintingCover = false;
         _label = null;
+        _cover = null;
         ResetDescriptionScroll();
     }
 
-    public void Update(GameTime gameTime)
+    public void Update(GameTime gameTime, MouseState mouse)
     {
         var keyboard = Keyboard.GetState();
         var delta = gameTime.ElapsedGameTime.TotalSeconds;
         _cursorTimer += delta;
 
-        if (_editing)
+        if (_paintingCover)
+        {
+            UpdateCover(keyboard, mouse);
+        }
+        else if (_editing)
         {
             UpdateInlay(keyboard, delta);
         }
@@ -136,7 +145,11 @@ public sealed class SoftwareShelf
             new Rectangle(16, 16, 608, 48),
             Header);
 
-        if (_editing && _label != null)
+        if (_paintingCover && _cover != null)
+        {
+            DrawCoverEditor(spriteBatch);
+        }
+        else if (_editing && _label != null)
         {
             DrawInlay(spriteBatch);
         }
@@ -177,7 +190,11 @@ public sealed class SoftwareShelf
             _field = InlayField.Description;
             _label = _labels[_selected];
             _repeatKey = null;
+            return;
         }
+
+        if (Pressed(keyboard, Keys.C))
+            OpenCover();
     }
 
     private void UpdateInlay(KeyboardState keyboard, double delta)
@@ -413,7 +430,7 @@ public sealed class SoftwareShelf
 
         var footer = _tapes.Count == 0
             ? "ESC BACK"
-            : "ARROWS SELECT    ENTER INLAY    ESC BACK";
+            : "ARROWS SELECT    ENTER INLAY    C COVER    ESC BACK";
 
         DrawText(spriteBatch, footer, 48, 432, Dark);
     }
@@ -464,6 +481,7 @@ public sealed class SoftwareShelf
                 spriteBatch,
                 _tapes[index],
                 _labels[index],
+                _covers[index],
                 x,
                 y,
                 index == _selected);
@@ -474,6 +492,7 @@ public sealed class SoftwareShelf
         SpriteBatch spriteBatch,
         string name,
         TapeLabel label,
+        TapeCover cover,
         int x,
         int y,
         bool selected)
@@ -488,18 +507,33 @@ public sealed class SoftwareShelf
             new Rectangle(x + 8, y + 8, CassetteWidth - 16, CassetteHeight - 16),
             Cream);
 
+        var hasArt = cover.HasArt;
+        var textX = hasArt ? x + 64 : x + 44;
+        var reserved = hasArt ? 120 : 88;
+        var maxCharacters = (CassetteWidth - reserved) / CharacterWidth;
+
         DrawBox(spriteBatch, new Rectangle(x + 20, y + 34, 16, 16), Dark);
         DrawBox(
             spriteBatch,
             new Rectangle(x + CassetteWidth - 36, y + 34, 16, 16),
             Dark);
 
-        var maxCharacters = (CassetteWidth - 88) / CharacterWidth;
+        if (hasArt)
+        {
+            DrawCoverPreview(
+                spriteBatch,
+                cover,
+                x + 8,
+                y + 8,
+                CoverPreviewWidth,
+                CoverPreviewHeight);
+        }
+
         var title = Fit(name, maxCharacters);
         var subtitle = Subtitle(label, maxCharacters, selected);
 
-        DrawText(spriteBatch, title, x + 44, y + 28, Dark);
-        DrawText(spriteBatch, subtitle, x + 44, y + 48, Header);
+        DrawText(spriteBatch, title, textX, y + 28, Dark);
+        DrawText(spriteBatch, subtitle, textX, y + 48, Header);
     }
 
     private void DrawInlay(SpriteBatch spriteBatch)
@@ -541,6 +575,8 @@ public sealed class SoftwareShelf
             : _label.MachineVersion.ToString();
 
         DrawText(spriteBatch, "MACHINE " + machine, 48, 336, Muted);
+
+        DrawInlayCover(spriteBatch);
 
         DrawBox(
             spriteBatch,
@@ -603,7 +639,8 @@ public sealed class SoftwareShelf
             return;
 
         var description = _labels[_selected].Description;
-        var limit = (CassetteWidth - 88) / CharacterWidth;
+        var reserved = _covers[_selected].HasArt ? 120 : 88;
+        var limit = (CassetteWidth - reserved) / CharacterWidth;
 
         if (description.Length <= limit)
             return;
