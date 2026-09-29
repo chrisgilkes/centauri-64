@@ -51,6 +51,8 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     private ProgrammingManual _programmingManual = null!;
 
+    private SoftwareShelf _softwareShelf = null!;
+
     private static readonly Color EditorBackground = new(205, 198, 170);
 
     private static readonly Color EditorFrame = CentauriPalette.Get(17); // Navy
@@ -121,6 +123,8 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         _programmingManual = new ProgrammingManual(_font,_pixel);
 
+        _softwareShelf = new SoftwareShelf(_font, _pixel, _basicMachine);
+
         _computerRoom.ComputerSelected += OnComputerSelected;
 
         _computerRoom.ManualSelected += () =>
@@ -128,7 +132,18 @@ public class Game1 : Microsoft.Xna.Framework.Game
             _gameMode = GameMode.ProgrammingManual;
         };
 
+        _computerRoom.SoftwareSelected += () =>
+        {
+            _softwareShelf.Show(_basicMachine.GetTapeNames());
+            _gameMode = GameMode.Software;
+        };
+
         _programmingManual.ExitSelected += () =>
+        {
+            _gameMode = GameMode.ComputerRoom;
+        };
+
+        _softwareShelf.ExitSelected += () =>
         {
             _gameMode = GameMode.ComputerRoom;
         };
@@ -234,6 +249,16 @@ public class Game1 : Microsoft.Xna.Framework.Game
         if (_gameMode == GameMode.ProgrammingManual)
         {
             _programmingManual.Update();
+
+            _previousKeyboardState = keyboardState;
+
+            base.Update(gameTime);
+            return;
+        }
+
+        if (_gameMode == GameMode.Software)
+        {
+            _softwareShelf.Update(gameTime);
 
             _previousKeyboardState = keyboardState;
 
@@ -404,6 +429,21 @@ public class Game1 : Microsoft.Xna.Framework.Game
             _codeEditorRenderTarget);
     }
 
+    private void DrawSoftwareShelf()
+    {
+        GraphicsDevice.SetRenderTarget(
+            _codeEditorRenderTarget);
+
+        GraphicsDevice.Clear(Color.Black);
+
+        _softwareShelf.Draw(_spriteBatch);
+
+        GraphicsDevice.SetRenderTarget(null);
+
+        DrawRenderTargetToWindow(
+            _codeEditorRenderTarget);
+    }
+
     protected override void Draw(GameTime gameTime)
     {
         if (_computerPoweringOn)
@@ -425,6 +465,14 @@ public class Game1 : Microsoft.Xna.Framework.Game
         if (_gameMode == GameMode.ProgrammingManual)
         {
             DrawProgrammingManual();
+
+            base.Draw(gameTime);
+            return;
+        }
+
+        if (_gameMode == GameMode.Software)
+        {
+            DrawSoftwareShelf();
 
             base.Draw(gameTime);
             return;

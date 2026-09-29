@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Centauri64.Basic;
@@ -63,10 +64,32 @@ public sealed partial class BasicMachine
 
         _spriteStorage.Save(name,_machine.SpriteAssets);
 
+        var label = _storage.LoadLabel(name);
+        label.MachineVersion = TapeLabel.CurrentMachineVersion;
+        _storage.SaveLabel(name, label);
+
         _console.WriteLine("");
         _console.WriteLine($"SAVED {name}");
         _console.WriteLine("");
         _console.WriteLine("READY.");
+    }
+
+    public IReadOnlyList<string> GetTapeNames()
+    {
+        return _storage.GetPrograms().ToList();
+    }
+
+    public TapeLabel GetTapeLabel(string name)
+    {
+        return _storage.LoadLabel(name);
+    }
+
+    public void SaveTapeLabel(string name, TapeLabel label)
+    {
+        if (label.MachineVersion <= 0)
+            label.MachineVersion = TapeLabel.CurrentMachineVersion;
+
+        _storage.SaveLabel(name, label);
     }
 
     private void ListPrograms()

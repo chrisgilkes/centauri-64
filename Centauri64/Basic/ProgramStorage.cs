@@ -10,11 +10,8 @@ public sealed class ProgramStorage
 
     public ProgramStorage()
     {
-        _programDirectory = Path.Combine(
-            AppContext.BaseDirectory,
-            "Programs");
-
-        Directory.CreateDirectory(_programDirectory);
+        TapeFolder.EnsureExists();
+        _programDirectory = TapeFolder.Location;
     }
 
     public void Save(
@@ -60,15 +57,118 @@ public sealed class ProgramStorage
         }
 
         File.Delete(path);
+        DeleteLabel(name);
+    }
+
+    public TapeLabel LoadLabel(string name)
+    {
+        var path = GetLabelPath(name);
+
+        if (!File.Exists(path))
+            return new TapeLabel();
+
+        var label = new TapeLabel();
+
+        foreach (var line in File.ReadAllLines(path))
+        {
+            ReadLabelLine(label, line);
+        }
+
+        return label;
+    }
+
+    public void SaveLabel(string name, TapeLabel label)
+    {
+        var path = GetLabelPath(name);
+
+        label.Description = Clean(
+            label.Description,
+            TapeLabel.MaxDescriptionLength);
+
+        label.Author = Clean(
+            label.Author,
+            TapeLabel.MaxAuthorLength);
+
+        File.WriteAllLines(
+            path,
+            new[]
+            {
+                "DESCRIPTION " + label.Description,
+                "AUTHOR " + label.Author,
+                "KIND " + label.Kind.ToString().ToUpperInvariant(),
+                "MACHINE " + label.MachineVersion
+            });
+    }
+
+    public void DeleteLabel(string name)
+    {
+        var path = GetLabelPath(name);
+
+        if (File.Exists(path))
+            File.Delete(path);
     }
 
     private string GetProgramPath(string name)
     {
-        var validName = ValidateName(name);
-
         return Path.Combine(
             _programDirectory,
-            validName + ".bas");
+            ValidateName(name) + ".bas");
+    }
+
+    private string GetLabelPath(string name)
+    {
+        return Path.Combine(
+            _programDirectory,
+            ValidateName(name) + ".tape");
+    }
+
+    private static void ReadLabelLine(TapeLabel label, string line)
+    {
+        if (line.StartsWith("DESCRIPTION "))
+        {
+            label.Description = Clean(
+                line["DESCRIPTION ".Length..],
+                TapeLabel.MaxDescriptionLength);
+            return;
+        }
+
+        if (line.StartsWith("AUTHOR "))
+        {
+            label.Author = Clean(
+                line["AUTHOR ".Length..],
+                TapeLabel.MaxAuthorLength);
+            return;
+        }
+
+        if (line.StartsWith("KIND ") &&
+            Enum.TryParse<TapeKind>(
+                line["KIND ".Length..].Trim(),
+                ignoreCase: true,
+                out var kind))
+        {
+            label.Kind = kind;
+            return;
+        }
+
+        if (line.StartsWith("MACHINE ") &&
+            int.TryParse(line["MACHINE ".Length..].Trim(), out var version))
+        {
+            label.MachineVersion = version;
+        }
+    }
+
+    private static string Clean(string value, int maxLength)
+    {
+        var cleaned = value
+            .Replace("\r", string.Empty)
+            .Replace("\n", string.Empty)
+            .Trim()
+            .ToUpperInvariant();
+
+        if (cleaned.Length > maxLength)
+            return cleaned[..maxLength];
+
+        return cleaned;
     }
 
     private static string ValidateName(string name)

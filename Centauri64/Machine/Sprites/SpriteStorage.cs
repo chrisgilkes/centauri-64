@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 
+using Centauri64.Basic;
+
 namespace Centauri64.Machine.Sprites;
 
 public sealed class SpriteStorage
@@ -9,12 +11,8 @@ public sealed class SpriteStorage
 
     public SpriteStorage()
     {
-        _programDirectory = Path.Combine(
-            AppContext.BaseDirectory,
-            "Programs");
-
-        Directory.CreateDirectory(
-            _programDirectory);
+        TapeFolder.EnsureExists();
+        _programDirectory = TapeFolder.Location;
     }
 
     public void Save(
