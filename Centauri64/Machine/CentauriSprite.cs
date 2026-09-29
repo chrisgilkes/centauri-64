@@ -10,6 +10,8 @@ public sealed class CentauriSprite
 
     public bool Visible { get; set; }
 
+    public bool FlipX { get; set; }
+
     public int[,] Pixels { get; }
 
     public string? AssetName { get; set; }

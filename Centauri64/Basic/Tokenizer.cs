@@ -249,6 +249,7 @@ public sealed class Tokenizer
             "FILL" => TokenType.Fill,
             "SPRITESHOW" => TokenType.SpriteShow,
             "SPRITEHIDE" => TokenType.SpriteHide,
+            "SPRITEFLIP" => TokenType.SpriteFlip,
             "DIM" => TokenType.Dim,
             "REM" => TokenType.Rem,
             "END" => TokenType.End,

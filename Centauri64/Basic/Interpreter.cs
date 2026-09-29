@@ -232,6 +232,7 @@ public sealed partial class Interpreter
                 next is Syntax.SpritePositionStatement or
                     Syntax.SpriteShowStatement or
                     Syntax.SpriteHideStatement or
+                    Syntax.SpriteFlipStatement or
                     Syntax.SpriteAnimationStatement,
 
             _ => false
@@ -337,6 +338,11 @@ public sealed partial class Interpreter
         if (statement is SpriteHideStatement spriteHide)
         {
             return ExecuteSpriteHide(spriteHide);
+        }
+
+        if (statement is SpriteFlipStatement spriteFlip)
+        {
+            return ExecuteSpriteFlip(spriteFlip);
         }
 
         if( statement is ResetStatement reset)

@@ -42,10 +42,14 @@ public sealed class SpriteRenderer
                 var colour =
                     CentauriPalette.Get(colourIndex);
 
+                var px = sprite.FlipX
+                    ? CentauriSprite.WIDTH - 1 - x
+                    : x;
+
                 spriteBatch.Draw(
                     pixel,
                     new Rectangle(
-                                    sprite.X + x,
+                                    sprite.X + px,
                                     sprite.Y + y,
                                     1,
                                     1),

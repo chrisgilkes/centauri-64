@@ -139,6 +139,7 @@ public sealed class BasicSourceRenderer
             TokenType.SpritePosition or
             TokenType.SpriteShow or
             TokenType.SpriteHide or
+            TokenType.SpriteFlip or
             TokenType.Reset or
             TokenType.Gosub or
             TokenType.Return or

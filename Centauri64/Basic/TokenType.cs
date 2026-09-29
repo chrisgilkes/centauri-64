@@ -50,6 +50,7 @@ public enum TokenType
     Fill,
     SpriteShow,
     SpriteHide,
+    SpriteFlip,
     Dim,
     Rem,
     End,

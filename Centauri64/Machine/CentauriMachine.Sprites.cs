@@ -102,7 +102,15 @@ public sealed partial class CentauriMachine
 
         CopyFrameToSprite(animation.Frames[0],sprite);
 
+        sprite.FlipX = false;
         sprite.Visible = true;
+    }
+
+    public void SetSpriteFlip(int index, int facing)
+    {
+        ValidateSpriteIndex(index);
+
+        _sprites[index].FlipX = facing < 0;
     }
 
     public bool SpritesCollide(int firstIndex, int secondIndex)
@@ -167,11 +175,15 @@ public sealed partial class CentauriMachine
                 if (sprite.Pixels[y, x] == 0)
                     continue;
 
-                if (x < left)
-                    left = x;
+                var px = sprite.FlipX
+                    ? CentauriSprite.WIDTH - 1 - x
+                    : x;
 
-                if (x > right)
-                    right = x;
+                if (px < left)
+                    left = px;
+
+                if (px > right)
+                    right = px;
 
                 if (y < top)
                     top = y;

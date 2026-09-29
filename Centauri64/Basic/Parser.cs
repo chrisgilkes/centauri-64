@@ -194,6 +194,11 @@ public sealed class Parser
             return ParseSpriteHideStatement();
         }
 
+        if (token.Type == TokenType.SpriteFlip)
+        {
+            return ParseSpriteFlipStatement();
+        }
+
         if (token.Type == TokenType.SpriteAnimation)
         {
             return ParseSpriteAnimationStatement();
@@ -312,6 +317,19 @@ public sealed class Parser
         var spriteIndex = ParseExpression();
 
         return new SpriteHideStatement(spriteIndex);
+    }
+
+    private SpriteFlipStatement ParseSpriteFlipStatement()
+    {
+        Expect(TokenType.SpriteFlip);
+
+        var spriteIndex = ParseExpression();
+
+        Expect(TokenType.Comma);
+
+        var facing = ParseExpression();
+
+        return new SpriteFlipStatement(spriteIndex, facing);
     }
 
     private CircleStatement ParseCircleStatement()

@@ -117,4 +117,24 @@ public sealed partial class Interpreter
 
         return ExecutionResult.Continue(ScreenPresentation.Sprite);
     }
+
+    private ExecutionResult ExecuteSpriteFlip(SpriteFlipStatement statement)
+    {
+        var spriteIndex = Evaluate(statement.SpriteIndex);
+        var facing = Evaluate(statement.Facing);
+
+        if (!spriteIndex.IsInteger || !facing.IsInteger)
+        {
+            throw new InvalidOperationException("SPRITEFLIP expects numeric values.");
+        }
+
+        if (facing.Integer != 1 && facing.Integer != -1)
+        {
+            throw new InvalidOperationException("SPRITEFLIP facing must be 1 or -1.");
+        }
+
+        _machine.SetSpriteFlip(spriteIndex.Integer, facing.Integer);
+
+        return ExecutionResult.Continue(ScreenPresentation.Sprite);
+    }
 }
