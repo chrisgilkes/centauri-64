@@ -34,6 +34,17 @@ public sealed partial class CentauriMachine
         _programConsole.WriteLine(text);
     }
 
+    public void BeginInput(string prompt)
+    {
+        _programConsole.Write(prompt);
+        _programConsole.BeginInput();
+    }
+
+    public void CancelInput()
+    {
+        _programConsole.CancelInput();
+    }
+
     public void WriteText(int x, int y, string text)
     {
         var existing = _positionedText.FindIndex(

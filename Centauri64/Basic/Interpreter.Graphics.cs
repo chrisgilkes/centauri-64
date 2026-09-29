@@ -10,7 +10,7 @@ public sealed partial class Interpreter
     {
         _machine.ClearScreen();
 
-        return ExecutionResult.Continue();
+        return ExecutionResult.Continue(ScreenPresentation.Clear);
     }
 
     private ExecutionResult ExecuteInk(InkStatement statement)
@@ -163,6 +163,6 @@ public sealed partial class Interpreter
             y.Integer,
             text.ToString());
 
-        return ExecutionResult.Continue();
+        return ExecutionResult.Continue(ScreenPresentation.Text);
     }
 }

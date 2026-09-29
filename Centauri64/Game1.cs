@@ -105,6 +105,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         _console        = new TextConsole(80, CODE_EDITOR_ROWS);
         _programConsole = new TextConsole(80, 60);
+        _programConsole.LineEntered += OnProgramInput;
 
         // Development editor palette.
         _console.Foreground = 16; // Midnight Blue
@@ -132,6 +133,11 @@ public class Game1 : Microsoft.Xna.Framework.Game
             _gameMode = GameMode.ComputerRoom;
         };
 
+    }
+
+    private void OnProgramInput(string line)
+    {
+        _basicMachine.SubmitInput(line);
     }
 
     private void OnComputerSelected()
@@ -335,6 +341,12 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         _basicMachine.Update();
 
+        if (_basicMachine.IsWaitingForInput &&
+            !_machine.SpriteEditor.IsActive)
+        {
+            _programConsole.Update(gameTime);
+        }
+
         if (_machine.SpriteEditor.IsActive)
         {
             var mouse = Mouse.GetState();
@@ -457,7 +469,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
                                 Color.White,
                                 new Color(40, 40, 160),
                                 true,
-                                !_basicMachine.IsRunning,
+                                !_basicMachine.IsRunning || _basicMachine.IsWaitingForInput,
                                 visibleRows: 60);
 
         _machine.DrawGraphics(
@@ -542,7 +554,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
                 CentauriMachine.ARCADE_HEIGHT),
             CentauriPalette.Get(_programConsole.Background));
 
-        _programConsole.Draw(_spriteBatch,_font,_pixel,Color.White,CentauriPalette.Get(_programConsole.Background),drawBackground: false, drawCursor: !_basicMachine.IsRunning, visibleRows: 30);
+        _programConsole.Draw(_spriteBatch,_font,_pixel,Color.White,CentauriPalette.Get(_programConsole.Background),drawBackground: false, drawCursor: !_basicMachine.IsRunning || _basicMachine.IsWaitingForInput, visibleRows: 30);
 
         // GRAPHICS
         _machine.DrawGraphics(

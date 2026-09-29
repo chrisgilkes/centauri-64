@@ -114,13 +114,19 @@ public sealed class BasicSourceRenderer
             "COLLIDE" or
             "SWIDTH" or
             "SHEIGHT" or
-            "ANIMPLAYING";
+            "ANIMPLAYING" or
+            "LEN" or
+            "LEFT$" or
+            "RIGHT$" or
+            "MID$" or
+            "UPPER$";
     }
 
     private static bool IsKeyword(TokenType type)
     {
         return type is
             TokenType.Print or
+            TokenType.Input or
             TokenType.Goto or
             TokenType.If or
             TokenType.Then or

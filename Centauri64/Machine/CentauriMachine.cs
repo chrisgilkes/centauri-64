@@ -126,6 +126,7 @@ public sealed partial class CentauriMachine
     public void ClearScreen()
     {
         _programConsole.Clear();
+        _programConsole.CancelInput();
         _positionedText.Clear();
         _plotPoints.Clear();
         _lines.Clear();
@@ -171,6 +172,7 @@ public sealed partial class CentauriMachine
         _programConsole.Background  = DEFAULT_PAPER;
 
         _programConsole.Clear();
+        _programConsole.CancelInput();
         _positionedText.Clear();
         _plotPoints.Clear();
         _lines.Clear();

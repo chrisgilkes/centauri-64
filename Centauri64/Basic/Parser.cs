@@ -74,6 +74,11 @@ public sealed class Parser
             return ParsePrintStatement();
         }
 
+        if (token.Type == TokenType.Input)
+        {
+            return ParseInputStatement();
+        }
+
         if (token.Type == TokenType.Goto)
         {
             return ParseGotoStatement();    
@@ -570,6 +575,33 @@ public sealed class Parser
         return new PrintStatement(expression);
     }
 
+    private InputStatement ParseInputStatement()
+    {
+        Expect(TokenType.Input);
+
+        Expression? prompt = null;
+
+        if (Current().Type != TokenType.Identifier)
+        {
+            prompt = ParseExpression();
+
+            if (Current().Type != TokenType.Semicolon &&
+                Current().Type != TokenType.Comma)
+            {
+                throw new InvalidOperationException(
+                    "INPUT expects ; or , before the variable.");
+            }
+
+            Advance();
+        }
+
+        var variable = Expect(TokenType.Identifier);
+
+        return new InputStatement(
+            prompt,
+            variable.Text);
+    }
+
     private GotoStatement ParseGotoStatement()
     {
         Expect(TokenType.Goto);
@@ -710,8 +742,13 @@ public sealed class Parser
             "RND" or
             "COLLIDE" or
             "SWIDTH" or
-            "SHEIGHT" or 
-            "ANIMPLAYING";
+            "SHEIGHT" or
+            "ANIMPLAYING" or
+            "LEN" or
+            "LEFT$" or
+            "RIGHT$" or
+            "MID$" or
+            "UPPER$";
     }
 
     private Expression ParsePrimaryExpression()

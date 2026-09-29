@@ -6,7 +6,19 @@ public sealed partial class BasicMachine
 {
     private bool _programFinished;
 
+    private string? _runtimeError;
+
     public bool ProgramFinished => _programFinished;
+
+    public bool IsWaitingForInput => _interpreter.IsWaitingForInput;
+
+    public void SubmitInput(string text)
+    {
+        if (!IsWaitingForInput)
+            return;
+
+        _interpreter.SubmitInput(text);
+    }
 
     public void DismissFinishedProgram()
     {
@@ -18,6 +30,12 @@ public sealed partial class BasicMachine
         _machine.HideAllSprites();
         _machine.ResetDisplay();
 
+        if (_runtimeError != null)
+        {
+            _console.WriteLine(_runtimeError);
+            _runtimeError = null;
+        }
+
         _console.WriteLine("");
         _console.WriteLine("READY.");
     }
@@ -25,6 +43,7 @@ public sealed partial class BasicMachine
     private void RunProgram()
     {
         _programFinished = false;
+        _runtimeError = null;
 
         _interpreter.Start(_program);
 
@@ -67,7 +86,8 @@ public sealed partial class BasicMachine
                     _interpreter.ExecuteNextInstruction();
 
                 if (action == ExecutionAction.Yield ||
-                    action == ExecutionAction.Wait)
+                    action == ExecutionAction.Wait ||
+                    action == ExecutionAction.Input)
                 {
                     break;
                 }
@@ -82,8 +102,10 @@ public sealed partial class BasicMachine
         {
             _interpreter.Stop();
 
-            _console.WriteLine(
-                $"?{exception.Message.ToUpperInvariant()}");
+            _runtimeError =
+                $"?{exception.Message.ToUpperInvariant()}";
+
+            _machine.Print(_runtimeError);
 
             OnProgramFinished();
         }

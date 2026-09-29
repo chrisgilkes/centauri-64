@@ -3,18 +3,26 @@ public readonly struct ExecutionResult
     public ExecutionAction Action { get; }
     public int? JumpToLine { get; }
     public int? ProgramCounter { get; }
+    public ScreenPresentation Presentation { get; }
 
-    private ExecutionResult(ExecutionAction action,int? jumpToLine = null,int? programCounter = null)
+    private ExecutionResult(
+        ExecutionAction action,
+        int? jumpToLine = null,
+        int? programCounter = null,
+        ScreenPresentation presentation = ScreenPresentation.None)
     {
         Action = action;
         JumpToLine = jumpToLine;
         ProgramCounter = programCounter;
+        Presentation = presentation;
     }
 
-    public static ExecutionResult Continue()
+    public static ExecutionResult Continue(
+        ScreenPresentation presentation = ScreenPresentation.None)
     {
         return new ExecutionResult(
-            ExecutionAction.Continue);
+            ExecutionAction.Continue,
+            presentation: presentation);
     }
 
     public static ExecutionResult Jump(int lineNumber)
@@ -40,6 +48,12 @@ public readonly struct ExecutionResult
     {
         return new ExecutionResult(
             ExecutionAction.Wait);
+    }
+
+    public static ExecutionResult Input()
+    {
+        return new ExecutionResult(
+            ExecutionAction.Input);
     }
 
     public static ExecutionResult End()

@@ -101,7 +101,12 @@ public sealed partial class Interpreter
             throw new InvalidOperationException("STEP cannot be zero.");
         }
 
-        _variables[statement.VariableName] = start.Integer;
+        if (IsStringVariable(statement.VariableName))
+        {
+            throw new InvalidOperationException("FOR expects a numeric variable.");
+        }
+
+        _variables[statement.VariableName] = new BasicValue(start.Integer);
 
         _forStack.Push(
             new ForLoop(
@@ -127,9 +132,9 @@ public sealed partial class Interpreter
             throw new InvalidOperationException($"NEXT {statement.VariableName} does not match FOR {loop.VariableName}.");
         }
 
-        var value = GetVariable(loop.VariableName) + loop.Step;
+        var value = GetNumericVariable(loop.VariableName) + loop.Step;
 
-        _variables[loop.VariableName] = value;
+        _variables[loop.VariableName] = new BasicValue(value);
 
         var keepGoing = loop.Step > 0 ? value <= loop.End : value >= loop.End;
 

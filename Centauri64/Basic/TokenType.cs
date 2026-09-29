@@ -7,6 +7,7 @@ public enum TokenType
     Identifier,
 
     Print,
+    Input,
     Wait,
     Goto,
     Yield,
@@ -25,6 +26,7 @@ public enum TokenType
     LeftParenthesis,
     RightParenthesis,
     Comma,
+    Semicolon,
     PrintAt,
     Cls,
     Ink,

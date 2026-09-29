@@ -71,7 +71,7 @@ public sealed partial class Interpreter
             animationName.String!,
             loop.Integer != 0);
 
-        return ExecutionResult.Continue();
+        return ExecutionResult.Continue(ScreenPresentation.Sprite);
     }
 
     private ExecutionResult ExecuteSpritePosition(SpritePositionStatement statement)
@@ -87,7 +87,7 @@ public sealed partial class Interpreter
 
         _machine.SetSpritePosition(spriteIndex.Integer,x.Integer,y.Integer);
 
-        return ExecutionResult.Continue();
+        return ExecutionResult.Continue(ScreenPresentation.Sprite);
     }
 
     private ExecutionResult ExecuteSpriteShow(SpriteShowStatement statement)
@@ -101,7 +101,7 @@ public sealed partial class Interpreter
 
         _machine.ShowSprite(spriteIndex.Integer);
 
-        return ExecutionResult.Continue();
+        return ExecutionResult.Continue(ScreenPresentation.Sprite);
     }
 
     private ExecutionResult ExecuteSpriteHide(SpriteHideStatement statement)
@@ -115,6 +115,6 @@ public sealed partial class Interpreter
 
         _machine.HideSprite(spriteIndex.Integer);
 
-        return ExecutionResult.Continue();
+        return ExecutionResult.Continue(ScreenPresentation.Sprite);
     }
 }

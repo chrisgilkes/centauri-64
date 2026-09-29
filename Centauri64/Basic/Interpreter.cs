@@ -11,7 +11,7 @@ namespace Centauri64.Basic;
 public sealed partial class Interpreter
 {
     private readonly TextConsole _console;
-    private readonly Dictionary<string, int> _variables = new();
+    private readonly Dictionary<string, BasicValue> _variables = new();
     private readonly Dictionary<string, int[]> _arrays = new();
     private readonly Random _random = new();
 
@@ -64,6 +64,7 @@ public sealed partial class Interpreter
         _returnStack.Clear();
         _forStack.Clear();
         _arrays.Clear();
+        ClearPendingInput();
 
         _lines = program.GetLines();
         _programCounter = 0;
@@ -75,6 +76,9 @@ public sealed partial class Interpreter
     {
         if (!_isRunning)
             return ExecutionAction.Continue;
+
+        if (IsWaitingForInput)
+            return ExecutionAction.Input;
 
         if (_waitUntil.HasValue)
         {
@@ -114,6 +118,9 @@ public sealed partial class Interpreter
                 _programCounter++;
                 break;
 
+            case ExecutionAction.Input:
+                break;
+
             case ExecutionAction.Return:
                 _programCounter = _returnStack.Pop();
                 break;
@@ -134,6 +141,13 @@ public sealed partial class Interpreter
             Stop();
         }
 
+        if (_isRunning &&
+            result.Presentation != ScreenPresentation.None &&
+            !NextContinuesPresentation(result.Presentation))
+        {
+            return ExecutionAction.Yield;
+        }
+
         return result.Action;
     }
 
@@ -141,6 +155,8 @@ public sealed partial class Interpreter
     {
         _isRunning = false;
         _waitUntil = null;
+        ClearPendingInput();
+        _machine.CancelInput();
     }
 
     public void Run(BasicProgram program)
@@ -184,6 +200,43 @@ public sealed partial class Interpreter
         throw new InvalidOperationException($"Undefined line {lineNumber}.");
     }
 
+    private bool NextContinuesPresentation(ScreenPresentation presentation)
+    {
+        var index = _programCounter;
+
+        while (index < _lines.Count &&
+               _lines[index].Statement is Syntax.RemStatement)
+        {
+            index++;
+        }
+
+        if (index >= _lines.Count)
+        {
+            return false;
+        }
+
+        var next = _lines[index].Statement;
+
+        return presentation switch
+        {
+            ScreenPresentation.Text =>
+                next is Syntax.PrintStatement or Syntax.PrintAtStatement,
+
+            ScreenPresentation.Clear =>
+                next is Syntax.PrintStatement or
+                    Syntax.PrintAtStatement or
+                    Syntax.ClsStatement,
+
+            ScreenPresentation.Sprite =>
+                next is Syntax.SpritePositionStatement or
+                    Syntax.SpriteShowStatement or
+                    Syntax.SpriteHideStatement or
+                    Syntax.SpriteAnimationStatement,
+
+            _ => false
+        };
+    }
+
     private ExecutionResult Execute(Statement statement)
     {
         if (statement is PrintStatement print)
@@ -192,7 +245,12 @@ public sealed partial class Interpreter
 
             _machine.Print(value.ToString());
 
-            return ExecutionResult.Continue();
+            return ExecutionResult.Continue(ScreenPresentation.Text);
+        }
+
+        if (statement is InputStatement input)
+        {
+            return ExecuteInput(input);
         }
 
         if (statement is PrintAtStatement printAt)
@@ -319,14 +377,9 @@ public sealed partial class Interpreter
 
         if (statement is AssignmentStatement assignment)
         {
-            var value = Evaluate(assignment.Value);
-
-            if (!value.IsInteger)
-            {
-                throw new InvalidOperationException("Expected numeric value.");
-            }
-
-            _variables[assignment.VariableName] = value.Integer;
+            AssignVariable(
+                assignment.VariableName,
+                Evaluate(assignment.Value));
 
             return ExecutionResult.Continue();
         }
@@ -343,6 +396,11 @@ public sealed partial class Interpreter
 
         if (statement is DimStatement dim)
         {
+            if (IsStringVariable(dim.Name))
+            {
+                throw new InvalidOperationException("DIM expects a numeric array.");
+            }
+
             var size = Evaluate(dim.Size);
 
             if (!size.IsInteger)
@@ -412,7 +470,7 @@ public sealed partial class Interpreter
 
         if (expression is VariableExpression variable)
         {
-            return new BasicValue(GetVariable(variable.Name));
+            return GetVariable(variable.Name);
         }
 
         if (expression is UnaryExpression unary)
@@ -478,6 +536,11 @@ public sealed partial class Interpreter
             "SHEIGHT" => EvaluateScreenHeightFunction(function),
             "KEYPRESSED" => EvaluateKeyPressedFunction(function),
             "ANIMPLAYING" => EvaluateAnimPlayingFunction(function),
+            "LEN" => EvaluateLenFunction(function),
+            "LEFT$" => EvaluateLeftFunction(function),
+            "RIGHT$" => EvaluateRightFunction(function),
+            "MID$" => EvaluateMidFunction(function),
+            "UPPER$" => EvaluateUpperFunction(function),
             _ => throw new InvalidOperationException($"Unknown function {function.Name}.")
         };
     }
@@ -638,6 +701,14 @@ public sealed partial class Interpreter
         var left = Evaluate(expression.Left);
         var right = Evaluate(expression.Right);
 
+        if (left.IsString || right.IsString)
+        {
+            return EvaluateStringOperation(
+                expression.Operator,
+                left,
+                right);
+        }
+
         if (!left.IsInteger || !right.IsInteger)
         {
             throw new InvalidOperationException("Arithmetic requires numeric values.");
@@ -684,13 +755,18 @@ public sealed partial class Interpreter
         return new BasicValue(result);
     }
 
-    private int GetVariable(string name)
+    private BasicValue GetVariable(string name)
     {
         if (_variables.TryGetValue(name, out var value))
         {
             return value;
         }
 
-        return 0;
+        if (IsStringVariable(name))
+        {
+            return new BasicValue(string.Empty);
+        }
+
+        return new BasicValue(0);
     }
 }

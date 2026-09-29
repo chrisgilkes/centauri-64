@@ -31,6 +31,9 @@ public sealed class TextConsole
 
     private KeyboardState _previousKeyboardState;
 
+    private int? _inputColumn;
+    private int _inputRow;
+
     private const double KEY_REPEAT_DELAY = 0.4;
     private const double KEY_REPEAT_INTERVAL = 0.05;
 
@@ -154,6 +157,20 @@ public sealed class TextConsole
         }
 
         return new string(characters).TrimEnd();
+    }
+
+    public void BeginInput()
+    {
+        _inputRow = _cursorRow;
+        _inputColumn = _cursorColumn;
+        _repeatingKey = null;
+        _keyRepeatTimer = 0.0;
+        _previousKeyboardState = Keyboard.GetState();
+    }
+
+    public void CancelInput()
+    {
+        _inputColumn = null;
     }
 
     public void Update(GameTime gameTime)
@@ -288,6 +305,12 @@ public sealed class TextConsole
 
         if (key == Keys.Left)
         {
+            if (IsAtInputStart())
+            {
+                ResetCursorFlash();
+                return;
+            }
+
             MoveCursorLeft();
             ResetCursorFlash();
             return;
@@ -302,6 +325,12 @@ public sealed class TextConsole
 
         if (key == Keys.Up)
         {
+            if (_inputColumn.HasValue)
+            {
+                ResetCursorFlash();
+                return;
+            }
+
             if (control)
             {
                 PreviousHistory();
@@ -317,6 +346,12 @@ public sealed class TextConsole
 
         if (key == Keys.Down)
         {
+            if (_inputColumn.HasValue)
+            {
+                ResetCursorFlash();
+                return;
+            }
+
             if (control)
             {
                 NextHistory();
@@ -341,6 +376,12 @@ public sealed class TextConsole
 
         if (key == Keys.Back)
         {
+            if (IsAtInputStart())
+            {
+                ResetCursorFlash();
+                return;
+            }
+
             Backspace();
             ResetCursorFlash();
             return;
@@ -355,7 +396,9 @@ public sealed class TextConsole
 
         if (key == Keys.Enter)
         {
-            var line = GetCurrentLine();
+            var line = ReadEnteredLine();
+
+            _inputColumn = null;
 
             if (!string.IsNullOrWhiteSpace(line))
             {
@@ -374,7 +417,7 @@ public sealed class TextConsole
 
         if (key == Keys.Home)
         {
-            _cursorColumn = 0;
+            _cursorColumn = _inputColumn ?? 0;
 
             ResetCursorFlash();
             return;
@@ -391,6 +434,12 @@ public sealed class TextConsole
 
         if (key == Keys.PageUp)
         {
+            if (_inputColumn.HasValue)
+            {
+                ResetCursorFlash();
+                return;
+            }
+
             PageUp();
 
             ResetCursorFlash();
@@ -399,6 +448,12 @@ public sealed class TextConsole
 
         if (key == Keys.PageDown)
         {
+            if (_inputColumn.HasValue)
+            {
+                ResetCursorFlash();
+                return;
+            }
+
             PageDown();
 
             ResetCursorFlash();
@@ -649,9 +704,42 @@ public sealed class TextConsole
                 cell.Background);
     }
 
+    private bool IsAtInputStart()
+    {
+        return _inputColumn.HasValue &&
+            _cursorRow == _inputRow &&
+            _cursorColumn <= _inputColumn.Value;
+    }
+
+    private string ReadEnteredLine()
+    {
+        if (!_inputColumn.HasValue)
+        {
+            return GetCurrentLine();
+        }
+
+        var characters = new char[_columns - _inputColumn.Value];
+
+        for (var column = _inputColumn.Value;
+             column < _columns;
+             column++)
+        {
+            characters[column - _inputColumn.Value] =
+                _cells[_inputRow, column].Character;
+        }
+
+        return new string(characters).Trim();
+    }
+
     private void PutCharacter(
         char character)
     {
+        if (_inputColumn.HasValue &&
+            _cursorColumn >= _columns - 1)
+        {
+            return;
+        }
+
         // Shift everything to the right of the cursor
         // one character to make room.
         for (var column = _columns - 1;

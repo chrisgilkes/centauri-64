@@ -167,6 +167,14 @@ public sealed class Tokenizer
                 continue;
             }
 
+            if (character == ';')
+            {
+                tokens.Add(new Token(TokenType.Semicolon, ";", _position, 1));
+
+                Advance();
+                continue;
+            }
+
             if (_allowIncomplete)
             {
                 Advance();
@@ -202,11 +210,17 @@ public sealed class Tokenizer
             Advance();
         }
 
+        if (!IsAtEnd() && Current() == '$')
+        {
+            Advance();
+        }
+
         var text = _source[start.._position];
 
         var type = text switch
         {
             "PRINT" => TokenType.Print,
+            "INPUT" => TokenType.Input,
             "GOTO"  => TokenType.Goto,
             "IF" => TokenType.If,
             "THEN" => TokenType.Then,
