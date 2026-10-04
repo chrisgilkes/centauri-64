@@ -31,6 +31,7 @@ public sealed partial class BasicMachine
     private void NewProgram()
     {
         _program.Clear();
+        _machine.ResetEditorAssets();
 
         _console.WriteLine("");
         _console.WriteLine("READY.");

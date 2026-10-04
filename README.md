@@ -21,7 +21,7 @@ For example:
 20 PAPER 0
 30 CLS
 40 FOR I=0 TO 80 STEP 4
-50 RECT I,I/2,320-I-I,180-I,RND(8)
+50 RECT I,I/2,320-I-I,240-I,RND(8)
 60 NEXT I
 70 WAIT 10000
 ```
@@ -56,7 +56,7 @@ Programs aren't just static examples. They run through the same tokenizer, parse
 
 ## Graphics
 
-Centauri64 currently has two display modes, including a 320x180 arcade mode designed for games.
+Centauri64 currently has two display modes, including a 320x240 arcade mode designed for games.
 
 The graphics API currently includes:
 
@@ -68,8 +68,8 @@ The graphics API currently includes:
 - `CIRCLE ... FILL`
 - `INK`
 - `PAPER`
-- `BORDER`
 - `CLS`
+- `MODE`
 
 The commands are deliberately simple, but loops and expressions can already produce some nice old-school graphics effects.
 
@@ -95,23 +95,15 @@ Keyboard/game input is exposed to BASIC so programs can be interactive rather th
 
 Centauri BASIC currently supports things including:
 
-- Line numbered programs
-- Immediate commands
-- Variables and expressions
-- `IF / THEN`
-- `GOTO`
-- `GOSUB`
-- `FOR / NEXT`
-- Positive and negative `STEP`
-- `PRINT`
-- `PRINTAT`
-- `WAIT`
-- `SAVE / LOAD`
-- Keyboard input
-- Graphics
-- Sprites
-- Collision detection
-- Sound
+- Line numbered programs and immediate commands
+- Numbers, strings (`A$`), arrays (`DIM`), and expressions
+- `IF / THEN` with `AND` / `OR` / `NOT`
+- `GOTO`, `GOSUB` / `RETURN`, `FOR` / `NEXT`
+- `PRINT`, `PRINTAT`, `INPUT`, string functions
+- `MODE`, graphics (`PLOT` `LINE` `RECT` `CIRCLE`), `INK` / `PAPER`
+- Sprites, collision, maps (`TDEF` `MAP` `LOADMAP`), camera
+- `KEY` / `KEYPRESSED`, `BEEP`, `WAIT`, `YIELD`
+- `SAVE` / `LOAD` / `DIR` / `MEM` tapes with sprites, maps, and covers
 
 There is still a lot I want to add, but the aim is to add features by actually using the language rather than designing everything up front.
 

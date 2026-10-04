@@ -118,49 +118,60 @@ public sealed partial class CentauriMachine
     {
         foreach (var point in _plotPoints.Values)
         {
-            spriteBatch.Draw(pixel,new Rectangle(point.X,point.Y,1,1),CentauriPalette.Get(point.Colour));
+            spriteBatch.Draw(pixel,new Rectangle(point.X - _cameraX,point.Y - _cameraY,1,1),CentauriPalette.Get(point.Colour));
         }
 
         foreach (var line in _lines)
         {
-            DrawLine(spriteBatch,pixel,line.X1,line.Y1,line.X2,line.Y2,CentauriPalette.Get(line.Colour));
+            DrawLine(
+                spriteBatch,
+                pixel,
+                line.X1 - _cameraX,
+                line.Y1 - _cameraY,
+                line.X2 - _cameraX,
+                line.Y2 - _cameraY,
+                CentauriPalette.Get(line.Colour));
         }
 
         foreach (var rect in _rectangles)
         {
             var colour = CentauriPalette.Get(rect.Colour);
+            var x = rect.X - _cameraX;
+            var y = rect.Y - _cameraY;
 
             if (rect.Filled)
             {
-                spriteBatch.Draw(pixel,new Rectangle(rect.X,rect.Y,rect.Width,rect.Height),colour);
+                spriteBatch.Draw(pixel,new Rectangle(x,y,rect.Width,rect.Height),colour);
             }
             else
             {
-                var right = rect.X + rect.Width - 1;
+                var right = x + rect.Width - 1;
 
-                var bottom = rect.Y + rect.Height - 1;
+                var bottom = y + rect.Height - 1;
 
-                DrawLine(spriteBatch,pixel,rect.X,rect.Y,right,rect.Y,colour);
+                DrawLine(spriteBatch,pixel,x,y,right,y,colour);
 
-                DrawLine(spriteBatch,pixel,right,rect.Y,right,bottom,colour);
+                DrawLine(spriteBatch,pixel,right,y,right,bottom,colour);
 
-                DrawLine(spriteBatch,pixel,right,bottom,rect.X,bottom,colour);
+                DrawLine(spriteBatch,pixel,right,bottom,x,bottom,colour);
 
-                DrawLine(spriteBatch,pixel,rect.X,bottom,rect.X,rect.Y,colour);
+                DrawLine(spriteBatch,pixel,x,bottom,x,y,colour);
             }
         }
 
         foreach (var circle in _circles)
         {
             var circleCol = CentauriPalette.Get(circle.Colour);
+            var cx = circle.X - _cameraX;
+            var cy = circle.Y - _cameraY;
 
             if (circle.Filled)
             {
-                DrawFilledCircle(spriteBatch,pixel,circle.X,circle.Y,circle.Radius,circleCol);
+                DrawFilledCircle(spriteBatch,pixel,cx,cy,circle.Radius,circleCol);
             }
             else
             {
-                DrawCircle(spriteBatch,pixel,circle.X,circle.Y,circle.Radius,circleCol);
+                DrawCircle(spriteBatch,pixel,cx,cy,circle.Radius,circleCol);
             }
         }
     }

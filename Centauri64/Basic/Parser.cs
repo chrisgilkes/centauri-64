@@ -209,6 +209,31 @@ public sealed class Parser
             return ParseDimStatement();
         }
 
+        if (token.Type == TokenType.Tdef)
+        {
+            return ParseTdefStatement();
+        }
+
+        if (token.Type == TokenType.Map)
+        {
+            return ParseMapStatement();
+        }
+
+        if (token.Type == TokenType.LoadMap)
+        {
+            return ParseLoadMapStatement();
+        }
+
+        if (token.Type == TokenType.Camera)
+        {
+            return ParseCameraStatement();
+        }
+
+        if (token.Type == TokenType.CamOff)
+        {
+            return ParseCamOffStatement();
+        }
+
         if (token.Type == TokenType.Rem)
         {
             return ParseRemStatement();
@@ -299,6 +324,75 @@ public sealed class Parser
         Expect(TokenType.RightParenthesis);
 
         return new DimStatement(name.Text,size);
+    }
+
+    private TdefStatement ParseTdefStatement()
+    {
+        Expect(TokenType.Tdef);
+
+        var tileId = ParseExpression();
+
+        Expect(TokenType.Comma);
+
+        var assetName = ParseExpression();
+
+        return new TdefStatement(tileId, assetName);
+    }
+
+    private MapStatement ParseMapStatement()
+    {
+        Expect(TokenType.Map);
+
+        var arrayName = Expect(TokenType.Identifier);
+
+        Expect(TokenType.Comma);
+
+        var columns = ParseExpression();
+
+        Expect(TokenType.Comma);
+
+        var rows = ParseExpression();
+
+        return new MapStatement(
+            arrayName.Text,
+            columns,
+            rows);
+    }
+
+    private LoadMapStatement ParseLoadMapStatement()
+    {
+        Expect(TokenType.LoadMap);
+
+        var name = ParseExpression();
+
+        return new LoadMapStatement(name);
+    }
+
+    private CameraStatement ParseCameraStatement()
+    {
+        Expect(TokenType.Camera);
+
+        if (Current().Type == TokenType.Follow)
+        {
+            Advance();
+
+            return CameraStatement.FollowSprite(ParseExpression());
+        }
+
+        var x = ParseExpression();
+
+        Expect(TokenType.Comma);
+
+        var y = ParseExpression();
+
+        return CameraStatement.Manual(x, y);
+    }
+
+    private CamOffStatement ParseCamOffStatement()
+    {
+        Expect(TokenType.CamOff);
+
+        return new CamOffStatement();
     }
 
     private SpriteShowStatement ParseSpriteShowStatement()
@@ -717,6 +811,54 @@ public sealed class Parser
 
     private Expression ParseExpression()
     {
+        return ParseOrExpression();
+    }
+
+    private Expression ParseOrExpression()
+    {
+        var left = ParseAndExpression();
+
+        while (Current().Type == TokenType.Or)
+        {
+            Advance();
+
+            left = new BinaryExpression(
+                left,
+                TokenType.Or,
+                ParseAndExpression());
+        }
+
+        return left;
+    }
+
+    private Expression ParseAndExpression()
+    {
+        var left = ParseNotExpression();
+
+        while (Current().Type == TokenType.And)
+        {
+            Advance();
+
+            left = new BinaryExpression(
+                left,
+                TokenType.And,
+                ParseNotExpression());
+        }
+
+        return left;
+    }
+
+    private Expression ParseNotExpression()
+    {
+        if (Current().Type == TokenType.Not)
+        {
+            Advance();
+
+            return new UnaryExpression(
+                TokenType.Not,
+                ParseNotExpression());
+        }
+
         return ParseComparisonExpression();
     }
 
@@ -766,7 +908,8 @@ public sealed class Parser
             "LEFT$" or
             "RIGHT$" or
             "MID$" or
-            "UPPER$";
+            "UPPER$" or
+            "TILEAT";
     }
 
     private Expression ParsePrimaryExpression()

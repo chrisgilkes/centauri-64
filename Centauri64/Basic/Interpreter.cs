@@ -416,6 +416,31 @@ public sealed partial class Interpreter
             return ExecutionResult.Continue();
         }
 
+        if (statement is TdefStatement tdef)
+        {
+            return ExecuteTdef(tdef);
+        }
+
+        if (statement is MapStatement map)
+        {
+            return ExecuteMap(map);
+        }
+
+        if (statement is LoadMapStatement loadMap)
+        {
+            return ExecuteLoadMap(loadMap);
+        }
+
+        if (statement is CameraStatement camera)
+        {
+            return ExecuteCamera(camera);
+        }
+
+        if (statement is CamOffStatement)
+        {
+            return ExecuteCamOff();
+        }
+
         if (statement is ArrayAssignmentStatement arrayAssignment)
         {
             var index = Evaluate(arrayAssignment.Index);
@@ -477,12 +502,20 @@ public sealed partial class Interpreter
 
             if (!value.IsInteger)
             {
-                throw new InvalidOperationException("Unary minus requires a numeric value.");
+                throw new InvalidOperationException(
+                    unary.Operator == TokenType.Not
+                        ? "NOT requires a numeric value."
+                        : "Unary minus requires a numeric value.");
             }
 
             if (unary.Operator == TokenType.Minus)
             {
                 return new BasicValue(-value.Integer);
+            }
+
+            if (unary.Operator == TokenType.Not)
+            {
+                return new BasicValue(value.Integer == 0 ? 1 : 0);
             }
 
             throw new InvalidOperationException($"Unsupported unary operator: {unary.Operator}");
@@ -539,6 +572,7 @@ public sealed partial class Interpreter
             "RIGHT$" => EvaluateRightFunction(function),
             "MID$" => EvaluateMidFunction(function),
             "UPPER$" => EvaluateUpperFunction(function),
+            "TILEAT" => EvaluateTileAtFunction(function),
             _ => throw new InvalidOperationException($"Unknown function {function.Name}.")
         };
     }
@@ -745,6 +779,12 @@ public sealed partial class Interpreter
 
             TokenType.GreaterThanOrEqual =>
                 left.Integer >= right.Integer ? 1 : 0,
+
+            TokenType.And =>
+                (left.Integer != 0 && right.Integer != 0) ? 1 : 0,
+
+            TokenType.Or =>
+                (left.Integer != 0 || right.Integer != 0) ? 1 : 0,
 
             _ => throw new InvalidOperationException(
                 $"Unsupported operator: {expression.Operator}")

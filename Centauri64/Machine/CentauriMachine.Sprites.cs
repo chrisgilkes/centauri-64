@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Input;
 
 using Centauri64.Graphics;
 using Centauri64.Machine.Sprites;
+using Centauri64.Machine.Maps;
 using Microsoft.Xna.Framework;
 
 namespace Centauri64.Machine;
@@ -21,11 +22,19 @@ public sealed partial class CentauriMachine
 
     private readonly SpriteAssetStore _spriteAssets = new();
 
+    private readonly MapAssetStore _mapAssets = new();
+
     private readonly SpriteEditor _spriteEditor;
+
+    private readonly MapEditor _mapEditor;
 
     public SpriteEditor SpriteEditor => _spriteEditor;
 
+    public MapEditor MapEditor => _mapEditor;
+
     public SpriteAssetStore SpriteAssets => _spriteAssets;
+
+    public MapAssetStore MapAssets => _mapAssets;
 
 
     public void SetSpritePosition(int index,int x,int y)
@@ -56,6 +65,8 @@ public sealed partial class CentauriMachine
         {
             sprite.Visible = false;
         }
+
+        ClearTiles();
     }
 
      public void UpdateSpriteEditor(GameTime gameTime, MouseState mouse,KeyboardState keyboard,KeyboardState previousKeyboard)
@@ -63,13 +74,28 @@ public sealed partial class CentauriMachine
         _spriteEditor.Update(gameTime, mouse,keyboard,previousKeyboard);
     }
 
+    public void UpdateMapEditor(GameTime gameTime, MouseState mouse, KeyboardState keyboard, KeyboardState previousKeyboard)
+    {
+        _mapEditor.Update(gameTime, mouse, keyboard, previousKeyboard);
+    }
+
     public void DrawSpriteEditor(SpriteBatch spriteBatch,BitmapFont font, Texture2D pixel)
     {
         _spriteEditor.Draw(spriteBatch,font, pixel);
     }
+
+    public void DrawMapEditor(SpriteBatch spriteBatch, BitmapFont font, Texture2D pixel)
+    {
+        _mapEditor.Draw(spriteBatch, font, pixel);
+    }
     public void DrawSprites(SpriteBatch spriteBatch,Texture2D pixel)
     {
-        _spriteRenderer.Draw(spriteBatch,pixel,_sprites);
+        _spriteRenderer.Draw(
+            spriteBatch,
+            pixel,
+            _sprites,
+            _cameraX,
+            _cameraY);
     }
 
     public void SetSprite(int index,string assetName)
@@ -198,6 +224,9 @@ public sealed partial class CentauriMachine
 
     private void CreateBuiltInSpriteAssets()
     {
+        if (_spriteAssets.Contains("PLAYER"))
+            return;
+
         var player = new SpriteAsset("PLAYER");
 
         var animation = player.AddAnimation("DEFAULT");
@@ -394,6 +423,8 @@ public sealed partial class CentauriMachine
                     sprite);
             }
         }
+
+        UpdateCamera();
     }
 
 }

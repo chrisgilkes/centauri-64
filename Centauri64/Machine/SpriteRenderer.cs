@@ -1,4 +1,3 @@
-
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -7,7 +6,12 @@ namespace Centauri64.Machine;
 
 public sealed class SpriteRenderer
 {
-    public void Draw(SpriteBatch spriteBatch,Texture2D pixel,IReadOnlyList<CentauriSprite> sprites)
+    public void Draw(
+        SpriteBatch spriteBatch,
+        Texture2D pixel,
+        IReadOnlyList<CentauriSprite> sprites,
+        int cameraX,
+        int cameraY)
     {
         foreach (var sprite in sprites)
         {
@@ -17,14 +21,18 @@ public sealed class SpriteRenderer
             DrawSprite(
                 spriteBatch,
                 pixel,
-                sprite);
+                sprite,
+                cameraX,
+                cameraY);
         }
     }
 
     private static void DrawSprite(
         SpriteBatch spriteBatch,
         Texture2D pixel,
-        CentauriSprite sprite)
+        CentauriSprite sprite,
+        int cameraX,
+        int cameraY)
     {
         for (var y = 0; y < CentauriSprite.HEIGHT; y++)
         {
@@ -49,10 +57,10 @@ public sealed class SpriteRenderer
                 spriteBatch.Draw(
                     pixel,
                     new Rectangle(
-                                    sprite.X + px,
-                                    sprite.Y + y,
-                                    1,
-                                    1),
+                        sprite.X + px - cameraX,
+                        sprite.Y + y - cameraY,
+                        1,
+                        1),
                     colour);
             }
         }

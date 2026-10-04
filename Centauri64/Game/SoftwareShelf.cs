@@ -22,13 +22,22 @@ public sealed partial class SoftwareShelf
     private const int Columns = 2;
     private const int Rows = 3;
     private const int PageSize = Columns * Rows;
-    private const int CassetteWidth = 272;
-    private const int CassetteHeight = 88;
-    private const int OriginX = 32;
-    private const int OriginY = 104;
+    private const int CassetteWidth = 160;
+    private const int CassetteHeight = 100;
+    private const int OriginX = 144;
+    private const int OriginY = 100;
     private const int GapX = 32;
-    private const int GapY = 16;
+    private const int GapY = 6;
     private const int CharacterWidth = 8;
+    private const int StickerPadX = 4;
+    private const int StickerPadY = 3;
+    private const int StickerOffsetX = 24;
+    private const int StickerOffsetY = 14;
+    private const int StickerWidth = 116;
+    private const int InlayCassetteX = 448;
+    private const int InlayCassetteY = 328;
+    private const int InlayCassetteWidth = 160;
+    private const int InlayCassetteHeight = 100;
     private const int ScrollGap = 3;
     private const double ScrollHold = 1.0;
     private const double ScrollInterval = 0.12;
@@ -43,6 +52,8 @@ public sealed partial class SoftwareShelf
 
     private readonly BitmapFont _font;
     private readonly Texture2D _whitePixel;
+    private readonly Texture2D _cassetteShelf;
+    private readonly Texture2D _cassetteSideA;
     private readonly BasicMachine _machine;
 
     private static readonly Color Background = new(22, 55, 72);
@@ -52,7 +63,8 @@ public sealed partial class SoftwareShelf
     private static readonly Color Yellow = new(232, 205, 92);
     private static readonly Color Muted = new(130, 165, 170);
     private static readonly Color Dark = new(14, 28, 38);
-    private static readonly Color Shell = new(36, 44, 52);
+    private static readonly Color Sticker = new(250, 246, 220);
+    private static readonly Color StickerEdge = new(48, 42, 36);
 
     private KeyboardState _previousKeyboard;
     private List<string> _tapes = new();
@@ -75,10 +87,14 @@ public sealed partial class SoftwareShelf
     public SoftwareShelf(
         BitmapFont font,
         Texture2D whitePixel,
+        Texture2D cassetteShelf,
+        Texture2D cassetteSideA,
         BasicMachine machine)
     {
         _font = font;
         _whitePixel = whitePixel;
+        _cassetteShelf = cassetteShelf;
+        _cassetteSideA = cassetteSideA;
         _machine = machine;
     }
 
@@ -482,6 +498,7 @@ public sealed partial class SoftwareShelf
                 _tapes[index],
                 _labels[index],
                 _covers[index],
+                index + 1,
                 x,
                 y,
                 index == _selected);
@@ -493,47 +510,73 @@ public sealed partial class SoftwareShelf
         string name,
         TapeLabel label,
         TapeCover cover,
+        int number,
         int x,
         int y,
         bool selected)
     {
-        DrawBox(
-            spriteBatch,
+        spriteBatch.Draw(
+            _cassetteShelf,
             new Rectangle(x, y, CassetteWidth, CassetteHeight),
-            Shell);
+            Color.White);
 
-        DrawBox(
+        DrawTapeNumber(spriteBatch, number, x + 6, y + 4);
+
+        var maxCharacters = (StickerWidth - (StickerPadX * 2)) / CharacterWidth;
+        var text = CassetteCaption(name, label, maxCharacters, selected);
+
+        DrawLabelSticker(
             spriteBatch,
-            new Rectangle(x + 8, y + 8, CassetteWidth - 16, CassetteHeight - 16),
-            Cream);
+            text,
+            x + StickerOffsetX,
+            y + StickerOffsetY);
 
-        var hasArt = cover.HasArt;
-        var textX = hasArt ? x + 64 : x + 44;
-        var reserved = hasArt ? 120 : 88;
-        var maxCharacters = (CassetteWidth - reserved) / CharacterWidth;
-
-        DrawBox(spriteBatch, new Rectangle(x + 20, y + 34, 16, 16), Dark);
-        DrawBox(
-            spriteBatch,
-            new Rectangle(x + CassetteWidth - 36, y + 34, 16, 16),
-            Dark);
-
-        if (hasArt)
+        if (cover.HasArt)
         {
             DrawCoverPreview(
                 spriteBatch,
                 cover,
-                x + 8,
-                y + 8,
-                CoverPreviewWidth,
-                CoverPreviewHeight);
+                x + 12,
+                y + 12,
+                14,
+                20);
         }
+    }
 
-        var title = Fit(name, maxCharacters);
-        var subtitle = Subtitle(label, maxCharacters, selected);
+    private void DrawTapeNumber(
+        SpriteBatch spriteBatch,
+        int number,
+        int x,
+        int y)
+    {
+        var text = number.ToString();
+        var width = (text.Length * CharacterWidth) + 6;
+        const int height = 12;
 
-        DrawText(spriteBatch, title, textX, y + 28, Dark);
-        DrawText(spriteBatch, subtitle, textX, y + 48, Header);
+        DrawBox(spriteBatch, new Rectangle(x + 1, y, width - 2, height), Dark);
+        DrawBox(spriteBatch, new Rectangle(x, y + 1, width, height - 2), Dark);
+        DrawText(spriteBatch, text, x + 3, y + 2, Yellow);
+    }
+
+    private void DrawLabelSticker(
+        SpriteBatch spriteBatch,
+        string text,
+        int x,
+        int y)
+    {
+        var width = StickerWidth;
+        var height = CharacterWidth + (StickerPadY * 2);
+
+        // Bordered plate with nibbled corners so it reads as a label sticker.
+        DrawBox(spriteBatch, new Rectangle(x + 1, y, width - 2, height), Sticker);
+        DrawBox(spriteBatch, new Rectangle(x, y + 1, width, height - 2), Sticker);
+
+        DrawBox(spriteBatch, new Rectangle(x + 1, y, width - 2, 1), StickerEdge);
+        DrawBox(spriteBatch, new Rectangle(x + 1, y + height - 1, width - 2, 1), StickerEdge);
+        DrawBox(spriteBatch, new Rectangle(x, y + 1, 1, height - 2), StickerEdge);
+        DrawBox(spriteBatch, new Rectangle(x + width - 1, y + 1, 1, height - 2), StickerEdge);
+
+        DrawText(spriteBatch, text, x + StickerPadX, y + StickerPadY, Dark);
     }
 
     private void DrawInlay(SpriteBatch spriteBatch)
@@ -577,6 +620,21 @@ public sealed partial class SoftwareShelf
         DrawText(spriteBatch, "MACHINE " + machine, 48, 336, Muted);
 
         DrawInlayCover(spriteBatch);
+
+        spriteBatch.Draw(
+            _cassetteSideA,
+            new Rectangle(
+                InlayCassetteX,
+                InlayCassetteY,
+                InlayCassetteWidth,
+                InlayCassetteHeight),
+            Color.White);
+
+        DrawLabelSticker(
+            spriteBatch,
+            Fit(_tapes[_selected], 12),
+            InlayCassetteX + 36,
+            InlayCassetteY + 16);
 
         DrawBox(
             spriteBatch,
@@ -638,11 +696,10 @@ public sealed partial class SoftwareShelf
         if (_tapes.Count == 0)
             return;
 
-        var description = _labels[_selected].Description;
-        var reserved = _covers[_selected].HasArt ? 120 : 88;
-        var limit = (CassetteWidth - reserved) / CharacterWidth;
+        var maxCharacters = (StickerWidth - (StickerPadX * 2)) / CharacterWidth;
+        var band = MarqueeBand(_tapes[_selected], _labels[_selected]);
 
-        if (description.Length <= limit)
+        if (band.Length <= maxCharacters)
             return;
 
         _descriptionScrollTimer += delta;
@@ -663,7 +720,7 @@ public sealed partial class SoftwareShelf
         _descriptionScrollTimer = 0;
         _descriptionScroll++;
 
-        if (_descriptionScroll >= description.Length + ScrollGap)
+        if (_descriptionScroll >= band.Length)
         {
             _descriptionScroll = 0;
             _descriptionHolding = true;
@@ -677,23 +734,32 @@ public sealed partial class SoftwareShelf
         _descriptionHolding = true;
     }
 
-    private string Subtitle(
+    private string CassetteCaption(
+        string name,
         TapeLabel label,
         int maxCharacters,
         bool selected)
     {
-        if (string.IsNullOrEmpty(label.Description))
-            return label.Kind.ToString().ToUpperInvariant();
+        if (!selected)
+            return Fit(name, maxCharacters);
 
-        if (!selected || label.Description.Length <= maxCharacters)
-            return Fit(label.Description, maxCharacters);
+        var band = MarqueeBand(name, label);
 
-        var band = label.Description + new string(' ', ScrollGap);
+        if (band.Length <= maxCharacters)
+            return band;
+
         var doubled = band + band;
 
-        return doubled.Substring(
-            _descriptionScroll,
-            maxCharacters);
+        return doubled.Substring(_descriptionScroll, maxCharacters);
+    }
+
+    private static string MarqueeBand(string name, TapeLabel label)
+    {
+        var detail = string.IsNullOrEmpty(label.Description)
+            ? label.Kind.ToString().ToUpperInvariant()
+            : label.Description;
+
+        return name + "  -  " + detail + new string(' ', ScrollGap);
     }
 
     private static string Fit(string value, int maxCharacters)

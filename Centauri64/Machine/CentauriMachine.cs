@@ -7,6 +7,7 @@ using Microsoft.Xna.Framework;
 using System.Linq;
 
 using Centauri64.Machine.Sprites;
+using Centauri64.Machine.Maps;
 using Centauri64.Graphics;
 using Centauri64.Basic;
 
@@ -21,8 +22,6 @@ public sealed partial class CentauriMachine
 
     private readonly TextConsole _console;
     private readonly TextConsole _programConsole;
-
-    private readonly BasicMachine _basic;
 
     private KeyboardState _keyboardState;
     private KeyboardState _previousKeyboardState;
@@ -45,6 +44,8 @@ public sealed partial class CentauriMachine
 
     private CentauriDisplayMode _displayMode = CentauriDisplayMode.HighResolution;
 
+    private int _paperColour = DEFAULT_PAPER;
+
     public CentauriDisplayMode DisplayMode => _displayMode;
 
     public int SystemMemoryBytes => SYSTEM_MEMORY_BYTES;
@@ -65,7 +66,7 @@ public sealed partial class CentauriMachine
         _ => SCREEN_HEIGHT
     };
 
-    public int PaperColour => DEFAULT_PAPER;
+    public int PaperColour => _paperColour;
 
     public CentauriMachine(TextConsole console, TextConsole programConsole)
     {
@@ -78,7 +79,22 @@ public sealed partial class CentauriMachine
         }
 
         _spriteEditor = new SpriteEditor(_spriteAssets);
+        _mapEditor = new MapEditor(_mapAssets, _spriteAssets);
 
+        CreateBuiltInSpriteAssets();
+    }
+
+    public void ResetEditorAssets()
+    {
+        _spriteAssets.Clear();
+        _mapAssets.Clear();
+        CreateBuiltInSpriteAssets();
+        _spriteEditor.MarkSaved();
+        _mapEditor.MarkSaved();
+    }
+
+    public void EnsureBuiltInSpriteAssets()
+    {
         CreateBuiltInSpriteAssets();
     }
 
@@ -132,6 +148,7 @@ public sealed partial class CentauriMachine
         _lines.Clear();
         _rectangles.Clear();
         _circles.Clear();
+        ClearTileMap();
     }
 
     public void SetInk(int colour)
@@ -145,6 +162,7 @@ public sealed partial class CentauriMachine
     {
         ValidateColour(colour);
 
+        _paperColour = colour;
         _programConsole.Background = colour;
     }
 
@@ -168,6 +186,7 @@ public sealed partial class CentauriMachine
 
     public void ResetProgramDisplay()
     {
+        _paperColour = DEFAULT_PAPER;
         _programConsole.Foreground  = DEFAULT_INK;
         _programConsole.Background  = DEFAULT_PAPER;
 
@@ -178,6 +197,8 @@ public sealed partial class CentauriMachine
         _lines.Clear();
         _rectangles.Clear();
         _circles.Clear();
+
+        ClearTiles();
 
         _displayMode = CentauriDisplayMode.HighResolution;
     }

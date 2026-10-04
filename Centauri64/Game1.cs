@@ -117,6 +117,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         _machine = new CentauriMachine(_console,_programConsole);
         _machine.SpriteEditor.Notice += OnSpriteEditorNotice;
+        _machine.MapEditor.Notice += OnMapEditorNotice;
 
         _basicMachine = new BasicMachine(_console,_machine);
 
@@ -124,12 +125,21 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         _programmingManual = new ProgrammingManual(_font,_pixel);
 
-        _softwareShelf = new SoftwareShelf(_font, _pixel, _basicMachine);
+        var cassetteShelf = Content.Load<Texture2D>("UI/cassette-stripes");
+        var cassetteSideA = Content.Load<Texture2D>("UI/cassette-side-a");
+
+        _softwareShelf = new SoftwareShelf(
+            _font,
+            _pixel,
+            cassetteShelf,
+            cassetteSideA,
+            _basicMachine);
 
         _computerRoom.ComputerSelected += OnComputerSelected;
 
         _computerRoom.ManualSelected += () =>
         {
+            _programmingManual.Open();
             _gameMode = GameMode.ProgrammingManual;
         };
 
@@ -157,6 +167,13 @@ public class Game1 : Microsoft.Xna.Framework.Game
     }
 
     private void OnSpriteEditorNotice(string text)
+    {
+        _console.WriteLine("");
+        _console.WriteLine(text);
+        _console.WriteLine("");
+    }
+
+    private void OnMapEditorNotice(string text)
     {
         _console.WriteLine("");
         _console.WriteLine(text);
@@ -229,9 +246,19 @@ public class Game1 : Microsoft.Xna.Framework.Game
         if (KeyPressed(keyboardState, Keys.F5) &&
             _gameMode == GameMode.Computer &&
             !_basicMachine.IsRunning &&
-            !_machine.SpriteEditor.IsActive)
+            !_machine.SpriteEditor.IsActive &&
+            !_machine.MapEditor.IsActive)
         {
             _machine.SpriteEditor.Open();
+        }
+
+        if (KeyPressed(keyboardState, Keys.F6) &&
+            _gameMode == GameMode.Computer &&
+            !_basicMachine.IsRunning &&
+            !_machine.SpriteEditor.IsActive &&
+            !_machine.MapEditor.IsActive)
+        {
+            _machine.MapEditor.Open();
         }
         
         if (KeyPressed(keyboardState, Keys.F11))
@@ -249,7 +276,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         if (_gameMode == GameMode.ComputerRoom)
         {
-            _computerRoom.Update();
+            _computerRoom.Update(gameTime);
 
             _previousKeyboardState = keyboardState;
 
@@ -269,24 +296,9 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         if (_gameMode == GameMode.Software)
         {
-            var mouse = Mouse.GetState();
-            var scaleX =
-                GraphicsDevice.Viewport.Width /
-                (float)CentauriMachine.DEVELOPMENT_WIDTH;
-            var scaleY =
-                GraphicsDevice.Viewport.Height /
-                (float)CentauriMachine.DEVELOPMENT_HEIGHT;
-            var virtualMouse = new MouseState(
-                (int)(mouse.X / scaleX),
-                (int)(mouse.Y / scaleY),
-                mouse.ScrollWheelValue,
-                mouse.LeftButton,
-                mouse.MiddleButton,
-                mouse.RightButton,
-                mouse.XButton1,
-                mouse.XButton2);
-
-            _softwareShelf.Update(gameTime, virtualMouse);
+            _softwareShelf.Update(
+                gameTime,
+                GetVirtualMouse(CentauriMachine.DEVELOPMENT_WIDTH, CentauriMachine.DEVELOPMENT_HEIGHT));
 
             _previousKeyboardState = keyboardState;
 
@@ -387,7 +399,9 @@ public class Game1 : Microsoft.Xna.Framework.Game
         _machine.UpdateInput();
         _machine.UpdateSprites(gameTime);
 
-        if (!_basicMachine.IsRunning && !_machine.SpriteEditor.IsActive)
+        if (!_basicMachine.IsRunning &&
+            !_machine.SpriteEditor.IsActive &&
+            !_machine.MapEditor.IsActive)
         {
             _console.Update(gameTime);
         }
@@ -395,31 +409,35 @@ public class Game1 : Microsoft.Xna.Framework.Game
         _basicMachine.Update();
 
         if (_basicMachine.IsWaitingForInput &&
-            !_machine.SpriteEditor.IsActive)
+            !_machine.SpriteEditor.IsActive &&
+            !_machine.MapEditor.IsActive)
         {
             _programConsole.Update(gameTime);
         }
 
-        if (_machine.SpriteEditor.IsActive)
+        if (_machine.SpriteEditor.IsActive ||
+            _machine.MapEditor.IsActive)
         {
-            var mouse = Mouse.GetState();
+            var virtualMouse = GetVirtualMouse(
+                CentauriMachine.DEVELOPMENT_WIDTH,
+                CentauriMachine.DEVELOPMENT_HEIGHT);
 
-           var scaleX = GraphicsDevice.Viewport.Width / (float)CentauriMachine.DEVELOPMENT_WIDTH;
-
-            var scaleY = GraphicsDevice.Viewport.Height / (float)CentauriMachine.DEVELOPMENT_HEIGHT;
-
-            var virtualMouse =
-                new MouseState(
-                    (int)(mouse.X / scaleX),
-                    (int)(mouse.Y / scaleY),
-                    mouse.ScrollWheelValue,
-                    mouse.LeftButton,
-                    mouse.MiddleButton,
-                    mouse.RightButton,
-                    mouse.XButton1,
-                    mouse.XButton2);
-
-            _machine.UpdateSpriteEditor(gameTime, virtualMouse,keyboardState,_previousKeyboardState);
+            if (_machine.SpriteEditor.IsActive)
+            {
+                _machine.UpdateSpriteEditor(
+                    gameTime,
+                    virtualMouse,
+                    keyboardState,
+                    _previousKeyboardState);
+            }
+            else
+            {
+                _machine.UpdateMapEditor(
+                    gameTime,
+                    virtualMouse,
+                    keyboardState,
+                    _previousKeyboardState);
+            }
         }
 
         _previousKeyboardState = keyboardState;
@@ -552,6 +570,10 @@ public class Game1 : Microsoft.Xna.Framework.Game
             _spriteBatch,
             _pixel);
 
+        _machine.DrawTiles(
+            _spriteBatch,
+            _pixel);
+
         _machine.DrawSprites(
             _spriteBatch,
             _pixel);
@@ -587,6 +609,13 @@ public class Game1 : Microsoft.Xna.Framework.Game
         if (_machine.SpriteEditor.IsActive)
         {
             _machine.DrawSpriteEditor(
+                _spriteBatch,
+                _font,
+                _pixel);
+        }
+        else if (_machine.MapEditor.IsActive)
+        {
+            _machine.DrawMapEditor(
                 _spriteBatch,
                 _font,
                 _pixel);
@@ -637,6 +666,11 @@ public class Game1 : Microsoft.Xna.Framework.Game
             _spriteBatch,
             _pixel);
 
+        // TILES
+        _machine.DrawTiles(
+            _spriteBatch,
+            _pixel);
+
         // SPRITES
         _machine.DrawSprites(
             _spriteBatch,
@@ -647,12 +681,43 @@ public class Game1 : Microsoft.Xna.Framework.Game
             _spriteBatch,
             _font);
 
+        if (_basicMachine.ProgramFinished)
+        {
+            DrawArcadeFinishedPrompt();
+        }
+
         _spriteBatch.End();
 
         GraphicsDevice.SetRenderTarget(null);
 
         DrawRenderTargetToWindow(
             _gameRenderTarget);
+    }
+
+    private MouseState GetVirtualMouse(int virtualWidth, int virtualHeight)
+    {
+        var mouse = Mouse.GetState();
+        var viewportWidth = GraphicsDevice.Viewport.Width;
+        var viewportHeight = GraphicsDevice.Viewport.Height;
+        var scale = MathF.Min(
+            viewportWidth / (float)virtualWidth,
+            viewportHeight / (float)virtualHeight);
+        var destinationWidth = (int)(virtualWidth * scale);
+        var destinationHeight = (int)(virtualHeight * scale);
+        var destinationX = (viewportWidth - destinationWidth) / 2;
+        var destinationY = (viewportHeight - destinationHeight) / 2;
+        var x = (int)((mouse.X - destinationX) / scale);
+        var y = (int)((mouse.Y - destinationY) / scale);
+
+        return new MouseState(
+            x,
+            y,
+            mouse.ScrollWheelValue,
+            mouse.LeftButton,
+            mouse.MiddleButton,
+            mouse.RightButton,
+            mouse.XButton1,
+            mouse.XButton2);
     }
 
     private void DrawRenderTargetToWindow(RenderTarget2D renderTarget)
@@ -712,6 +777,18 @@ public class Game1 : Microsoft.Xna.Framework.Game
             _spriteBatch,
             prompt,
             new Vector2(224, 376),
+            new Color(160, 160, 160));
+    }
+
+    private void DrawArcadeFinishedPrompt()
+    {
+        const string prompt = "[PRESS ANY KEY]";
+        var x = (CentauriMachine.ARCADE_WIDTH - (prompt.Length * 8)) / 2;
+
+        _font.Draw(
+            _spriteBatch,
+            prompt,
+            new Vector2(x, CentauriMachine.ARCADE_HEIGHT - 24),
             new Color(160, 160, 160));
     }
 
@@ -784,9 +861,9 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         _font.Draw(
             _spriteBatch,
-            "F5 SPRITES",
+            "F5 SPRITES  F6 MAPS",
             new Vector2(
-                248,
+                200,
                 CentauriMachine.DEVELOPMENT_HEIGHT - 12),
             Color.White);
 

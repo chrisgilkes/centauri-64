@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Centauri64.Console;
 using Centauri64.Machine;
 using Centauri64.Machine.Sprites;
+using Centauri64.Machine.Maps;
 
 namespace Centauri64.Basic;
 
@@ -26,6 +27,8 @@ public sealed partial class BasicMachine
     private readonly ProgramStorage _storage;
 
     private readonly SpriteStorage _spriteStorage;
+
+    private readonly MapStorage _mapStorage;
 
     private readonly CentauriMachine _machine;
 
@@ -52,6 +55,7 @@ public sealed partial class BasicMachine
         _storage        = new ProgramStorage();
 
         _spriteStorage  = new SpriteStorage();
+        _mapStorage     = new MapStorage();
 
         _console.LineEntered += OnLineEntered;
         _console.InputChanged += UpdateInputHighlighting;

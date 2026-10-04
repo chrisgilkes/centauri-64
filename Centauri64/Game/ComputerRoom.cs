@@ -10,7 +10,18 @@ namespace Centauri64.Game;
 
 public sealed class ComputerRoom
 {
+    private const int BannerLength = 74;
+    private const double FlipInterval = 0.45;
+    private const int FlipsPerTick = 6;
+    private const double FlashSeconds = 0.35;
+
     private readonly BitmapFont _font;
+    private readonly Texture2D _whitePixel;
+    private readonly Random _random = new();
+    private readonly char[] _topBanner;
+    private readonly char[] _bottomBanner;
+    private readonly double[] _topFlash;
+    private readonly double[] _bottomFlash;
 
     private static readonly Color Background = new(22, 55, 72);
     private static readonly Color Header     = new(36, 72, 110);
@@ -19,9 +30,9 @@ public sealed class ComputerRoom
     private static readonly Color Yellow     = new(232, 205, 92);
     private static readonly Color Muted      = new(130, 165, 170);
     private static readonly Color Dark       = new(14, 28, 38);
-    private readonly Texture2D _whitePixel;
 
     private KeyboardState _previousKeyboard;
+    private double _flipTimer;
 
     public event Action? ComputerSelected;
 
@@ -37,6 +48,10 @@ public sealed class ComputerRoom
     {
         _font       = font;
         _whitePixel = whitePixel;
+        _topBanner = CreateBanner();
+        _bottomBanner = CreateBanner();
+        _topFlash = new double[BannerLength];
+        _bottomFlash = new double[BannerLength];
     }
 
     public void SetComputerPoweredOn()
@@ -44,7 +59,7 @@ public sealed class ComputerRoom
         _computerPoweredOn = true;
     }
 
-    public void Update()
+    public void Update(GameTime gameTime)
     {
         var keyboard = Keyboard.GetState();
 
@@ -66,28 +81,34 @@ public sealed class ComputerRoom
             SoftwareSelected?.Invoke();
         }
 
+        var delta = gameTime.ElapsedGameTime.TotalSeconds;
+        _flipTimer += delta;
+        AgeFlashes(_topFlash, delta);
+        AgeFlashes(_bottomFlash, delta);
+
+        if (_flipTimer >= FlipInterval)
+        {
+            _flipTimer -= FlipInterval;
+            FlipBits(_topBanner, _topFlash);
+            FlipBits(_bottomBanner, _bottomFlash);
+        }
+
         _previousKeyboard = keyboard;
     }
 
     public void Draw(SpriteBatch spriteBatch)
     {
-        
         spriteBatch.Begin(
             samplerState: SamplerState.PointClamp);
 
-        // Background.
         DrawBox(
             spriteBatch,
             new Rectangle(
-            0,
-            0,
-            CentauriMachine.DEVELOPMENT_WIDTH,
-            CentauriMachine.DEVELOPMENT_HEIGHT),
+                0,
+                0,
+                CentauriMachine.DEVELOPMENT_WIDTH,
+                CentauriMachine.DEVELOPMENT_HEIGHT),
             Background);
-
-        // ---------------------------------------------------------
-        // Header
-        // ---------------------------------------------------------
 
         DrawBox(
             spriteBatch,
@@ -119,7 +140,6 @@ public sealed class ComputerRoom
             44,
             Cyan);
 
-
         var timeText = DateTime.Now.ToString("h:mm tt").ToUpperInvariant();
         var timeX = 576 - (timeText.Length * 8);
 
@@ -130,16 +150,12 @@ public sealed class ComputerRoom
             44,
             Yellow);
 
-        DrawText(
+        DrawBanner(
             spriteBatch,
-            "0101010101010101010101010101010101010101010101010101010101010101010101",
+            _topBanner,
+            _topFlash,
             24,
-            72,
-            Cyan);
-
-        // ---------------------------------------------------------
-        // Centauri64
-        // ---------------------------------------------------------
+            72);
 
         DrawText(spriteBatch,
             "+-----------------------------+",
@@ -153,7 +169,7 @@ public sealed class ComputerRoom
             "|                             |",
             192, 112, Cyan);
 
-       var computerStatus = _computerPoweredOn
+        var computerStatus = _computerPoweredOn
             ? "|           READY.            |"
             : "|        SWITCHED OFF         |";
 
@@ -176,13 +192,11 @@ public sealed class ComputerRoom
             "+-----------------------------+",
             192, 144, Cyan);
 
-        // ---------------------------------------------------------
-        // Menu
-        // ---------------------------------------------------------
-
         DrawText(spriteBatch, "[1]", 72, 184, Yellow);
-        
-        var computerOption = _computerPoweredOn? "USE CENTAURI64": "BOOT UP CENTAURI64";
+
+        var computerOption = _computerPoweredOn
+            ? "USE CENTAURI64"
+            : "BOOT UP CENTAURI64";
 
         DrawText(
             spriteBatch,
@@ -203,16 +217,12 @@ public sealed class ComputerRoom
         DrawText(spriteBatch, "[5]", 72, 280, Yellow);
         DrawText(spriteBatch, "NOTICE BOARD", 112, 280, Cream);
 
-        // ---------------------------------------------------------
-        // Footer
-        // ---------------------------------------------------------
-
-        DrawText(
+        DrawBanner(
             spriteBatch,
-            "0101010101010101010101010101010101010101010101010101010101010101010101",
+            _bottomBanner,
+            _bottomFlash,
             24,
-            408,
-            Cyan);
+            408);
 
         DrawBox(
             spriteBatch,
@@ -229,18 +239,83 @@ public sealed class ComputerRoom
         spriteBatch.End();
     }
 
-    private void DrawText(SpriteBatch spriteBatch,string text,int x,int y,Color colour)
+    private static char[] CreateBanner()
     {
-        _font.Draw(spriteBatch,text,new Vector2(x, y),colour);
+        var banner = new char[BannerLength];
+
+        for (var i = 0; i < BannerLength; i++)
+        {
+            banner[i] = (i % 2) == 0 ? '0' : '1';
+        }
+
+        return banner;
     }
 
-    private void DrawBox(SpriteBatch spriteBatch,Rectangle rectangle,Color colour)
+    private void FlipBits(char[] banner, double[] flashes)
     {
-        spriteBatch.Draw(_whitePixel,rectangle,colour);
+        for (var n = 0; n < FlipsPerTick; n++)
+        {
+            var index = _random.Next(banner.Length);
+            banner[index] = banner[index] == '0' ? '1' : '0';
+            flashes[index] = FlashSeconds;
+        }
     }
 
-    private bool Pressed(KeyboardState keyboard,Keys key)
+    private static void AgeFlashes(double[] flashes, double delta)
     {
-        return keyboard.IsKeyDown(key) &&!_previousKeyboard.IsKeyDown(key);
+        for (var i = 0; i < flashes.Length; i++)
+        {
+            if (flashes[i] <= 0)
+                continue;
+
+            flashes[i] -= delta;
+
+            if (flashes[i] < 0)
+                flashes[i] = 0;
+        }
+    }
+
+    private void DrawBanner(
+        SpriteBatch spriteBatch,
+        char[] banner,
+        double[] flashes,
+        int x,
+        int y)
+    {
+        for (var i = 0; i < banner.Length; i++)
+        {
+            var colour = flashes[i] > 0 ? Yellow : Cyan;
+
+            DrawText(
+                spriteBatch,
+                banner[i].ToString(),
+                x + (i * 8),
+                y,
+                colour);
+        }
+    }
+
+    private void DrawText(
+        SpriteBatch spriteBatch,
+        string text,
+        int x,
+        int y,
+        Color colour)
+    {
+        _font.Draw(spriteBatch, text, new Vector2(x, y), colour);
+    }
+
+    private void DrawBox(
+        SpriteBatch spriteBatch,
+        Rectangle rectangle,
+        Color colour)
+    {
+        spriteBatch.Draw(_whitePixel, rectangle, colour);
+    }
+
+    private bool Pressed(KeyboardState keyboard, Keys key)
+    {
+        return keyboard.IsKeyDown(key) &&
+            !_previousKeyboard.IsKeyDown(key);
     }
 }

@@ -66,7 +66,11 @@ public sealed partial class CentauriMachine
     {
         foreach (var item in _positionedText)
         {
-            font.Draw(spriteBatch,item.Text,new Vector2(item.X, item.Y),CentauriPalette.Get(item.Colour));
+            font.Draw(
+                spriteBatch,
+                item.Text,
+                new Vector2(item.X - _cameraX, item.Y - _cameraY),
+                CentauriPalette.Get(item.Colour));
         }
     }
 }

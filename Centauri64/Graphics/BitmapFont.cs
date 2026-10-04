@@ -1,3 +1,5 @@
+using System;
+
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -23,8 +25,20 @@ public sealed class BitmapFont
         Vector2 position,
         Color color)
     {
+        Draw(spriteBatch, text, position, color, 1f);
+    }
+
+    public void Draw(
+        SpriteBatch spriteBatch,
+        string text,
+        Vector2 position,
+        Color color,
+        float scale)
+    {
         var x = (int)position.X;
         var y = (int)position.Y;
+        var step = Math.Max(1, (int)(CharacterWidth * scale));
+        var size = Math.Max(1, (int)(CharacterHeight * scale));
 
         foreach (var character in text)
         {
@@ -32,7 +46,7 @@ public sealed class BitmapFont
 
             if (index < 0 || index > 94)
             {
-                x += CharacterWidth;
+                x += step;
                 continue;
             }
 
@@ -47,11 +61,11 @@ public sealed class BitmapFont
 
             spriteBatch.Draw(
                 _texture,
-                new Vector2(x, y),
+                new Rectangle(x, y, size, size),
                 source,
                 color);
 
-            x += CharacterWidth;
+            x += step;
         }
     }
 

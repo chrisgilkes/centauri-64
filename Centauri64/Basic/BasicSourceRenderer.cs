@@ -119,7 +119,8 @@ public sealed class BasicSourceRenderer
             "LEFT$" or
             "RIGHT$" or
             "MID$" or
-            "UPPER$";
+            "UPPER$" or
+            "TILEAT";
     }
 
     private static bool IsKeyword(TokenType type)
@@ -156,7 +157,16 @@ public sealed class BasicSourceRenderer
             TokenType.Circle or
             TokenType.Fill or
             TokenType.Dim or
-            TokenType.Rem or 
-            TokenType.End;
+            TokenType.Rem or
+            TokenType.End or
+            TokenType.And or
+            TokenType.Or or
+            TokenType.Not or
+            TokenType.Tdef or
+            TokenType.Map or
+            TokenType.LoadMap or
+            TokenType.Camera or
+            TokenType.Follow or
+            TokenType.CamOff;
     }
 }

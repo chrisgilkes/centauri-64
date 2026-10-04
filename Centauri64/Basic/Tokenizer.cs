@@ -253,6 +253,15 @@ public sealed class Tokenizer
             "DIM" => TokenType.Dim,
             "REM" => TokenType.Rem,
             "END" => TokenType.End,
+            "AND" => TokenType.And,
+            "OR" => TokenType.Or,
+            "NOT" => TokenType.Not,
+            "TDEF" => TokenType.Tdef,
+            "MAP" => TokenType.Map,
+            "LOADMAP" => TokenType.LoadMap,
+            "CAMERA" => TokenType.Camera,
+            "FOLLOW" => TokenType.Follow,
+            "CAMOFF" => TokenType.CamOff,
             _ => TokenType.Identifier
         };
 

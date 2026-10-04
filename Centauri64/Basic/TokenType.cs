@@ -19,6 +19,9 @@ public enum TokenType
     GreaterThanOrEqual,
     NotEqual,
     Equals,
+    And,
+    Or,
+    Not,
     Plus,
     Minus,
     Multiply,
@@ -54,5 +57,11 @@ public enum TokenType
     Dim,
     Rem,
     End,
+    Tdef,
+    Map,
+    LoadMap,
+    Camera,
+    Follow,
+    CamOff,
     EndOfLine
 }
