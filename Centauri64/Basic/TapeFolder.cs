@@ -48,10 +48,16 @@ public static class TapeFolder
 
             var destination = Path.Combine(Location, name);
 
-            if (File.Exists(destination))
+            // Refresh shipped demos when the install copy is newer.
+            // Player-made tapes (not in Programs/) are never overwritten.
+            if (File.Exists(destination) &&
+                File.GetLastWriteTimeUtc(destination) >=
+                File.GetLastWriteTimeUtc(source))
+            {
                 continue;
+            }
 
-            File.Copy(source, destination);
+            File.Copy(source, destination, overwrite: true);
         }
     }
 }

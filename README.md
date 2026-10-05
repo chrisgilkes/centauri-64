@@ -103,7 +103,8 @@ Centauri BASIC currently supports things including:
 - `MODE`, graphics (`PLOT` `LINE` `RECT` `CIRCLE`), `INK` / `PAPER`
 - Sprites, collision, maps (`TDEF` `MAP` `LOADMAP`), camera
 - `KEY` / `KEYPRESSED`, `BEEP`, `WAIT`, `YIELD`
-- `SAVE` / `LOAD` / `DIR` / `MEM` tapes with sprites, maps, and covers
+- `SAVE` / `LOAD` / `DIR` / `MEM` / `ANALYSE` tapes with sprites, maps, and covers
+- Software analyser foundation for magazine/publisher submissions (see `docs/SOFTWARE-ANALYSER.md`)
 
 There is still a lot I want to add, but the aim is to add features by actually using the language rather than designing everything up front.
 

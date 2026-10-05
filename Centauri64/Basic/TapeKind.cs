@@ -4,5 +4,7 @@ public enum TapeKind
 {
     Game,
     Utility,
-    Demo
+    Demo,
+    Tool,
+    Experiment
 }

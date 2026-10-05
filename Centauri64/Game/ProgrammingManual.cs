@@ -38,6 +38,7 @@ public sealed class ProgrammingManual
         Sound,
         Input,
         Memory,
+        Hardware,
         Network1,
         Network2,
         Network3
@@ -88,6 +89,14 @@ public sealed class ProgrammingManual
 
             case ManualPage.Palette:
                 Navigate(keyboard, ManualPage.TextColour, ManualPage.Contents);
+                break;
+
+            case ManualPage.Memory:
+                Navigate(keyboard, ManualPage.Contents, ManualPage.Hardware);
+                break;
+
+            case ManualPage.Hardware:
+                Navigate(keyboard, ManualPage.Memory, ManualPage.Contents);
                 break;
 
             case ManualPage.Network1:
@@ -202,6 +211,9 @@ public sealed class ProgrammingManual
                 break;
             case ManualPage.Memory:
                 DrawMemory(spriteBatch);
+                break;
+            case ManualPage.Hardware:
+                DrawHardware(spriteBatch);
                 break;
             case ManualPage.Network1:
                 DrawNetwork1(spriteBatch);
@@ -459,8 +471,27 @@ public sealed class ProgrammingManual
             ("MEM", "BYTES FREE"),
             ("RESET", "RESET DISPLAY"));
         DrawText(spriteBatch, "F5 SPRITES   F6 MAPS   F12 BEDROOM", 48, 360, Muted);
-        DrawText(spriteBatch, "TAPES KEEP .BAS .SPRITES .MAPS .TAPE .COVER", 48, 384, Muted);
-        DrawManualFooter(spriteBatch, "ESC CONTENTS");
+        DrawText(spriteBatch, "RIGHT FOR HARDWARE SPECS", 48, 384, Muted);
+        DrawManualFooter(spriteBatch, "RIGHT NEXT                 ESC CONTENTS");
+    }
+
+    private void DrawHardware(SpriteBatch spriteBatch)
+    {
+        DrawManualHeader(spriteBatch, "8. MEMORY & MACHINE", "HARDWARE SPECS");
+        DrawReference(spriteBatch,
+            ("SYSTEM RAM", "64K"),
+            ("BASIC RAM", "48K"),
+            ("MODE 0", "640X480"),
+            ("MODE 1", "320X240"),
+            ("COLOURS", "32  (0-31)"),
+            ("SPRITES", "64  (0-63)"),
+            ("SOUND", "BEEP TONE"),
+            ("KEYS", "ARROWS SPACE 0-9 A-Z"),
+            ("NETWORK", "2 PLAYERS"),
+            ("MEM", "SHOW FREE BASIC RAM"));
+        DrawText(spriteBatch, "MODE 1 IS THE ARCADE GAME SCREEN.", 48, 360, Muted);
+        DrawText(spriteBatch, "USE SWIDTH AND SHEIGHT FOR THE ACTIVE MODE.", 48, 384, Muted);
+        DrawManualFooter(spriteBatch, "LEFT PREVIOUS              ESC CONTENTS");
     }
 
     private void DrawNetwork1(SpriteBatch spriteBatch)

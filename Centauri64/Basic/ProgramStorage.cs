@@ -97,10 +97,11 @@ public sealed class ProgramStorage
                 "DESCRIPTION " + label.Description,
                 "AUTHOR " + label.Author,
                 "KIND " + label.Kind.ToString().ToUpperInvariant(),
+                "GENRE " + label.Genre.ToString().ToUpperInvariant(),
                 "MACHINE " + label.MachineVersion,
                 "PROGRAMID " + label.ProgramId,
                 "PROGRAMVER " + label.ProgramVersion,
-                "PLAYERS " + label.Players
+                "PLAYERS " + FormatPlayers(label.Players)
             });
     }
 
@@ -110,6 +111,15 @@ public sealed class ProgramStorage
 
         if (File.Exists(path))
             File.Delete(path);
+    }
+
+    /// <summary>
+    /// True when the player has saved a cover asset for this tape
+    /// (<c>.cover</c> file present). Missing file means no cover was set.
+    /// </summary>
+    public bool HasSavedCover(string name)
+    {
+        return File.Exists(GetCoverPath(name));
     }
 
     public TapeCover LoadCover(string name)
@@ -234,6 +244,16 @@ public sealed class ProgramStorage
             return;
         }
 
+        if (line.StartsWith("GENRE ") &&
+            Enum.TryParse<GameGenre>(
+                line["GENRE ".Length..].Trim(),
+                ignoreCase: true,
+                out var genre))
+        {
+            label.Genre = genre;
+            return;
+        }
+
         if (line.StartsWith("MACHINE ") &&
             int.TryParse(line["MACHINE ".Length..].Trim(), out var version))
         {
@@ -254,11 +274,41 @@ public sealed class ProgramStorage
             return;
         }
 
-        if (line.StartsWith("PLAYERS ") &&
-            int.TryParse(line["PLAYERS ".Length..].Trim(), out var players))
+        if (line.StartsWith("PLAYERS "))
         {
-            label.Players = Math.Clamp(players, 1, 2);
+            label.Players = ParsePlayers(line["PLAYERS ".Length..].Trim());
         }
+    }
+
+    private static string FormatPlayers(TapePlayers players)
+    {
+        return players switch
+        {
+            TapePlayers.TwoNetwork => "NETWORK",
+            TapePlayers.TwoLocal => "2",
+            _ => "1"
+        };
+    }
+
+    private static TapePlayers ParsePlayers(string value)
+    {
+        if (value.Equals("NETWORK", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("2NETWORK", StringComparison.OrdinalIgnoreCase) ||
+            value == "3")
+        {
+            return TapePlayers.TwoNetwork;
+        }
+
+        if (value == "2" ||
+            value.Equals("LOCAL", StringComparison.OrdinalIgnoreCase))
+        {
+            return TapePlayers.TwoLocal;
+        }
+
+        if (Enum.TryParse<TapePlayers>(value, ignoreCase: true, out var players))
+            return players;
+
+        return TapePlayers.One;
     }
 
     private static string Clean(string value, int maxLength)

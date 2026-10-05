@@ -16,7 +16,9 @@ public sealed partial class SoftwareShelf
     {
         Description,
         Author,
-        Kind
+        Kind,
+        Genre,
+        Players
     }
 
     private const int Columns = 2;
@@ -114,8 +116,10 @@ public sealed partial class SoftwareShelf
         _selected = 0;
         _editing = false;
         _paintingCover = false;
+        _showingReport = false;
         _label = null;
         _cover = null;
+        CloseReport();
         ResetDescriptionScroll();
     }
 
@@ -125,7 +129,11 @@ public sealed partial class SoftwareShelf
         var delta = gameTime.ElapsedGameTime.TotalSeconds;
         _cursorTimer += delta;
 
-        if (_paintingCover)
+        if (_showingReport)
+        {
+            UpdateReport(keyboard);
+        }
+        else if (_paintingCover)
         {
             UpdateCover(keyboard, mouse);
         }
@@ -161,7 +169,11 @@ public sealed partial class SoftwareShelf
             new Rectangle(16, 16, 608, 48),
             Header);
 
-        if (_paintingCover && _cover != null)
+        if (_showingReport)
+        {
+            DrawReport(spriteBatch);
+        }
+        else if (_paintingCover && _cover != null)
         {
             DrawCoverEditor(spriteBatch);
         }
@@ -211,6 +223,9 @@ public sealed partial class SoftwareShelf
 
         if (Pressed(keyboard, Keys.C))
             OpenCover();
+
+        if (Pressed(keyboard, Keys.A))
+            OpenReport();
     }
 
     private void UpdateInlay(KeyboardState keyboard, double delta)
@@ -225,24 +240,24 @@ public sealed partial class SoftwareShelf
         if (Pressed(keyboard, Keys.Up))
         {
             _field = _field == InlayField.Description
-                ? InlayField.Kind
+                ? InlayField.Players
                 : _field - 1;
         }
 
         if (Pressed(keyboard, Keys.Down))
         {
-            _field = _field == InlayField.Kind
+            _field = _field == InlayField.Players
                 ? InlayField.Description
                 : _field + 1;
         }
 
-        if (_field == InlayField.Kind)
+        if (_field is InlayField.Kind or InlayField.Genre or InlayField.Players)
         {
             if (Pressed(keyboard, Keys.Left))
-                CycleKind(-1);
+                CycleEnumField(-1);
 
             if (Pressed(keyboard, Keys.Right))
-                CycleKind(1);
+                CycleEnumField(1);
 
             return;
         }
@@ -316,14 +331,53 @@ public sealed partial class SoftwareShelf
         ResetDescriptionScroll();
     }
 
-    private void CycleKind(int direction)
+    private void CycleEnumField(int direction)
     {
         if (_label == null)
             return;
 
-        var count = Enum.GetValues<TapeKind>().Length;
-        var next = ((int)_label.Kind + direction + count) % count;
-        _label.Kind = (TapeKind)next;
+        switch (_field)
+        {
+            case InlayField.Kind:
+            {
+                var count = Enum.GetValues<TapeKind>().Length;
+                var next = ((int)_label.Kind + direction + count) % count;
+                _label.Kind = (TapeKind)next;
+                break;
+            }
+
+            case InlayField.Genre:
+            {
+                var values = Enum.GetValues<GameGenre>();
+                var index = Array.IndexOf(values, _label.Genre);
+                if (index < 0)
+                    index = 0;
+                var next = (index + direction + values.Length) % values.Length;
+                _label.Genre = values[next];
+                break;
+            }
+
+            case InlayField.Players:
+            {
+                var values = Enum.GetValues<TapePlayers>();
+                var index = Array.IndexOf(values, _label.Players);
+                if (index < 0)
+                    index = 0;
+                var next = (index + direction + values.Length) % values.Length;
+                _label.Players = values[next];
+                break;
+            }
+        }
+    }
+
+    private static string FormatPlayersLabel(TapePlayers players)
+    {
+        return players switch
+        {
+            TapePlayers.TwoNetwork => "2 PLAYER NETWORK",
+            TapePlayers.TwoLocal => "2 PLAYER LOCAL",
+            _ => "1 PLAYER"
+        };
     }
 
     private bool TypeKey(KeyboardState keyboard, Keys key)
@@ -446,9 +500,9 @@ public sealed partial class SoftwareShelf
 
         var footer = _tapes.Count == 0
             ? "ESC BACK"
-            : "ARROWS SELECT    ENTER INLAY    C COVER    ESC BACK";
+            : "ARROWS SELECT  ENTER INLAY  C COVER  A ANALYSE  ESC BACK";
 
-        DrawText(spriteBatch, footer, 48, 432, Dark);
+        DrawText(spriteBatch, footer, 24, 432, Dark);
     }
 
     private void DrawEmpty(SpriteBatch spriteBatch)
@@ -587,37 +641,53 @@ public sealed partial class SoftwareShelf
         DrawText(spriteBatch, "TAPE INLAY", 280, 24, Cream);
         DrawText(spriteBatch, _tapes[_selected], 48, 44, Cyan);
 
-        DrawText(spriteBatch, "DESCRIPTION", 48, 96, Yellow);
+        DrawText(spriteBatch, "DESCRIPTION", 48, 72, Yellow);
         DrawField(
             spriteBatch,
             _label.Description,
             TapeLabel.MaxDescriptionLength,
             48,
-            116,
+            88,
             _field == InlayField.Description);
 
-        DrawText(spriteBatch, "AUTHOR", 48, 176, Yellow);
+        DrawText(spriteBatch, "AUTHOR", 48, 128, Yellow);
         DrawField(
             spriteBatch,
             _label.Author,
             TapeLabel.MaxAuthorLength,
             48,
-            196,
+            144,
             _field == InlayField.Author);
 
-        DrawText(spriteBatch, "KIND", 48, 256, Yellow);
+        DrawText(spriteBatch, "KIND", 48, 184, Yellow);
         DrawText(
             spriteBatch,
             "< " + _label.Kind.ToString().ToUpperInvariant() + " >",
             48,
-            276,
+            200,
             _field == InlayField.Kind ? Yellow : Cream);
+
+        DrawText(spriteBatch, "GENRE", 48, 240, Yellow);
+        DrawText(
+            spriteBatch,
+            "< " + _label.Genre.ToString().ToUpperInvariant() + " >",
+            48,
+            256,
+            _field == InlayField.Genre ? Yellow : Cream);
+
+        DrawText(spriteBatch, "PLAYERS", 48, 296, Yellow);
+        DrawText(
+            spriteBatch,
+            "< " + FormatPlayersLabel(_label.Players) + " >",
+            48,
+            312,
+            _field == InlayField.Players ? Yellow : Cream);
 
         var machine = _label.MachineVersion <= 0
             ? "UNKNOWN"
             : _label.MachineVersion.ToString();
 
-        DrawText(spriteBatch, "MACHINE " + machine, 48, 336, Muted);
+        DrawText(spriteBatch, "MACHINE " + machine, 48, 352, Muted);
 
         DrawInlayCover(spriteBatch);
 
@@ -643,7 +713,7 @@ public sealed partial class SoftwareShelf
 
         DrawText(
             spriteBatch,
-            "UP DOWN FIELD    LEFT RIGHT KIND    ESC SAVE",
+            "UP DOWN FIELD    LEFT RIGHT VALUE    ESC SAVE",
             48,
             432,
             Dark);

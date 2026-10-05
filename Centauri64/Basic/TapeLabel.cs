@@ -16,6 +16,10 @@ public sealed class TapeLabel
 
     public TapeKind Kind { get; set; } = TapeKind.Game;
 
+    public GameGenre Genre { get; set; } = GameGenre.None;
+
+    public TapePlayers Players { get; set; } = TapePlayers.One;
+
     public int MachineVersion { get; set; }
 
     /// <summary>
@@ -28,9 +32,4 @@ public sealed class TapeLabel
     /// Program content version for network compatibility checks.
     /// </summary>
     public int ProgramVersion { get; set; } = DefaultProgramVersion;
-
-    /// <summary>
-    /// Declared player count for software metadata (1 or 2 for V1).
-    /// </summary>
-    public int Players { get; set; } = 1;
 }

@@ -95,8 +95,8 @@ public sealed partial class BasicMachine
         if (label.ProgramVersion <= 0)
             label.ProgramVersion = TapeLabel.DefaultProgramVersion;
 
-        if (label.Players <= 0)
-            label.Players = 1;
+        if (!Enum.IsDefined(label.Players) || label.Players <= 0)
+            label.Players = TapePlayers.One;
     }
 
     public  void ShowBootMessage()
@@ -146,6 +146,12 @@ public sealed partial class BasicMachine
             if (source == "MEM")
             {
                 ShowMemory();
+                return;
+            }
+
+            if (source == "ANALYSE" || source == "ANALYZE")
+            {
+                AnalyseCurrentProgram();
                 return;
             }
 
