@@ -36,6 +36,26 @@ public static class SubmissionEvaluator
                 label.Genre == requirements.RequiredGenre.Value));
         }
 
+        if (requirements.AllowedGenres is { Length: > 0 })
+        {
+            var names = new List<string>();
+            var matched = false;
+
+            foreach (var genre in requirements.AllowedGenres)
+            {
+                names.Add(genre.ToString().ToUpperInvariant());
+                if (label.Genre == genre)
+                    matched = true;
+            }
+
+            checks.Add(new SubmissionCheck(
+                "GENRE " + string.Join("/", names),
+                matched,
+                matched
+                    ? null
+                    : "YOUR GENRE: " + label.Genre.ToString().ToUpperInvariant()));
+        }
+
         if (requirements.RequiredPlayers.HasValue)
         {
             checks.Add(new SubmissionCheck(
@@ -58,7 +78,7 @@ public static class SubmissionEvaluator
             }
 
             checks.Add(new SubmissionCheck(
-                "ANY OF " + string.Join(" OR ", labels),
+                string.Join(" OR ", labels),
                 anyPassed));
         }
 
@@ -71,9 +91,46 @@ public static class SubmissionEvaluator
 
         if (requirements.MinimumLineCount > 0)
         {
+            var passed = analysis.LineCount >= requirements.MinimumLineCount;
             checks.Add(new SubmissionCheck(
                 $"AT LEAST {requirements.MinimumLineCount} LINES",
-                analysis.LineCount >= requirements.MinimumLineCount));
+                passed,
+                "YOUR PROGRAM: " + analysis.LineCount));
+        }
+
+        if (requirements.MaximumLineCount > 0)
+        {
+            var passed = analysis.LineCount <= requirements.MaximumLineCount;
+            var over = analysis.LineCount - requirements.MaximumLineCount;
+            checks.Add(new SubmissionCheck(
+                $"MAXIMUM {requirements.MaximumLineCount} LINES",
+                passed,
+                passed
+                    ? "YOUR PROGRAM: " + analysis.LineCount
+                    : "YOUR PROGRAM: " + analysis.LineCount +
+                      "\n" + over + " LINE" + (over == 1 ? "" : "S") + " OVER LIMIT"));
+        }
+
+        if (requirements.MinimumStatementCount > 0)
+        {
+            var passed = analysis.StatementCount >= requirements.MinimumStatementCount;
+            checks.Add(new SubmissionCheck(
+                $"AT LEAST {requirements.MinimumStatementCount} STATEMENTS",
+                passed,
+                "YOUR PROGRAM: " + analysis.StatementCount));
+        }
+
+        if (requirements.MaximumStatementCount > 0)
+        {
+            var passed = analysis.StatementCount <= requirements.MaximumStatementCount;
+            var over = analysis.StatementCount - requirements.MaximumStatementCount;
+            checks.Add(new SubmissionCheck(
+                $"MAXIMUM {requirements.MaximumStatementCount} STATEMENTS",
+                passed,
+                passed
+                    ? "YOUR PROGRAM: " + analysis.StatementCount
+                    : "YOUR PROGRAM: " + analysis.StatementCount +
+                      "\n" + over + " STATEMENT" + (over == 1 ? "" : "S") + " OVER LIMIT"));
         }
 
         if (requirements.MinimumUniqueCommands > 0)
@@ -150,9 +207,28 @@ public static class SubmissionEvaluator
                 continue;
 
             checks.Add(new SubmissionCheck(
-                "USES " + flag.ToString().ToUpperInvariant(),
+                DescribeCapability(flag),
                 analysis.Has(flag)));
         }
+    }
+
+    private static string DescribeCapability(SoftwareCapability flag)
+    {
+        return flag switch
+        {
+            SoftwareCapability.Input => "PLAYER INPUT",
+            SoftwareCapability.Networking => "NETWORKING",
+            SoftwareCapability.Graphics => "GRAPHICS",
+            SoftwareCapability.Sprites => "SPRITES",
+            SoftwareCapability.Animation => "ANIMATION",
+            SoftwareCapability.Sound => "SOUND",
+            SoftwareCapability.Maps => "MAPS",
+            SoftwareCapability.Strings => "STRINGS",
+            SoftwareCapability.Text => "TEXT",
+            SoftwareCapability.Random => "RANDOM",
+            SoftwareCapability.Camera => "CAMERA",
+            _ => flag.ToString().ToUpperInvariant()
+        };
     }
 
     private static string DescribeCapabilities(SoftwareCapability capabilities)
@@ -165,7 +241,7 @@ public static class SubmissionEvaluator
                 continue;
 
             if ((capabilities & flag) != 0)
-                parts.Add(flag.ToString().ToUpperInvariant());
+                parts.Add(DescribeCapability(flag));
         }
 
         return string.Join("+", parts);

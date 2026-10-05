@@ -31,8 +31,12 @@ public sealed class ComputerRoom
     private static readonly Color Muted      = new(130, 165, 170);
     private static readonly Color Dark       = new(14, 28, 38);
 
+    private const double MailFlashInterval = 0.6;
+
     private KeyboardState _previousKeyboard;
     private double _flipTimer;
+    private double _mailFlashTimer;
+    private bool _mailFlashOn;
 
     public event Action? ComputerSelected;
 
@@ -40,7 +44,13 @@ public sealed class ComputerRoom
 
     public event Action? SoftwareSelected;
 
+    public event Action? MagazinesSelected;
+
+    public event Action? MailSelected;
+
     private bool _computerPoweredOn;
+    private bool _hasUnreadMail;
+    private string _cashLabel = "CASH £0.00";
 
     public bool ComputerPoweredOn => _computerPoweredOn;
 
@@ -57,6 +67,28 @@ public sealed class ComputerRoom
     public void SetComputerPoweredOn()
     {
         _computerPoweredOn = true;
+    }
+
+    public void SetCareerStatus(int cashPennies, bool hasUnreadMail)
+    {
+        _cashLabel = "CASH " + Progression.PlayerProgress.FormatPounds(cashPennies);
+
+        if (!hasUnreadMail)
+        {
+            _hasUnreadMail = false;
+            _mailFlashOn = false;
+            _mailFlashTimer = 0;
+            return;
+        }
+
+        if (!_hasUnreadMail)
+        {
+            // Start flashing on the highlight phase so NEW! is visible immediately.
+            _mailFlashOn = true;
+            _mailFlashTimer = 0;
+        }
+
+        _hasUnreadMail = true;
     }
 
     public void Update(GameTime gameTime)
@@ -81,10 +113,33 @@ public sealed class ComputerRoom
             SoftwareSelected?.Invoke();
         }
 
+        if (Pressed(keyboard, Keys.D4) ||
+            Pressed(keyboard, Keys.NumPad4))
+        {
+            MagazinesSelected?.Invoke();
+        }
+
+        if (Pressed(keyboard, Keys.D5) ||
+            Pressed(keyboard, Keys.NumPad5))
+        {
+            MailSelected?.Invoke();
+        }
+
         var delta = gameTime.ElapsedGameTime.TotalSeconds;
         _flipTimer += delta;
         AgeFlashes(_topFlash, delta);
         AgeFlashes(_bottomFlash, delta);
+
+        if (_hasUnreadMail)
+        {
+            _mailFlashTimer += delta;
+
+            if (_mailFlashTimer >= MailFlashInterval)
+            {
+                _mailFlashTimer -= MailFlashInterval;
+                _mailFlashOn = !_mailFlashOn;
+            }
+        }
 
         if (_flipTimer >= FlipInterval)
         {
@@ -215,7 +270,20 @@ public sealed class ComputerRoom
         DrawText(spriteBatch, "MAGAZINES", 112, 256, Cream);
 
         DrawText(spriteBatch, "[5]", 72, 280, Yellow);
-        DrawText(spriteBatch, "NOTICE BOARD", 112, 280, Cream);
+
+        var noticeColour = !_hasUnreadMail
+            ? Cream
+            : _mailFlashOn
+                ? Yellow
+                : Cream;
+
+        var noticeLabel = _hasUnreadMail
+            ? "NOTICE BOARD   NEW!"
+            : "NOTICE BOARD";
+
+        DrawText(spriteBatch, noticeLabel, 112, 280, noticeColour);
+
+        DrawText(spriteBatch, _cashLabel, 400, 184, Yellow);
 
         DrawBanner(
             spriteBatch,

@@ -1,5 +1,8 @@
 namespace Centauri64.Publishing;
 
+/// <summary>
+/// Legacy alias — prefer <see cref="OrganisationDefinition"/>.
+/// </summary>
 public sealed class SoftwarePublisher
 {
     public string Id { get; init; } = string.Empty;

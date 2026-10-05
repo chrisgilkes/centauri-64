@@ -5,5 +5,7 @@ public enum GameMode
     ComputerRoom,
     Computer,
     ProgrammingManual,
-    Software
+    Software,
+    Magazines,
+    Mail
 }

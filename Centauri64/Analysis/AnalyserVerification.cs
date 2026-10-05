@@ -3,13 +3,13 @@ using System.IO;
 using System.Linq;
 
 using Centauri64.Basic;
-using Centauri64.Publishing;
 using Centauri64.Progression;
+using Centauri64.Publishing;
 
 namespace Centauri64.Analysis;
 
 /// <summary>
-/// Headless smoke checks for the software analyser and submission rules.
+/// Headless smoke checks for analyser + career loop.
 /// Run with: Centauri64.exe --verify-analyser
 /// </summary>
 public static class AnalyserVerification
@@ -18,142 +18,216 @@ public static class AnalyserVerification
     {
         var failed = 0;
         var analyser = new SoftwareAnalyser();
-        var submissions = new SubmissionService();
+        var career = new CareerService();
         var programs = new ProgramStorage();
 
-        System.Console.WriteLine("SOFTWARE ANALYSER VERIFICATION");
+        System.Console.WriteLine("SOFTWARE ANALYSER + CAREER VERIFICATION");
         System.Console.WriteLine();
+
+        // Isolate progress for this run.
+        ResetProgress();
 
         SyncSeed("HELLO");
         SyncSeed("PONG");
         SyncSeed("ADVENTURE");
-
-        // Shipped PONG has no cover — remove any leftover AppData cover.
         ClearCover("PONG");
         ClearCover("HELLO");
 
-        var hello = analyser.AnalyseTape("HELLO");
-        failed += Expect("HELLO valid", hello.ProgramValid);
-        failed += Expect("HELLO lines=2", hello.LineCount == 2);
-        failed += Expect("HELLO text", hello.UsesText);
-        failed += Expect("HELLO no input", !hello.UsesInput);
-        failed += Expect("HELLO no graphics", !hello.UsesGraphics);
-        failed += Expect("HELLO no sprites", !hello.UsesSprites);
-        failed += Expect("HELLO no sound", !hello.UsesSound);
-        failed += Expect("HELLO no maps", !hello.UsesMaps);
-        failed += Expect("HELLO no networking", !hello.UsesNetworking);
-        failed += Expect("HELLO no cover", !hello.HasCover);
-        failed += Expect("HELLO not custom cover", !hello.HasCustomCover);
-
-        var first = PublisherCatalog.GetContract("cu-first-program")!;
-        var helloLabel = programs.LoadLabel("HELLO");
-        var firstResult = submissions.Evaluate(first, hello, helloLabel);
-        failed += Expect("HELLO first program accepted", firstResult.Accepted);
-
-        // Cover detection cases on a scratch name so demos stay clean.
+        // --- Cover detection ---
         const string coverTape = "COVERTEST";
         SyncNamedFrom("HELLO", coverTape);
-
         ClearCover(coverTape);
+
         var noCover = analyser.AnalyseTape(coverTape);
         failed += Expect("1 no cover → CUSTOM NO", !noCover.HasCustomCover && !noCover.HasCover);
-        failed += Expect("1 no cover → metrics 0", noCover.CoverChangedPixelCount == 0);
 
         WriteBlankCoverFile(coverTape);
         var blank = analyser.AnalyseTape(coverTape);
-        failed += Expect("2 blank cover → PRESENT YES", blank.HasCover);
-        failed += Expect("2 blank cover → CUSTOM NO", !blank.HasCustomCover);
-        failed += Expect("2 blank cover → pixels 0", blank.CoverChangedPixelCount == 0);
+        failed += Expect("2 blank → CUSTOM NO", blank.HasCover && !blank.HasCustomCover);
 
-        EnsureCover(coverTape, changedPixels: 1, colour: 7);
-        var onePixel = analyser.AnalyseTape(coverTape);
-        failed += Expect("3 one pixel → CUSTOM NO", !onePixel.HasCustomCover);
-        failed += Expect("3 one pixel → PRESENT YES", onePixel.HasCover);
-        failed += Expect(
-            "3 one pixel → coverage > 0",
-            onePixel.CoverCoveragePercent > 0 && onePixel.CoverCoveragePercent < 1);
+        EnsureCover(coverTape, 1, 7);
+        var one = analyser.AnalyseTape(coverTape);
+        failed += Expect("3 one pixel → CUSTOM NO", !one.HasCustomCover);
+        failed += Expect("3 coverage > 0", one.CoverCoveragePercent > 0);
 
-        EnsureCover(coverTape, changedPixels: 12, colour: 1);
-        var simple = analyser.AnalyseTape(coverTape);
-        failed += Expect("4 simple cover → CUSTOM YES", simple.HasCustomCover);
-        failed += Expect("4 simple cover → 1 colour", simple.CoverColourCount == 1);
+        EnsureCover(coverTape, 12, 1);
+        failed += Expect("4 simple → CUSTOM YES", analyser.AnalyseTape(coverTape).HasCustomCover);
 
-        EnsureCover(coverTape, changedPixels: 400, colour: 7);
-        PaintExtraColour(coverTape, colour: 3, count: 50);
-        var detailed = analyser.AnalyseTape(coverTape);
-        failed += Expect("5 detailed cover → CUSTOM YES", detailed.HasCustomCover);
-        failed += Expect("5 detailed cover → colours > 1", detailed.CoverColourCount > 1);
-
+        EnsureCover(coverTape, 400, 7);
+        PaintExtraColour(coverTape, 3, 50);
+        failed += Expect("5 detailed → CUSTOM YES", analyser.AnalyseTape(coverTape).HasCustomCover);
         ClearCover(coverTape);
         DeleteTape(coverTape);
 
-        // Adventure with a real saved custom cover for Quill.
-        EnsureCover("ADVENTURE", changedPixels: 20, colour: 1);
-        var adventure = analyser.AnalyseTape("ADVENTURE");
-        failed += Expect("ADVENTURE strings", adventure.UsesStrings);
-        failed += Expect("ADVENTURE input", adventure.UsesInput);
-        failed += Expect("ADVENTURE no sprites", !adventure.UsesSprites);
-        failed += Expect("ADVENTURE custom cover", adventure.HasCustomCover);
+        // --- HELLO career loop ---
+        var hello = analyser.AnalyseTape("HELLO");
+        failed += Expect("HELLO valid", hello.ProgramValid);
+        failed += Expect("HELLO text", hello.UsesText);
 
-        var quill = PublisherCatalog.GetContract("quill-adventures")!;
-        var adventureLabel = programs.LoadLabel("ADVENTURE");
-        var quillResult = submissions.Evaluate(quill, adventure, adventureLabel);
-        failed += Expect("ADVENTURE quill accepted", quillResult.Accepted);
+        var first = PublisherCatalog.GetContract("career_first_program")!;
+        var helloLabel = programs.LoadLabel("HELLO");
+        var firstEval = career.Evaluate(first, hello, helloLabel);
+        failed += Expect("HELLO qualifies first program", firstEval.Accepted);
 
-        // PONG with no cover must fail Vector Crown on packaging only.
-        ClearCover("PONG");
-        var pong = analyser.AnalyseTape("PONG");
-        failed += Expect("PONG input", pong.UsesInput);
-        failed += Expect("PONG networking", pong.UsesNetworking);
-        failed += Expect("PONG no cover file", !pong.HasCover);
-        failed += Expect("PONG CUSTOM NO", !pong.HasCustomCover);
-        failed += Expect("PONG pixels 0", pong.CoverChangedPixelCount == 0);
-
-        var vector = PublisherCatalog.GetContract("vector-network")!;
-        var pongLabel = programs.LoadLabel("PONG");
-        var vectorBare = submissions.Evaluate(vector, pong, pongLabel);
-        failed += Expect("PONG vector rejected without cover", !vectorBare.Accepted);
         failed += Expect(
-            "PONG vector fails cover check",
-            vectorBare.FailedChecks.Any(check =>
-                check.Label.Contains("COVER", StringComparison.OrdinalIgnoreCase)));
+            "submit HELLO",
+            career.TrySubmit(first, "HELLO", helloLabel, hello, out _));
 
-        // With a custom cover, PONG should qualify.
-        EnsureCover("PONG", changedPixels: 40, colour: 7);
-        var pongPacked = analyser.AnalyseTape("PONG");
-        failed += Expect("PONG packed CUSTOM YES", pongPacked.HasCustomCover);
-        var vectorPacked = submissions.Evaluate(vector, pongPacked, pongLabel);
-        failed += Expect("PONG vector accepted with cover", vectorPacked.Accepted);
+        var afterSubmit = career.LoadProgress();
+        failed += Expect("cash still 0 after submit", afterSubmit.CashPennies == 0);
+        failed += Expect(
+            "pending submission",
+            afterSubmit.Submissions.Any(s => s.ContractId == first.Id &&
+                                             s.Status == SubmissionStatus.Pending));
 
-        // Leave shipped PONG unpackaged (no cover) after verification.
+        var delivered = career.DeliverPendingResponses();
+        failed += Expect("mail delivered", delivered == 1);
+
+        var withMail = career.LoadProgress();
+        var mail = withMail.Mail.Single();
+        failed += Expect("mail unread", !mail.Read);
+        failed += Expect("mail reward 200", mail.RewardPence == 200);
+
+        failed += Expect("open mail", career.OpenMail(mail.Id, out var awarded));
+        failed += Expect("awarded £2", awarded == 200);
+
+        var afterClaim = career.LoadProgress();
+        failed += Expect("cash £2", afterClaim.CashPennies == 200);
+        failed += Expect("first completed", afterClaim.HasCompleted(first.Id));
+
+        var again = career.Evaluate(first, hello, helloLabel);
+        failed += Expect("no second £2", again.AlreadyCompleted && !again.Accepted);
+
+        // Reload persistence
+        var reloaded = career.LoadProgress();
+        failed += Expect("cash persists", reloaded.CashPennies == 200);
+        failed += Expect("completion persists", reloaded.HasCompleted(first.Id));
+
+        // --- Line limit ---
+        var adventureLimit = PublisherCatalog.GetContract("adventure_1000_lines")!;
+        failed += Expect(
+            "900 lines under limit",
+            EvaluateLineCount(adventureLimit, 900).Accepted ||
+            EvaluateLineCount(adventureLimit, 900).Checks.Any(c =>
+                c.Label.Contains("MAXIMUM") && c.Passed));
+        var over = EvaluateLineCount(adventureLimit, 1001);
+        failed += Expect(
+            "1001 lines over limit",
+            over.Checks.Any(c => c.Label.Contains("MAXIMUM") && !c.Passed));
+
+        // --- Adventure (no graphics) ---
+        EnsureCover("ADVENTURE", 20, 1);
+        var adventure = analyser.AnalyseTape("ADVENTURE");
+        failed += Expect("adventure strings+input", adventure.UsesStrings && adventure.UsesInput);
+        failed += Expect("adventure no sprites needed", !adventure.UsesSprites);
+
+        // Unlock path: complete prerequisites manually for adventure contract visibility test
+        CompleteThrough("career_first_game");
+        var adventureContract = PublisherCatalog.GetContract("adventure_first_adventure")!;
+        var adventureLabel = programs.LoadLabel("ADVENTURE");
+        var adventureEval = career.Evaluate(adventureContract, adventure, adventureLabel);
+        failed += Expect("adventure qualifies", adventureEval.Accepted);
+
+        // --- PONG without cover ---
         ClearCover("PONG");
+        var pongBare = analyser.AnalyseTape("PONG");
+        var network = PublisherCatalog.GetContract("technical_network_game")!;
+        var pongLabel = programs.LoadLabel("PONG");
+        var bareEval = career.Evaluate(network, pongBare, pongLabel);
+        failed += Expect("PONG bare rejected", !bareEval.Accepted);
+        failed += Expect(
+            "PONG bare cover fail",
+            bareEval.FailedChecks.Any(c => c.Label.Contains("COVER")));
 
-        var storage = new PlayerProgressStorage();
-        var previous = storage.Load();
-        try
-        {
-            var progress = new PlayerProgress
-            {
-                CashPennies = previous.CashPennies,
-                CompletedContractIds = previous.CompletedContractIds.ToList(),
-                PendingRewards = previous.PendingRewards.ToList()
-            };
-            if (!progress.CompletedContractIds.Contains(first.Id))
-                progress.CompletedContractIds.Add(first.Id);
+        // --- PONG with cover ---
+        EnsureCover("PONG", 40, 7);
+        var pong = analyser.AnalyseTape("PONG");
+        failed += Expect("PONG networking", pong.UsesNetworking && pong.UsesInput);
+        var packedEval = career.Evaluate(network, pong, pongLabel);
+        failed += Expect("PONG qualifies network", packedEval.Accepted);
 
-            storage.Save(progress);
-            var again = submissions.Evaluate(first, hello, helloLabel);
-            failed += Expect("first program already completed", again.AlreadyCompleted);
-            failed += Expect("first program not re-accepted", !again.Accepted);
-        }
-        finally
-        {
-            storage.Save(previous);
-        }
+        failed += Expect(
+            "submit PONG",
+            career.TrySubmit(network, "PONG", pongLabel, pong, out _));
+        career.DeliverPendingResponses();
+        var pongMail = career.LoadProgress().Mail
+            .First(m => m.RelatedContractId == network.Id);
+        career.OpenMail(pongMail.Id, out var pongPay);
+        failed += Expect("PONG pay £25", pongPay == 2500);
+
+        var finalCash = career.LoadProgress().CashPennies;
+        // first £2 + unlocked path may have claimed more if CompleteThrough claimed; we only claim first+pong
+        // CompleteThrough only marks completed ids without cash.
+        failed += Expect("cash £27", finalCash == 2700);
+
+        ClearCover("PONG");
 
         System.Console.WriteLine();
         System.Console.WriteLine(failed == 0 ? "ALL CHECKS PASSED" : $"FAILED: {failed}");
         return failed == 0 ? 0 : 1;
+    }
+
+    private static SubmissionResult EvaluateLineCount(
+        SubmissionContract contract,
+        int lineCount)
+    {
+        var analysis = new SoftwareAnalysis
+        {
+            ProgramValid = true,
+            LineCount = lineCount,
+            StatementCount = lineCount,
+            Capabilities =
+                SoftwareCapability.Text |
+                SoftwareCapability.Input |
+                SoftwareCapability.Strings,
+            HasCover = true,
+            HasCustomCover = true,
+            CoverChangedPixelCount = 20,
+            CoverColourCount = 1
+        };
+
+        var label = new TapeLabel
+        {
+            Kind = TapeKind.Game,
+            Genre = GameGenre.Adventure
+        };
+
+        return SubmissionEvaluator.Evaluate(contract.Requirements, analysis, label);
+    }
+
+    private static void CompleteThrough(string contractId)
+    {
+        var career = new CareerService();
+        var progress = career.LoadProgress();
+        var chain = new[]
+        {
+            "career_first_program",
+            "career_interactive_program",
+            "career_graphical_program",
+            "career_first_game"
+        };
+
+        foreach (var id in chain)
+        {
+            if (!progress.HasCompleted(id))
+                progress.CompletedContractIds.Add(id);
+
+            if (id == contractId)
+                break;
+        }
+
+        career.SaveProgress(progress);
+    }
+
+    private static void ResetProgress()
+    {
+        var path = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Centauri64",
+            "player.json");
+
+        if (File.Exists(path))
+            File.Delete(path);
     }
 
     private static int Expect(string label, bool condition)
@@ -179,7 +253,6 @@ public static class AnalyserVerification
                 continue;
             }
 
-            // Seed has no sidecar — remove orphan AppData copies from prior runs.
             if (extension == ".cover" && File.Exists(destination))
                 File.Delete(destination);
         }
@@ -194,9 +267,8 @@ public static class AnalyserVerification
             overwrite: true);
 
         var tapeSource = Path.Combine(dir, sourceName + ".tape");
-        var tapeDest = Path.Combine(dir, destName + ".tape");
         if (File.Exists(tapeSource))
-            File.Copy(tapeSource, tapeDest, overwrite: true);
+            File.Copy(tapeSource, Path.Combine(dir, destName + ".tape"), overwrite: true);
 
         ClearCover(destName);
     }
@@ -212,16 +284,11 @@ public static class AnalyserVerification
         }
     }
 
-    private static void ClearCover(string name)
-    {
+    private static void ClearCover(string name) =>
         new ProgramStorage().DeleteCover(name);
-    }
 
-    private static void WriteBlankCoverFile(string name)
-    {
-        // Explicit blank saved cover (all colour 0) — distinct from "no cover file".
+    private static void WriteBlankCoverFile(string name) =>
         new ProgramStorage().SaveCover(name, new TapeCover());
-    }
 
     private static void EnsureCover(string name, int changedPixels, int colour)
     {

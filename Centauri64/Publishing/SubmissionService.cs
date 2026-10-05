@@ -4,69 +4,26 @@ using Centauri64.Progression;
 
 namespace Centauri64.Publishing;
 
+/// <summary>
+/// Compatibility wrapper around <see cref="CareerService"/>.
+/// </summary>
 public sealed class SubmissionService
 {
-    private readonly PlayerProgressStorage _storage = new();
+    private readonly CareerService _career = new();
 
-    public PlayerProgress LoadProgress() => _storage.Load();
+    public PlayerProgress LoadProgress() => _career.LoadProgress();
 
     public SubmissionResult Evaluate(
         SubmissionContract contract,
         SoftwareAnalysis analysis,
-        TapeLabel label)
-    {
-        var result = SubmissionEvaluator.Evaluate(
-            contract.Requirements,
-            analysis,
-            label);
+        TapeLabel label) =>
+        _career.Evaluate(contract, analysis, label);
 
-        var progress = _storage.Load();
-
-        if (!contract.Repeatable && progress.HasCompleted(contract.Id))
-        {
-            return new SubmissionResult
-            {
-                Accepted = false,
-                AlreadyCompleted = true,
-                Checks = result.Checks
-            };
-        }
-
-        return result;
-    }
-
-    /// <summary>
-    /// Records a successful non-repeatable completion and queues a pending
-    /// reward. Does not add cash immediately — mail delivery comes later.
-    /// </summary>
     public bool TryAccept(
         SubmissionContract contract,
         SoftwareAnalysis analysis,
         TapeLabel label,
         string tapeName,
-        out SubmissionResult result)
-    {
-        result = Evaluate(contract, analysis, label);
-
-        if (!result.Accepted || result.AlreadyCompleted)
-            return false;
-
-        var progress = _storage.Load();
-        var publisher = PublisherCatalog.GetPublisher(contract.PublisherId);
-
-        if (!contract.Repeatable)
-            progress.CompletedContractIds.Add(contract.Id);
-
-        progress.PendingRewards.Add(new PendingReward
-        {
-            ContractId = contract.Id,
-            PublisherName = publisher?.Name ?? contract.PublisherId,
-            ContractTitle = contract.Title,
-            TapeName = tapeName,
-            AmountPennies = contract.RewardPennies
-        });
-
-        _storage.Save(progress);
-        return true;
-    }
+        out SubmissionResult result) =>
+        _career.TrySubmit(contract, tapeName, label, analysis, out result);
 }

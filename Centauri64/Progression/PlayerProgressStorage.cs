@@ -31,8 +31,10 @@ public sealed class PlayerProgressStorage
         try
         {
             var json = File.ReadAllText(_path);
-            return JsonSerializer.Deserialize<PlayerProgress>(json, JsonOptions)
-                   ?? new PlayerProgress();
+            var progress = JsonSerializer.Deserialize<PlayerProgress>(json, JsonOptions)
+                           ?? new PlayerProgress();
+            progress.MigrateLegacyRewards();
+            return progress;
         }
         catch
         {

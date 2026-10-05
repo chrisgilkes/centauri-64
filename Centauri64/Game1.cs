@@ -56,6 +56,12 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     private SoftwareShelf _softwareShelf = null!;
 
+    private MagazinesScreen _magazinesScreen = null!;
+
+    private MailScreen _mailScreen = null!;
+
+    private readonly Centauri64.Publishing.CareerService _career = new();
+
     private static readonly Color EditorBackground = new(205, 198, 170);
 
     private static readonly Color EditorFrame = CentauriPalette.Get(17); // Navy
@@ -145,6 +151,9 @@ public class Game1 : Microsoft.Xna.Framework.Game
             cassetteSideA,
             _basicMachine);
 
+        _magazinesScreen = new MagazinesScreen(_font, _pixel, _basicMachine);
+        _mailScreen = new MailScreen(_font, _pixel);
+
         _computerRoom.ComputerSelected += OnComputerSelected;
 
         _computerRoom.ManualSelected += () =>
@@ -159,16 +168,42 @@ public class Game1 : Microsoft.Xna.Framework.Game
             _gameMode = GameMode.Software;
         };
 
-        _programmingManual.ExitSelected += () =>
+        _computerRoom.MagazinesSelected += () =>
         {
-            _gameMode = GameMode.ComputerRoom;
+            _magazinesScreen.Open();
+            _gameMode = GameMode.Magazines;
         };
 
-        _softwareShelf.ExitSelected += () =>
+        _computerRoom.MailSelected += () =>
         {
-            _gameMode = GameMode.ComputerRoom;
+            _mailScreen.Open();
+            _gameMode = GameMode.Mail;
         };
 
+        _programmingManual.ExitSelected += ReturnToBedroom;
+
+        _softwareShelf.ExitSelected += ReturnToBedroom;
+
+        _magazinesScreen.ExitSelected += ReturnToBedroom;
+
+        _mailScreen.ExitSelected += ReturnToBedroom;
+
+        RefreshBedroomCareerStatus();
+    }
+
+    private void ReturnToBedroom()
+    {
+        _career.DeliverPendingResponses();
+        RefreshBedroomCareerStatus();
+        _gameMode = GameMode.ComputerRoom;
+    }
+
+    private void RefreshBedroomCareerStatus()
+    {
+        var progress = _career.LoadProgress();
+        _computerRoom.SetCareerStatus(
+            progress.CashPennies,
+            progress.HasUnreadMail);
     }
 
     private void OnProgramInput(string line)
@@ -316,6 +351,26 @@ public class Game1 : Microsoft.Xna.Framework.Game
             return;
         }
 
+        if (_gameMode == GameMode.Magazines)
+        {
+            _magazinesScreen.Update(gameTime);
+
+            _previousKeyboardState = keyboardState;
+
+            base.Update(gameTime);
+            return;
+        }
+
+        if (_gameMode == GameMode.Mail)
+        {
+            _mailScreen.Update(gameTime);
+
+            _previousKeyboardState = keyboardState;
+
+            base.Update(gameTime);
+            return;
+        }
+
         if (_computerPoweringOn)
         {
             _powerOnTimer +=
@@ -349,7 +404,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         if (KeyPressed(keyboardState, Keys.F12))
         {
-            _gameMode = GameMode.ComputerRoom;
+            ReturnToBedroom();
 
             _previousKeyboardState = keyboardState;
 
@@ -502,6 +557,24 @@ public class Game1 : Microsoft.Xna.Framework.Game
             _codeEditorRenderTarget);
     }
 
+    private void DrawMagazines()
+    {
+        GraphicsDevice.SetRenderTarget(_codeEditorRenderTarget);
+        GraphicsDevice.Clear(Color.Black);
+        _magazinesScreen.Draw(_spriteBatch);
+        GraphicsDevice.SetRenderTarget(null);
+        DrawRenderTargetToWindow(_codeEditorRenderTarget);
+    }
+
+    private void DrawMail()
+    {
+        GraphicsDevice.SetRenderTarget(_codeEditorRenderTarget);
+        GraphicsDevice.Clear(Color.Black);
+        _mailScreen.Draw(_spriteBatch);
+        GraphicsDevice.SetRenderTarget(null);
+        DrawRenderTargetToWindow(_codeEditorRenderTarget);
+    }
+
     protected override void Draw(GameTime gameTime)
     {
         if (_computerPoweringOn)
@@ -531,6 +604,22 @@ public class Game1 : Microsoft.Xna.Framework.Game
         if (_gameMode == GameMode.Software)
         {
             DrawSoftwareShelf();
+
+            base.Draw(gameTime);
+            return;
+        }
+
+        if (_gameMode == GameMode.Magazines)
+        {
+            DrawMagazines();
+
+            base.Draw(gameTime);
+            return;
+        }
+
+        if (_gameMode == GameMode.Mail)
+        {
+            DrawMail();
 
             base.Draw(gameTime);
             return;

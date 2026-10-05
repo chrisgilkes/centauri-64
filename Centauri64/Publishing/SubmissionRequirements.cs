@@ -19,11 +19,22 @@ public sealed class SubmissionRequirements
 
     public GameGenre? RequiredGenre { get; init; }
 
+    /// <summary>
+    /// If set, the tape genre must be one of these values.
+    /// </summary>
+    public GameGenre[]? AllowedGenres { get; init; }
+
     public TapePlayers? RequiredPlayers { get; init; }
 
     public bool RequiresCustomCover { get; init; }
 
     public int MinimumLineCount { get; init; }
+
+    public int MaximumLineCount { get; init; }
+
+    public int MinimumStatementCount { get; init; }
+
+    public int MaximumStatementCount { get; init; }
 
     public int MinimumUniqueCommands { get; init; }
 

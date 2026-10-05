@@ -88,10 +88,8 @@ Edit `Publishing/PublisherCatalog.cs`:
 
 ## Progression
 
-`%LocalAppData%\Centauri64\player.json` stores:
+`%LocalAppData%\Centauri64\player.json` stores cash, completed contract Ids,
+submissions and mail. See `docs/CAREER-LOOP.md`.
 
-- `CashPennies`
-- `CompletedContractIds` (non-repeatable rewards)
-- `PendingRewards` (accepted work awaiting mail/payment UI)
-
-Rewards are **not** paid instantly on submit — pending rewards are for the future mail loop.
+Organisation/contract **Ids** are stable (`magazine_main`, `career_first_program`, …).
+Display names may change later without breaking saves.
