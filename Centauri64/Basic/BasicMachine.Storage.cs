@@ -25,6 +25,9 @@ public sealed partial class BasicMachine
 
         foreach (var sourceLine in sourceLines)
         {
+            if (string.IsNullOrWhiteSpace(sourceLine))
+                continue;
+
             var tokens = _tokenizer.Tokenize(sourceLine);
 
             var line = _parser.ParseLine(tokens,sourceLine);
@@ -45,6 +48,16 @@ public sealed partial class BasicMachine
 
         _mapStorage.Load(name, _machine.MapAssets);
         _machine.MapEditor.MarkSaved();
+
+        var label = _storage.LoadLabel(name);
+        EnsureLabelIdentity(label);
+        _storage.SaveLabel(name, label);
+
+        _programId = label.ProgramId;
+        _programVersion = label.ProgramVersion;
+        _tapeName = name;
+        SyncProgramIdentity();
+        _network.Leave();
 
         _console.WriteLine("");
         _console.WriteLine($"LOADED {name}");
@@ -74,8 +87,32 @@ public sealed partial class BasicMachine
         _machine.MapEditor.MarkSaved();
 
         var label = _storage.LoadLabel(name);
+        var sameTape = _tapeName != null &&
+            string.Equals(_tapeName, name, StringComparison.OrdinalIgnoreCase);
+
+        if (string.IsNullOrWhiteSpace(label.ProgramId))
+        {
+            if (sameTape || _tapeName == null)
+                label.ProgramId = _programId;
+            else
+                label.ProgramId = NewProgramId();
+        }
+
+        if (label.ProgramVersion <= 0)
+        {
+            label.ProgramVersion = sameTape || _tapeName == null
+                ? _programVersion
+                : TapeLabel.DefaultProgramVersion;
+        }
+
+        EnsureLabelIdentity(label);
         label.MachineVersion = TapeLabel.CurrentMachineVersion;
         _storage.SaveLabel(name, label);
+
+        _programId = label.ProgramId;
+        _programVersion = label.ProgramVersion;
+        _tapeName = name;
+        SyncProgramIdentity();
 
         _console.WriteLine("");
         _console.WriteLine($"SAVED {name}");
@@ -98,6 +135,7 @@ public sealed partial class BasicMachine
         if (label.MachineVersion <= 0)
             label.MachineVersion = TapeLabel.CurrentMachineVersion;
 
+        EnsureLabelIdentity(label);
         _storage.SaveLabel(name, label);
     }
 

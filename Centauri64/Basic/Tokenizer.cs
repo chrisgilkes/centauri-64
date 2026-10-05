@@ -262,6 +262,11 @@ public sealed class Tokenizer
             "CAMERA" => TokenType.Camera,
             "FOLLOW" => TokenType.Follow,
             "CAMOFF" => TokenType.CamOff,
+            "NET" => TokenType.Net,
+            "HOST" => TokenType.Host,
+            "JOIN" => TokenType.Join,
+            "SEND" => TokenType.Send,
+            "LEAVE" => TokenType.Leave,
             _ => TokenType.Identifier
         };
 

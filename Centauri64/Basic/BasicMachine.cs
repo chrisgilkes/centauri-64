@@ -5,6 +5,7 @@ using Centauri64.Console;
 using Centauri64.Machine;
 using Centauri64.Machine.Sprites;
 using Centauri64.Machine.Maps;
+using Centauri64.Network;
 
 namespace Centauri64.Basic;
 
@@ -32,15 +33,27 @@ public sealed partial class BasicMachine
 
     private readonly CentauriMachine _machine;
 
+    private readonly NetworkService _network;
+
     private readonly BasicEditorTheme _editorTheme;
 
     private readonly BasicSourceRenderer _sourceRenderer;
 
-    public BasicMachine(TextConsole console, CentauriMachine machine)
+    private string _programId = Guid.NewGuid().ToString("N");
+
+    private int _programVersion = TapeLabel.DefaultProgramVersion;
+
+    private string? _tapeName;
+
+    public BasicMachine(
+        TextConsole console,
+        CentauriMachine machine,
+        NetworkService network)
     {
         _console        = console;
 
         _machine        = machine;
+        _network        = network;
 
         _editorTheme    = new BasicEditorTheme();
 
@@ -50,7 +63,8 @@ public sealed partial class BasicMachine
 
         _sourceRenderer = new BasicSourceRenderer(_tokenizer,_editorTheme);
 
-        _interpreter    = new Interpreter(console, machine);
+        _interpreter    = new Interpreter(console, machine, network);
+        SyncProgramIdentity();
 
         _storage        = new ProgramStorage();
 
@@ -61,6 +75,28 @@ public sealed partial class BasicMachine
         _console.InputChanged += UpdateInputHighlighting;
 
         ShowBootMessage();
+    }
+
+    private void SyncProgramIdentity()
+    {
+        _interpreter.SetProgramIdentity(_programId, _programVersion);
+    }
+
+    private static string NewProgramId()
+    {
+        return Guid.NewGuid().ToString("N");
+    }
+
+    private void EnsureLabelIdentity(TapeLabel label, bool forceNewId = false)
+    {
+        if (forceNewId || string.IsNullOrWhiteSpace(label.ProgramId))
+            label.ProgramId = NewProgramId();
+
+        if (label.ProgramVersion <= 0)
+            label.ProgramVersion = TapeLabel.DefaultProgramVersion;
+
+        if (label.Players <= 0)
+            label.Players = 1;
     }
 
     public  void ShowBootMessage()

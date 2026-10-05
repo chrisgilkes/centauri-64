@@ -110,13 +110,32 @@ public sealed partial class CentauriMachine
 
     private static Keys? GetKey(string keyName)
     {
-        return keyName switch
+        if (string.IsNullOrWhiteSpace(keyName))
+            return null;
+
+        var name = keyName.Trim().ToUpperInvariant();
+
+        return name switch
         {
             "LEFT" => Keys.Left,
             "RIGHT" => Keys.Right,
             "UP" => Keys.Up,
             "DOWN" => Keys.Down,
             "SPACE" => Keys.Space,
+            "ENTER" or "RETURN" => Keys.Enter,
+            "ESC" or "ESCAPE" => Keys.Escape,
+            "0" => Keys.D0,
+            "1" => Keys.D1,
+            "2" => Keys.D2,
+            "3" => Keys.D3,
+            "4" => Keys.D4,
+            "5" => Keys.D5,
+            "6" => Keys.D6,
+            "7" => Keys.D7,
+            "8" => Keys.D8,
+            "9" => Keys.D9,
+            _ when name.Length == 1 && name[0] is >= 'A' and <= 'Z'
+                => Keys.A + (name[0] - 'A'),
             _ => null
         };
     }

@@ -9,6 +9,7 @@ using Centauri64.Console;
 using Centauri64.Basic;
 using Centauri64.Machine;
 using Centauri64.Game;
+using Centauri64.Network;
 
 namespace Centauri64;
 
@@ -33,6 +34,8 @@ public class Game1 : Microsoft.Xna.Framework.Game
     private BasicMachine _basicMachine = null!;
 
     private CentauriMachine _machine = null!;
+
+    private NetworkService _network = null!;
 
     private KeyboardState _previousKeyboardState;
 
@@ -84,6 +87,12 @@ public class Game1 : Microsoft.Xna.Framework.Game
         base.Initialize();
     }
 
+    protected override void UnloadContent()
+    {
+        _network?.Dispose();
+        base.UnloadContent();
+    }
+
     protected override void LoadContent()
     {
         _spriteBatch    = new SpriteBatch(GraphicsDevice);
@@ -119,7 +128,8 @@ public class Game1 : Microsoft.Xna.Framework.Game
         _machine.SpriteEditor.Notice += OnSpriteEditorNotice;
         _machine.MapEditor.Notice += OnMapEditorNotice;
 
-        _basicMachine = new BasicMachine(_console,_machine);
+        _network = new NetworkService();
+        _basicMachine = new BasicMachine(_console, _machine, _network);
 
         _computerRoom = new ComputerRoom(_font,_pixel);
 
@@ -406,7 +416,9 @@ public class Game1 : Microsoft.Xna.Framework.Game
             _console.Update(gameTime);
         }
 
+        _network.BeginFrame();
         _basicMachine.Update();
+        _network.EndFrame();
 
         if (_basicMachine.IsWaitingForInput &&
             !_machine.SpriteEditor.IsActive &&

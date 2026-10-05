@@ -97,7 +97,10 @@ public sealed class ProgramStorage
                 "DESCRIPTION " + label.Description,
                 "AUTHOR " + label.Author,
                 "KIND " + label.Kind.ToString().ToUpperInvariant(),
-                "MACHINE " + label.MachineVersion
+                "MACHINE " + label.MachineVersion,
+                "PROGRAMID " + label.ProgramId,
+                "PROGRAMVER " + label.ProgramVersion,
+                "PLAYERS " + label.Players
             });
     }
 
@@ -235,6 +238,26 @@ public sealed class ProgramStorage
             int.TryParse(line["MACHINE ".Length..].Trim(), out var version))
         {
             label.MachineVersion = version;
+            return;
+        }
+
+        if (line.StartsWith("PROGRAMID "))
+        {
+            label.ProgramId = line["PROGRAMID ".Length..].Trim();
+            return;
+        }
+
+        if (line.StartsWith("PROGRAMVER ") &&
+            int.TryParse(line["PROGRAMVER ".Length..].Trim(), out var programVersion))
+        {
+            label.ProgramVersion = programVersion;
+            return;
+        }
+
+        if (line.StartsWith("PLAYERS ") &&
+            int.TryParse(line["PLAYERS ".Length..].Trim(), out var players))
+        {
+            label.Players = Math.Clamp(players, 1, 2);
         }
     }
 

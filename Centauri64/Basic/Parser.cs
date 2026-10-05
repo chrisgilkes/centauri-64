@@ -234,6 +234,11 @@ public sealed class Parser
             return ParseCamOffStatement();
         }
 
+        if (token.Type == TokenType.Net)
+        {
+            return ParseNetStatement();
+        }
+
         if (token.Type == TokenType.Rem)
         {
             return ParseRemStatement();
@@ -393,6 +398,51 @@ public sealed class Parser
         Expect(TokenType.CamOff);
 
         return new CamOffStatement();
+    }
+
+    private Statement ParseNetStatement()
+    {
+        Expect(TokenType.Net);
+
+        var command = Current();
+
+        if (command.Type == TokenType.Host)
+        {
+            Advance();
+            return new NetHostStatement();
+        }
+
+        if (command.Type == TokenType.Join)
+        {
+            Advance();
+            return new NetJoinStatement();
+        }
+
+        if (command.Type == TokenType.Wait)
+        {
+            Advance();
+            return new NetWaitStatement();
+        }
+
+        if (command.Type == TokenType.Leave)
+        {
+            Advance();
+            return new NetLeaveStatement();
+        }
+
+        if (command.Type == TokenType.Send)
+        {
+            Advance();
+
+            var name = ParseExpression();
+            Expect(TokenType.Comma);
+            var value = ParseExpression();
+
+            return new NetSendStatement(name, value);
+        }
+
+        throw new InvalidOperationException(
+            "Expected HOST, JOIN, WAIT, LEAVE or SEND after NET.");
     }
 
     private SpriteShowStatement ParseSpriteShowStatement()
@@ -894,6 +944,11 @@ public sealed class Parser
             type == TokenType.GreaterThanOrEqual;
     }
 
+    private static bool IsBareFunctionName(string name)
+    {
+        return name is "NETPLAYER" or "NETCONNECTED";
+    }
+
     private static bool IsFunctionName(string name)
     {
         return name is
@@ -909,7 +964,10 @@ public sealed class Parser
             "RIGHT$" or
             "MID$" or
             "UPPER$" or
-            "TILEAT";
+            "TILEAT" or
+            "NET" or
+            "NETPLAYER" or
+            "NETCONNECTED";
     }
 
     private Expression ParsePrimaryExpression()
@@ -931,6 +989,24 @@ public sealed class Parser
             return new StringExpression(token.Text);
         }
 
+        if (token.Type == TokenType.Net)
+        {
+            if (Peek().Type != TokenType.LeftParenthesis)
+            {
+                throw new InvalidOperationException(
+                    "NET as a value expects NET(\"NAME\").");
+            }
+
+            Advance();
+            Expect(TokenType.LeftParenthesis);
+            var argument = ParseExpression();
+            Expect(TokenType.RightParenthesis);
+
+            return new FunctionCallExpression(
+                "NET",
+                new[] { argument });
+        }
+
         if (token.Type == TokenType.Identifier)
         {
             if (Peek().Type == TokenType.LeftParenthesis)
@@ -941,6 +1017,14 @@ public sealed class Parser
                 }
 
                 return ParseArrayAccessExpression();
+            }
+
+            if (IsBareFunctionName(token.Text))
+            {
+                Advance();
+                return new FunctionCallExpression(
+                    token.Text,
+                    Array.Empty<Expression>());
             }
 
             Advance();

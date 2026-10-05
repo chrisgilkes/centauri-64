@@ -38,7 +38,10 @@ public static class TapeFolder
             var extension = Path.GetExtension(name);
 
             if (extension != ".bas" &&
-                extension != ".sprites")
+                extension != ".sprites" &&
+                extension != ".tape" &&
+                extension != ".cover" &&
+                extension != ".maps")
             {
                 continue;
             }

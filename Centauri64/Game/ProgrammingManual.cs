@@ -37,7 +37,10 @@ public sealed class ProgrammingManual
         Sprites,
         Sound,
         Input,
-        Memory
+        Memory,
+        Network1,
+        Network2,
+        Network3
     }
 
     private ManualPage _currentPage = ManualPage.Contents;
@@ -87,6 +90,18 @@ public sealed class ProgrammingManual
                 Navigate(keyboard, ManualPage.TextColour, ManualPage.Contents);
                 break;
 
+            case ManualPage.Network1:
+                Navigate(keyboard, ManualPage.Contents, ManualPage.Network2);
+                break;
+
+            case ManualPage.Network2:
+                Navigate(keyboard, ManualPage.Network1, ManualPage.Network3);
+                break;
+
+            case ManualPage.Network3:
+                Navigate(keyboard, ManualPage.Network2, ManualPage.Contents);
+                break;
+
             default:
                 if (Pressed(keyboard, Keys.Escape))
                     _currentPage = ManualPage.Contents;
@@ -120,6 +135,8 @@ public sealed class ProgrammingManual
             _currentPage = ManualPage.Input;
         else if (Pressed(keyboard, Keys.D8) || Pressed(keyboard, Keys.NumPad8))
             _currentPage = ManualPage.Memory;
+        else if (Pressed(keyboard, Keys.D9) || Pressed(keyboard, Keys.NumPad9))
+            _currentPage = ManualPage.Network1;
     }
 
     private void Navigate(
@@ -186,6 +203,15 @@ public sealed class ProgrammingManual
             case ManualPage.Memory:
                 DrawMemory(spriteBatch);
                 break;
+            case ManualPage.Network1:
+                DrawNetwork1(spriteBatch);
+                break;
+            case ManualPage.Network2:
+                DrawNetwork2(spriteBatch);
+                break;
+            case ManualPage.Network3:
+                DrawNetwork3(spriteBatch);
+                break;
         }
 
         spriteBatch.End();
@@ -215,10 +241,11 @@ public sealed class ProgrammingManual
         DrawText(spriteBatch, "INPUT", 104, 264, Ink);
         DrawText(spriteBatch, "[8]", 64, 288, Header);
         DrawText(spriteBatch, "MEMORY & MACHINE", 104, 288, Ink);
+        DrawText(spriteBatch, "[9]", 64, 312, Header);
+        DrawText(spriteBatch, "NETWORK BASIC", 104, 312, Ink);
 
-        DrawText(spriteBatch, "LEARN IT. TYPE IT. CHANGE IT.", 184, 336, Muted);
-
-        DrawManualFooter(spriteBatch, "[1]-[8] SELECT       ESC BACK");
+        DrawText(spriteBatch, "LEARN IT. TYPE IT. CHANGE IT.", 184, 360, Muted);
+        DrawManualFooter(spriteBatch, "[1]-[9] SELECT       ESC BACK");
     }
 
     private void DrawGettingStarted1(SpriteBatch spriteBatch)
@@ -434,6 +461,62 @@ public sealed class ProgrammingManual
         DrawText(spriteBatch, "F5 SPRITES   F6 MAPS   F12 BEDROOM", 48, 360, Muted);
         DrawText(spriteBatch, "TAPES KEEP .BAS .SPRITES .MAPS .TAPE .COVER", 48, 384, Muted);
         DrawManualFooter(spriteBatch, "ESC CONTENTS");
+    }
+
+    private void DrawNetwork1(SpriteBatch spriteBatch)
+    {
+        DrawManualHeader(spriteBatch, "9. NETWORK BASIC", "TWO PLAYER GAMES");
+        DrawLines(spriteBatch, 80,
+            "CENTAURI64 CAN LINK TWO PLAYERS.",
+            "PLAYER 1 HOSTS. PLAYER 2 JOINS.",
+            "BOTH MUST RUN THE SAME PROGRAM.",
+            "",
+            "FOR LOCAL TESTING, RUN TWO COPIES",
+            "OF CENTAURI64 ON ONE COMPUTER.",
+            "LOAD THE SAME TAPE ON BOTH, THEN",
+            "HOST ON ONE AND JOIN ON THE OTHER.",
+            "",
+            "NET HOST     START A GAME",
+            "NET JOIN     JOIN A GAME",
+            "NET WAIT     WAIT FOR PLAYER 2",
+            "NET LEAVE    LEAVE THE SESSION");
+        DrawManualFooter(spriteBatch, "RIGHT NEXT                 ESC CONTENTS");
+    }
+
+    private void DrawNetwork2(SpriteBatch spriteBatch)
+    {
+        DrawManualHeader(spriteBatch, "9. NETWORK BASIC", "SEND AND RECEIVE");
+        DrawReference(spriteBatch,
+            ("NET SEND \"X\",N", "SHARE A NUMBER"),
+            ("V=NET(\"X\")", "READ THEIR VALUE"),
+            ("NETPLAYER", "0 NONE 1 HOST 2 JOIN"),
+            ("NETCONNECTED", "1 WHILE LINKED"));
+        DrawText(spriteBatch, "NET SEND SETS THE LATEST VALUE.", 48, 200, Muted);
+        DrawText(spriteBatch, "SHORT NAMES HELP: P1Y BX SCORE", 48, 224, Muted);
+        DrawText(spriteBatch, "ONLY NUMBERS ARE SENT IN V1.", 48, 248, Muted);
+        DrawText(spriteBatch, "NET() RETURNS 0 UNTIL A VALUE ARRIVES.", 48, 272, Muted);
+        DrawText(spriteBatch, "CHECK NETCONNECTED EACH FRAME.", 48, 296, Muted);
+        DrawManualFooter(spriteBatch, "LEFT PREVIOUS   RIGHT NEXT   ESC CONTENTS");
+    }
+
+    private void DrawNetwork3(SpriteBatch spriteBatch)
+    {
+        DrawManualHeader(spriteBatch, "9. NETWORK BASIC", "FIRST NETWORK PROGRAM");
+        DrawLines(spriteBatch, 80,
+            "HOST:",
+            "  NET HOST",
+            "  NET WAIT",
+            "  NET SEND \"TEST\",123",
+            "",
+            "JOIN:",
+            "  NET JOIN",
+            "  IF NETCONNECTED=0 THEN ...",
+            "  X=NET(\"TEST\")",
+            "",
+            "TRY LOAD \"NETTEST\" OR LOAD \"PONG\".",
+            "BOTH MACHINES MUST LOAD THE SAME",
+            "TAPE BEFORE RUNNING.");
+        DrawManualFooter(spriteBatch, "LEFT PREVIOUS              ESC CONTENTS");
     }
 
     private void DrawReference(

@@ -5,6 +5,7 @@ using System.Diagnostics;
 using Centauri64.Basic.Syntax;
 using Centauri64.Console;
 using Centauri64.Machine;
+using Centauri64.Network;
 
 namespace Centauri64.Basic;
 
@@ -24,6 +25,10 @@ public sealed partial class Interpreter
     public bool IsRunning => _isRunning;
 
     private readonly CentauriMachine _machine;
+    private readonly NetworkService _network;
+
+    private string _programId = Guid.NewGuid().ToString("N");
+    private int _programVersion = TapeLabel.DefaultProgramVersion;
 
     private readonly Stack<int> _returnStack = new();
 
@@ -49,15 +54,32 @@ public sealed partial class Interpreter
 
     private readonly Stack<ForLoop> _forStack = new();
 
-    public Interpreter(TextConsole console, CentauriMachine machine)
+    public Interpreter(
+        TextConsole console,
+        CentauriMachine machine,
+        NetworkService network)
     {
         _console = console;
         _machine = machine;
+        _network = network;
+    }
+
+    public void SetProgramIdentity(string programId, int programVersion)
+    {
+        _programId = string.IsNullOrWhiteSpace(programId)
+            ? Guid.NewGuid().ToString("N")
+            : programId;
+
+        _programVersion = programVersion <= 0
+            ? TapeLabel.DefaultProgramVersion
+            : programVersion;
     }
 
     public void Start(BasicProgram program)
     {
         _waitUntil = null;
+        _networkWait = NetworkWaitKind.None;
+        _network.Leave();
         _machine.ResetProgramDisplay();
 
         _variables.Clear();
@@ -88,6 +110,14 @@ public sealed partial class Interpreter
             }
 
             _waitUntil = null;
+        }
+
+        if (_networkWait != NetworkWaitKind.None)
+        {
+            if (IsNetworkWaiting())
+                return ExecutionAction.Wait;
+
+            _networkWait = NetworkWaitKind.None;
         }
 
         if (_programCounter >= _lines.Count)
@@ -155,6 +185,8 @@ public sealed partial class Interpreter
     {
         _isRunning = false;
         _waitUntil = null;
+        _networkWait = NetworkWaitKind.None;
+        _network.Leave();
         ClearPendingInput();
         _machine.CancelInput();
         _machine.Silence();
@@ -226,7 +258,16 @@ public sealed partial class Interpreter
             ScreenPresentation.Clear =>
                 next is Syntax.PrintStatement or
                     Syntax.PrintAtStatement or
-                    Syntax.ClsStatement,
+                    Syntax.ClsStatement or
+                    Syntax.PlotStatement or
+                    Syntax.LineStatement or
+                    Syntax.RectStatement or
+                    Syntax.CircleStatement or
+                    Syntax.InkStatement or
+                    Syntax.PaperStatement or
+                    Syntax.ForStatement or
+                    Syntax.NextStatement or
+                    Syntax.IfStatement,
 
             ScreenPresentation.Sprite =>
                 next is Syntax.SpritePositionStatement or
@@ -441,6 +482,31 @@ public sealed partial class Interpreter
             return ExecuteCamOff();
         }
 
+        if (statement is NetHostStatement)
+        {
+            return ExecuteNetHost();
+        }
+
+        if (statement is NetJoinStatement)
+        {
+            return ExecuteNetJoin();
+        }
+
+        if (statement is NetWaitStatement)
+        {
+            return ExecuteNetWait();
+        }
+
+        if (statement is NetLeaveStatement)
+        {
+            return ExecuteNetLeave();
+        }
+
+        if (statement is NetSendStatement netSend)
+        {
+            return ExecuteNetSend(netSend);
+        }
+
         if (statement is ArrayAssignmentStatement arrayAssignment)
         {
             var index = Evaluate(arrayAssignment.Index);
@@ -573,6 +639,9 @@ public sealed partial class Interpreter
             "MID$" => EvaluateMidFunction(function),
             "UPPER$" => EvaluateUpperFunction(function),
             "TILEAT" => EvaluateTileAtFunction(function),
+            "NET" => EvaluateNetFunction(function),
+            "NETPLAYER" => EvaluateNetPlayerFunction(function),
+            "NETCONNECTED" => EvaluateNetConnectedFunction(function),
             _ => throw new InvalidOperationException($"Unknown function {function.Name}.")
         };
     }

@@ -120,7 +120,10 @@ public sealed class BasicSourceRenderer
             "RIGHT$" or
             "MID$" or
             "UPPER$" or
-            "TILEAT";
+            "TILEAT" or
+            "NET" or
+            "NETPLAYER" or
+            "NETCONNECTED";
     }
 
     private static bool IsKeyword(TokenType type)
@@ -167,6 +170,11 @@ public sealed class BasicSourceRenderer
             TokenType.LoadMap or
             TokenType.Camera or
             TokenType.Follow or
-            TokenType.CamOff;
+            TokenType.CamOff or
+            TokenType.Net or
+            TokenType.Host or
+            TokenType.Join or
+            TokenType.Send or
+            TokenType.Leave;
     }
 }

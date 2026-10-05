@@ -63,5 +63,10 @@ public enum TokenType
     Camera,
     Follow,
     CamOff,
+    Net,
+    Host,
+    Join,
+    Send,
+    Leave,
     EndOfLine
 }

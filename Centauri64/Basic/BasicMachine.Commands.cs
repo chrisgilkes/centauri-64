@@ -32,6 +32,12 @@ public sealed partial class BasicMachine
     {
         _program.Clear();
         _machine.ResetEditorAssets();
+        _network.Leave();
+
+        _programId = NewProgramId();
+        _programVersion = TapeLabel.DefaultProgramVersion;
+        _tapeName = null;
+        SyncProgramIdentity();
 
         _console.WriteLine("");
         _console.WriteLine("READY.");
