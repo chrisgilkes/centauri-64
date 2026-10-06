@@ -31,17 +31,18 @@ public sealed partial class CentauriMachine
 
     public void Print(string text)
     {
-        _programConsole.WriteLine(text);
+        ActiveTextConsole.WriteLine(text);
     }
 
     public void BeginInput(string prompt)
     {
-        _programConsole.Write(prompt);
-        _programConsole.BeginInput();
+        ActiveTextConsole.Write(prompt);
+        ActiveTextConsole.BeginInput();
     }
 
     public void CancelInput()
     {
+        _console.CancelInput();
         _programConsole.CancelInput();
     }
 
@@ -50,7 +51,7 @@ public sealed partial class CentauriMachine
         var existing = _positionedText.FindIndex(
             item => item.X == x && item.Y == y);
 
-        var positionedText = new PositionedText(x,y,text,_programConsole.Foreground);
+        var positionedText = new PositionedText(x,y,text,ActiveTextConsole.Foreground);
 
         if (existing >= 0)
         {

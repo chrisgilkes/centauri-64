@@ -19,5 +19,11 @@ if (args.Contains("--verify-ghoule"))
     return;
 }
 
+if (args.Contains("--verify-basic-ux"))
+{
+    Environment.ExitCode = Centauri64.Analysis.BasicUxVerification.Run();
+    return;
+}
+
 using var game = new Centauri64.Game1();
 game.Run();

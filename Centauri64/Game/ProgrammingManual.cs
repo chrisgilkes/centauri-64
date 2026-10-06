@@ -430,8 +430,8 @@ public sealed class ProgrammingManual
     {
         DrawManualHeader(spriteBatch, "4. GRAPHICS", "POINTS LINES SHAPES");
         DrawReference(spriteBatch,
-            ("MODE 0", "640X480 TEXT/GFX"),
-            ("MODE 1", "320X240 ARCADE"),
+            ("MODE 1", "640X480 HIGH RES"),
+            ("MODE 2", "320X240 ARCADE"),
             ("PLOT X,Y,C", "ONE PIXEL"),
             ("LINE X1,Y1,X2,Y2,C", ""),
             ("RECT X,Y,W,H,C", ""),
@@ -442,7 +442,7 @@ public sealed class ProgrammingManual
             ("SHEIGHT", "SCREEN HEIGHT"),
             ("RND(N)", "0 TO N-1"),
             ("WAIT MS", "PAUSE MS"));
-        DrawText(spriteBatch, "COLOURS ARE 0 TO 31", 48, 380, Muted);
+        DrawText(spriteBatch, "DEFAULT BASIC NEEDS NO MODE. COLOURS 0 TO 31", 48, 380, Muted);
         DrawManualFooter(spriteBatch, "ESC CONTENTS");
     }
 
@@ -548,15 +548,15 @@ public sealed class ProgrammingManual
         DrawReference(spriteBatch,
             ("SYSTEM RAM", "64K"),
             ("BASIC RAM", "48K"),
-            ("MODE 0", "640X480"),
-            ("MODE 1", "320X240"),
+            ("MODE 1", "640X480"),
+            ("MODE 2", "320X240"),
             ("COLOURS", "32  (0-31)"),
             ("SPRITES", "64  (0-63)"),
             ("SOUND", "BEEP TONE"),
             ("KEYS", "ARROWS SPACE 0-9 A-Z"),
             ("NETWORK", "2 PLAYERS"),
             ("MEM", "SHOW FREE BASIC RAM"));
-        DrawText(spriteBatch, "MODE 1 IS THE ARCADE GAME SCREEN.", 48, 360, Muted);
+        DrawText(spriteBatch, "MODE 2 IS THE ARCADE GAME SCREEN.", 48, 360, Muted);
         DrawText(spriteBatch, "USE SWIDTH AND SHEIGHT FOR THE ACTIVE MODE.", 48, 384, Muted);
         DrawManualFooter(spriteBatch, "LEFT PREVIOUS              ESC CONTENTS");
     }

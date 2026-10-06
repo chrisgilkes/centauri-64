@@ -42,6 +42,30 @@ public sealed class Parser
                 $"SYNTAX ERROR{lineText}\n{_source}\n{ex.Message}",
                 ex);
         }
+    }
+
+    /// <summary>
+    /// Parse a single unnumbered statement for immediate (READY prompt) execution.
+    /// </summary>
+    public Statement ParseImmediate(IReadOnlyList<Token> tokens, string source)
+    {
+        _tokens = tokens;
+        _position = 0;
+        _source = source;
+        _lineNumber = 0;
+
+        try
+        {
+            var statement = ParseStatement();
+            Expect(TokenType.EndOfLine);
+            return statement;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                $"SYNTAX ERROR\n{_source}\n{ex.Message}",
+                ex);
+        }
     } 
 
     private Token Expect(TokenType type)

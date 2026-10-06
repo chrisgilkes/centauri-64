@@ -132,6 +132,13 @@ public sealed partial class BasicMachine
             return;
         }
 
+        // Program INPUT uses the same editor console in default BASIC mode.
+        if (IsWaitingForInput)
+        {
+            SubmitInput(source);
+            return;
+        }
+
         try
         {
 
@@ -216,10 +223,16 @@ public sealed partial class BasicMachine
 
             var tokens  = _tokenizer.Tokenize(source);
 
-            var line    = _parser.ParseLine(tokens, source);
+            // Numbered lines are stored; unnumbered statements run immediately.
+            if (tokens.Count > 0 && tokens[0].Type == TokenType.Number)
+            {
+                var line = _parser.ParseLine(tokens, source);
+                _program.StoreLine(line);
+                return;
+            }
 
-            _program.StoreLine(line);
-
+            var statement = _parser.ParseImmediate(tokens, source);
+            _interpreter.ExecuteImmediate(statement);
         }
         catch(Exception exception)
         {

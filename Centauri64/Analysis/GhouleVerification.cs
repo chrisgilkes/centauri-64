@@ -35,6 +35,18 @@ public static class GhouleVerification
             .ToArray();
 
         failed += Expect("source has lines", lines.Length > 40);
+        failed += Expect(
+            "no MODE command (default BASIC environment)",
+            !lines.Any(line =>
+            {
+                var trimmed = line.TrimStart();
+                var space = trimmed.IndexOf(' ');
+                if (space <= 0)
+                    return false;
+                var rest = trimmed[(space + 1)..].TrimStart();
+                return rest.StartsWith("MODE", StringComparison.OrdinalIgnoreCase) &&
+                       (rest.Length == 4 || char.IsWhiteSpace(rest[4]));
+            }));
         failed += ParseAll(lines);
 
         failed += Play(
@@ -141,9 +153,22 @@ public static class GhouleVerification
             program.StoreLine(parser.ParseLine(tokenizer.Tokenize(source), source));
 
         interpreter.Start(program);
+
+        if (machine.DisplayMode != CentauriDisplayMode.Console)
+        {
+            System.Console.WriteLine("FAIL " + name + ": RUN entered graphics mode without MODE");
+            return 1;
+        }
+
         var inputIndex = 0;
         var safety = 0;
         var output = new List<string>();
+
+        // Default BASIC environment writes to the editor console.
+        TextConsole ActiveConsole() =>
+            machine.DisplayMode == CentauriDisplayMode.Console
+                ? console
+                : programConsole;
 
         while (interpreter.IsRunning && safety++ < 20000)
         {
@@ -151,7 +176,7 @@ public static class GhouleVerification
             if (action != ExecutionAction.Input)
                 continue;
 
-            CaptureOutput(programConsole, output);
+            CaptureOutput(ActiveConsole(), output);
 
             if (stopAfterInputs.HasValue && inputIndex >= stopAfterInputs.Value)
                 break;
@@ -162,7 +187,14 @@ public static class GhouleVerification
             interpreter.SubmitInput(inputs[inputIndex++]);
         }
 
-        CaptureOutput(programConsole, output);
+        CaptureOutput(ActiveConsole(), output);
+
+        if (machine.DisplayMode != CentauriDisplayMode.Console)
+        {
+            System.Console.WriteLine("FAIL " + name + ": finished in graphics mode (expected default BASIC)");
+            return 1;
+        }
+
         var text = string.Join('\n', output).ToUpperInvariant();
         var failed = 0;
 

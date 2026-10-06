@@ -38,7 +38,7 @@ public sealed class ImageStorage
         foreach (var image in assets.Images)
         {
             writer.WriteLine($"IMAGE {image.Name}");
-            writer.WriteLine($"MODE {(int)image.Mode}");
+            writer.WriteLine($"MODE {ToFileMode(image.Mode)}");
             writer.WriteLine($"SIZE {image.Width} {image.Height}");
             writer.WriteLine($"CATEGORY {(int)image.Category}");
             writer.WriteLine($"FRAMES {image.FrameCount}");
@@ -148,10 +148,9 @@ public sealed class ImageStorage
                 continue;
 
             if (line.StartsWith("MODE ", StringComparison.OrdinalIgnoreCase) &&
-                int.TryParse(line["MODE ".Length..].Trim(), out var modeValue) &&
-                Enum.IsDefined(typeof(CentauriDisplayMode), modeValue))
+                int.TryParse(line["MODE ".Length..].Trim(), out var modeValue))
             {
-                pendingMode = (CentauriDisplayMode)modeValue;
+                pendingMode = FromFileMode(modeValue);
                 continue;
             }
 
@@ -287,6 +286,22 @@ public sealed class ImageStorage
     {
         return Path.Combine(_programDirectory, ValidateName(name) + ".images");
     }
+
+    /// <summary>
+    /// .images MODE integers stay on the legacy tape encoding:
+    /// 0 = high-resolution / standard, 1 = arcade.
+    /// BASIC MODE numbers (1/2) are separate from this file format.
+    /// </summary>
+    private static int ToFileMode(CentauriDisplayMode mode) =>
+        mode == CentauriDisplayMode.Arcade ? 1 : 0;
+
+    private static CentauriDisplayMode FromFileMode(int value) =>
+        value switch
+        {
+            1 or 2 => CentauriDisplayMode.Arcade,
+            _ => CentauriDisplayMode.HighResolution
+        };
+
 
     private static string ValidateName(string name)
     {

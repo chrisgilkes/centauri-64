@@ -26,8 +26,8 @@ categorised BACKGROUND.
 
 | Mode | Max size | Colours |
 |------|----------|---------|
-| STANDARD (MODE 0) | 640×480 | 32 |
-| ARCADE (MODE 1) | 320×240 | 32 |
+| STANDARD (high-res / MODE 1 screen) | 640×480 | 32 |
+| ARCADE (MODE 2 screen) | 320×240 | 32 |
 
 ## BASIC
 

@@ -95,6 +95,42 @@ public sealed partial class Interpreter
         _isRunning = _lines.Count > 0;
     }
 
+    /// <summary>
+    /// Execute one statement at the READY prompt without storing it in the program.
+    /// Variables persist across immediate statements until the next RUN.
+    /// </summary>
+    public void ExecuteImmediate(Statement statement)
+    {
+        if (!IsImmediateAllowed(statement))
+        {
+            throw new InvalidOperationException(
+                "Cannot execute that statement immediately.");
+        }
+
+        var result = Execute(statement);
+
+        // BEEP may schedule a wait; immediate mode does not enter the run loop.
+        if (result.Action == ExecutionAction.Wait)
+            _waitUntil = null;
+
+        if (result.Action == ExecutionAction.Input)
+        {
+            ClearPendingInput();
+            _machine.CancelInput();
+            throw new InvalidOperationException(
+                "Cannot execute that statement immediately.");
+        }
+    }
+
+    private static bool IsImmediateAllowed(Statement statement) =>
+        statement is PrintStatement
+            or ClsStatement
+            or InkStatement
+            or PaperStatement
+            or BeepStatement
+            or AssignmentStatement
+            or RemStatement;
+
     public ExecutionAction  ExecuteNextInstruction()
     {
         if (!_isRunning)

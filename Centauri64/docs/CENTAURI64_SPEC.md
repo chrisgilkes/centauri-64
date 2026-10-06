@@ -43,16 +43,24 @@ Source: `Machine/CentauriMachine.cs`
 
 Source: `Machine/CentauriDisplayMode.cs`, `CentauriMachine.SetDisplayMode`
 
-| Enum | Integer | Pixel size |
-|------|--------:|------------|
-| `HighResolution` | 0 | 640×480 |
-| `Arcade` | 1 | 320×240 |
+| Presentation | BASIC | Integer | Pixel size |
+|--------------|-------|--------:|------------|
+| Default BASIC environment | *(none — not a MODE)* | — | 640×480 editor/console |
+| `HighResolution` | `MODE 1` | 1 | 640×480 |
+| `Arcade` | `MODE 2` | 2 | 320×240 |
 
-BASIC: `MODE n` (`Basic/Interpreter.Graphics.cs` → `SetDisplayMode`). Values other than 0 and 1 throw `Unsupported display mode`.
+Internal enum: `Console = 0` (default BASIC environment; **not** selected by `MODE`), `HighResolution = 1`, `Arcade = 2`.
 
-**Enforced.** Default after `ResetProgramDisplay` is `HighResolution`.
+BASIC: `MODE n` (`Basic/Interpreter.Graphics.cs` → `SetDisplayMode`). Only `1` and `2` are accepted. `MODE 0` and other values throw `Unsupported display mode`.
 
-Presentation (`Game1.cs`): while a program is running or has finished, `HighResolution` uses the 640×480 target (`DrawTextMode`); `Arcade` uses the 320×240 target (`DrawGame`).
+**Enforced.** Default after `ResetProgramDisplay` is `Console` (normal BASIC editor/console). `RUN` does **not** switch to a graphics display unless the program executes `MODE`.
+
+Presentation (`Game1.cs`): while a program is running or has finished:
+- `Console` — keep drawing the BASIC editor/console (`DrawCodeEditor`); text I/O uses the editor console.
+- `HighResolution` — 640×480 target (`DrawTextMode`).
+- `Arcade` — 320×240 target (`DrawGame`).
+
+`.images` tape sidecars still encode mode as legacy file integers `0` = standard/high-res, `1` = arcade (independent of BASIC `MODE` numbers).
 
 ### 1.3 Paper vs “border”
 
@@ -376,7 +384,8 @@ Sources: `Basic/Tokenizer.cs`, `Basic/Parser.cs`, `Basic/Interpreter*.cs`, `Basi
 ### 11.1 Program model
 
 - Stored lines **must** start with a line number (`Parser.ParseLineNumber` → `int.Parse`).
-- Immediate (unnumbered) input is **not** executed as BASIC except for host commands (`BasicMachine.OnLineEntered`).
+- Unnumbered input is executed immediately when it parses as an allowed statement (`Parser.ParseImmediate` → `Interpreter.ExecuteImmediate`). Immediate statements are **not** stored in the listing.
+- Host commands (`RUN`, `LIST`, `DIR`, …) are matched first and never enter the statement parser.
 - One statement per line. `IF cond THEN statement` — no `ELSE`, no multi-statement THEN.
 - `GOTO` / `GOSUB` take a **numeric literal** line number, not an expression.
 - `REM` consumes the rest of the line.
@@ -401,6 +410,21 @@ Source: `Basic/BasicMachine.cs` (exact string match unless noted)
 | `SAVE name` | Write tape |
 | `LOAD name` | Read tape |
 
+### 11.2.1 Immediate BASIC statements
+
+Unnumbered statements at the READY prompt (after host commands):
+
+| Statement | Notes |
+|-----------|--------|
+| `PRINT expr` | Required; writes to the default BASIC console |
+| `CLS` | Clears the default BASIC console (no graphics MODE change) |
+| `INK n` / `PAPER n` | Same semantics as in programs |
+| `BEEP f,d` | Tone; wait is not held in the run loop |
+| `name = expr` | Scalar assignment; variables persist until next `RUN` |
+| `REM …` | No-op |
+
+**Not** supported immediately (program-control / multi-line flow): `GOTO`, `GOSUB`, `RETURN`, `FOR`, `NEXT`, `INPUT`, `MODE`, graphics, networking, sprites, maps, etc. These report `Cannot execute that statement immediately.`
+
 Numbered `RESET` as a **program statement** calls `ResetDisplay` then **falls through** and throws `Unsupported statement: ResetStatement` (`Interpreter.Execute`). **Incomplete.**
 
 ### 11.3 Statements (implemented)
@@ -410,9 +434,9 @@ Numbered `RESET` as a **program statement** calls `ResetDisplay` then **falls th
 | `PRINT expr` | Newline via `Print` |
 | `PRINTAT x,y,expr` | Pixel position; one string/value per cell key `(x,y)` |
 | `INPUT` | See §9.2 |
-| `CLS` | Console, plots, lines, rects, circles, image **blits**, tile **map**; **not** sprites; **not** BG/FG layers |
+| `CLS` | Active text console, plots, lines, rects, circles, image **blits**, tile **map**; **not** sprites; **not** BG/FG layers. In default BASIC environment clears the editor console without changing MODE. |
 | `INK n` / `PAPER n` | Palette 0–31 |
-| `MODE n` | 0 or 1 |
+| `MODE n` | `1` = High Resolution 640×480; `2` = Arcade 320×240 |
 | `PLOT x,y,c` | |
 | `LINE x1,y1,x2,y2,c` | |
 | `RECT x,y,w,h,c` optional `,FILL` | |

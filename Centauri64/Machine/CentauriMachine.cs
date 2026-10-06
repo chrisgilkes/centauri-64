@@ -42,7 +42,7 @@ public sealed partial class CentauriMachine
     public const int DEFAULT_INK = 1;
     public const int DEFAULT_PAPER = 0;
 
-    private CentauriDisplayMode _displayMode = CentauriDisplayMode.HighResolution;
+    private CentauriDisplayMode _displayMode = CentauriDisplayMode.Console;
 
     private int _paperColour = DEFAULT_PAPER;
 
@@ -102,14 +102,28 @@ public sealed partial class CentauriMachine
         CreateBuiltInSpriteAssets();
     }
 
+    /// <summary>
+    /// BASIC MODE command. Only graphics modes are accepted:
+    /// 1 = High Resolution (640×480), 2 = Arcade (320×240).
+    /// The default BASIC console is not a MODE number.
+    /// </summary>
     public void SetDisplayMode(int mode)
     {
-        if (!Enum.IsDefined(typeof(CentauriDisplayMode), mode))
+        _displayMode = mode switch
         {
-            throw new InvalidOperationException($"Unsupported display mode {mode}.");
-        }
+            1 => CentauriDisplayMode.HighResolution,
+            2 => CentauriDisplayMode.Arcade,
+            _ => throw new InvalidOperationException($"Unsupported display mode {mode}.")
+        };
+    }
 
-        _displayMode = (CentauriDisplayMode)mode;
+    /// <summary>
+    /// Leave any graphics MODE and return to the default BASIC environment
+    /// without clearing the editor console.
+    /// </summary>
+    public void ReturnToBasicEnvironment()
+    {
+        _displayMode = CentauriDisplayMode.Console;
     }
 
     private static Keys? GetKey(string keyName)
@@ -162,10 +176,19 @@ public sealed partial class CentauriMachine
         return _keyboardState.IsKeyDown(key.Value) && _previousKeyboardState.IsKeyUp(key.Value);
     }
 
+    /// <summary>
+    /// Text console used for PRINT/INPUT/INK/PAPER when in the default
+    /// BASIC environment; otherwise the dedicated program console.
+    /// </summary>
+    private TextConsole ActiveTextConsole =>
+        _displayMode == CentauriDisplayMode.Console
+            ? _console
+            : _programConsole;
+
     public void ClearScreen()
     {
-        _programConsole.Clear();
-        _programConsole.CancelInput();
+        ActiveTextConsole.Clear();
+        ActiveTextConsole.CancelInput();
         _positionedText.Clear();
         _plotPoints.Clear();
         _lines.Clear();
@@ -179,7 +202,7 @@ public sealed partial class CentauriMachine
     {
         ValidateColour(colour);
 
-        _programConsole.Foreground = colour;
+        ActiveTextConsole.Foreground = colour;
     }
 
     public void SetPaper(int colour)
@@ -187,7 +210,7 @@ public sealed partial class CentauriMachine
         ValidateColour(colour);
 
         _paperColour = colour;
-        _programConsole.Background = colour;
+        ActiveTextConsole.Background = colour;
     }
 
     private static void ValidateColour(int colour)
@@ -225,7 +248,7 @@ public sealed partial class CentauriMachine
         ClearTiles();
         ClearImageLayers();
 
-        _displayMode = CentauriDisplayMode.HighResolution;
+        _displayMode = CentauriDisplayMode.Console;
     }
 
     public void UpdateInput()

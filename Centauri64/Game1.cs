@@ -1030,7 +1030,10 @@ public class Game1 : Microsoft.Xna.Framework.Game
             !_machine.MapEditor.IsActive &&
             !_machine.ImageEditor.IsActive)
         {
-            _programConsole.Update(gameTime);
+            if (_machine.DisplayMode == CentauriDisplayMode.Console)
+                _console.Update(gameTime);
+            else
+                _programConsole.Update(gameTime);
         }
 
         if (_machine.SpriteEditor.IsActive ||
@@ -1257,6 +1260,10 @@ public class Game1 : Microsoft.Xna.Framework.Game
         {
             switch (_machine.DisplayMode)
             {
+                case CentauriDisplayMode.Console:
+                    DrawCodeEditor();
+                    break;
+
                 case CentauriDisplayMode.HighResolution:
                     DrawTextMode();
                     break;

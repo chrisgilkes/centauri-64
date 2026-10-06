@@ -1,4 +1,5 @@
 using System;
+using Centauri64.Machine;
 
 namespace Centauri64.Basic;
 
@@ -28,6 +29,7 @@ public sealed partial class BasicMachine
         _programFinished = false;
 
         _machine.HideAllSprites();
+        _machine.ReturnToBasicEnvironment();
         _machine.ResetDisplay();
 
         if (_runtimeError != null)
@@ -63,7 +65,13 @@ public sealed partial class BasicMachine
         _programFinished = false;
 
         _machine.HideAllSprites();
-        _machine.ResetDisplay();
+
+        // Graphics programs leave the dedicated display; console programs
+        // keep their output and return to the same READY prompt.
+        if (_machine.DisplayMode != CentauriDisplayMode.Console)
+            _machine.ResetDisplay();
+
+        _machine.ReturnToBasicEnvironment();
 
         _console.WriteLine("BREAK");
         _console.WriteLine("");
@@ -113,7 +121,26 @@ public sealed partial class BasicMachine
 
     private void OnProgramFinished()
     {
+        // Default BASIC environment: stay on the editor console and
+        // return to READY immediately (no key-to-dismiss graphics screen).
+        if (_machine.DisplayMode == CentauriDisplayMode.Console)
+        {
+            _programFinished = false;
+            _machine.HideAllSprites();
+
+            if (_runtimeError != null)
+            {
+                // Error may already have been printed via Print; avoid duplicate
+                // if it was written to the same console.
+                _runtimeError = null;
+            }
+
+            _console.WriteLine("");
+            _console.WriteLine("READY.");
+            return;
+        }
+
         _programFinished = true;
     }
-    
+
 }
