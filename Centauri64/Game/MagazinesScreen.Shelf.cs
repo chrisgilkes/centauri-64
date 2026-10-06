@@ -320,20 +320,19 @@ public sealed partial class MagazinesScreen
         var cover = new Rectangle(48, 120, 420, 592);
         DrawCover(spriteBatch, _issue, cover, CoverTint(state));
 
-        var y = 120;
         var textX = 500;
         var textWidth = MetaUi.Width - textX - 48;
-        _print.Draw(spriteBatch, _print.Title, _issue.CoverHeadline, textX, y, PrintTheme.Ink);
-        y += 48;
-        _print.Draw(spriteBatch, _print.Body, FictionLabel(_issue, state), textX, y, PrintTheme.Masthead);
-        y += 40;
+        var layout = new PrintLayout(spriteBatch, _whitePixel, _print, textX, 120, textWidth, 860);
+        layout.Heading(_issue.CoverHeadline);
+        layout.Section(FictionLabel(_issue, state), PrintTheme.Masthead);
+        layout.Space(8);
 
         if (state == MagazineIssueState.Owned)
-            DrawOwnedIssue(spriteBatch, textX, textWidth, ref y);
+            DrawOwnedIssue(layout);
         else if (state == MagazineIssueState.OnSale)
-            DrawOnSaleIssue(spriteBatch, textX, textWidth, ref y);
+            DrawOnSaleIssue(layout);
         else
-            DrawFutureIssue(spriteBatch, textX, textWidth, ref y, state);
+            DrawFutureIssue(layout, state);
 
         var footer = state == MagazineIssueState.OnSale && !_referenceLibrary
             ? "Y BUY THIS ISSUE    ESC BACK TO SHELF"
@@ -341,107 +340,52 @@ public sealed partial class MagazinesScreen
         PrintTheme.Footer(spriteBatch, _whitePixel, _print, footer);
     }
 
-    private void DrawOnSaleIssue(SpriteBatch spriteBatch, int x, int width, ref int y)
+    private void DrawOnSaleIssue(PrintLayout layout)
     {
         var cash = GameSession.Career?.Progress.CashPennies ?? 0;
         var price = Math.Max(0, _issue!.PricePennies);
 
-        foreach (var line in PrintFonts.Wrap(_print.Body, _issue.Teaser, width).Take(5))
-        {
-            _print.Draw(spriteBatch, _print.Body, line, x, y, PrintTheme.Ink);
-            y += 28;
-        }
-
-        y += 20;
-        _print.Draw(spriteBatch, _print.Caption, "COVER TAPE", x, y, PrintTheme.Masthead);
-        y += 28;
-        _print.Draw(spriteBatch, _print.Title, _issue.CoverGameTitle, x, y, PrintTheme.Ink);
-        y += 40;
-        _print.Draw(spriteBatch, _print.Body, "NOW ON SALE", x, y, PrintTheme.Masthead);
-        y += 36;
-        _print.Draw(spriteBatch, _print.Body, "PRICE ........ " + PlayerProgress.FormatPounds(price), x, y, PrintTheme.Ink);
-        y += 28;
-        _print.Draw(spriteBatch, _print.Body, "YOU HAVE ..... " + PlayerProgress.FormatPounds(cash), x, y, PrintTheme.Ink);
-        y += 40;
+        layout.Paragraph(_issue.Teaser, PrintTheme.Ink, maxLines: 5);
+        layout.Space(8);
+        layout.Section("COVER TAPE", PrintTheme.Masthead);
+        layout.Heading(_issue.CoverGameTitle);
+        layout.Space(8);
+        layout.Section("NOW ON SALE", PrintTheme.Masthead);
+        layout.BodyLine("PRICE ........ " + PlayerProgress.FormatPounds(price));
+        layout.BodyLine("YOU HAVE ..... " + PlayerProgress.FormatPounds(cash));
+        layout.Space(8);
 
         if (cash < price)
-            _print.Draw(spriteBatch, _print.Body, "NOT ENOUGH MONEY", x, y, PrintTheme.Stamp);
+            layout.BodyLine("NOT ENOUGH MONEY", PrintTheme.Stamp);
         else
-            _print.Draw(spriteBatch, _print.Body, "Y  BUY THIS ISSUE", x, y, PrintTheme.Ink);
+            layout.BodyLine("Y  BUY THIS ISSUE", PrintTheme.Ink);
 
         if (!string.IsNullOrEmpty(_purchaseNotice))
-        {
-            y += 32;
-            _print.Draw(spriteBatch, _print.Body, _purchaseNotice, x, y, PrintTheme.Stamp);
-        }
+            layout.BodyLine(_purchaseNotice, PrintTheme.Stamp);
     }
 
-    private void DrawOwnedIssue(SpriteBatch spriteBatch, int x, int width, ref int y)
+    private void DrawOwnedIssue(PrintLayout layout)
     {
-        _print.Draw(spriteBatch, _print.Caption, "CONTENTS", x, y, PrintTheme.SpotBlue);
-        y += 28;
-        foreach (var line in PrintFonts.Wrap(_print.Body, _issue!.FullDescription, width).Take(8))
-        {
-            _print.Draw(spriteBatch, _print.Body, line, x, y, PrintTheme.Ink);
-            y += 26;
-        }
-
-        y += 16;
-        _print.Draw(spriteBatch, _print.Caption, "COVER TAPE", x, y, PrintTheme.Masthead);
-        y += 28;
-        _print.Draw(spriteBatch, _print.Title, _issue.CoverGameTitle, x, y, PrintTheme.Ink);
-        y += 40;
-        foreach (var line in PrintFonts.Wrap(_print.Body, _issue.CoverGameDescription, width).Take(4))
-        {
-            _print.Draw(spriteBatch, _print.Caption, line, x, y, PrintTheme.InkMuted);
-            y += 24;
-        }
-
-        y += 16;
-        _print.Draw(
-            spriteBatch,
-            _print.Caption,
-            "Pages of this issue will appear here in a later printing.",
-            x,
-            Math.Min(y, 820),
-            PrintTheme.InkMuted);
+        layout.Section("CONTENTS", PrintTheme.SpotBlue);
+        layout.Paragraph(_issue!.FullDescription, PrintTheme.Ink, maxLines: 8);
+        layout.Space(8);
+        layout.Section("COVER TAPE", PrintTheme.Masthead);
+        layout.Heading(_issue.CoverGameTitle);
+        layout.Paragraph(_issue.CoverGameDescription, PrintTheme.InkMuted, maxLines: 4);
+        layout.Space(12);
+        layout.CaptionLine("Pages of this issue will appear here in a later printing.");
     }
 
-    private void DrawFutureIssue(
-        SpriteBatch spriteBatch,
-        int x,
-        int width,
-        ref int y,
-        MagazineIssueState state)
+    private void DrawFutureIssue(PrintLayout layout, MagazineIssueState state)
     {
-        _print.Draw(
-            spriteBatch,
-            _print.Body,
+        layout.Section(
             state == MagazineIssueState.ComingNext ? "COMING SOON" : "NOT YET ON SALE",
-            x,
-            y,
             PrintTheme.Stamp);
-        y += 36;
-
-        foreach (var line in PrintFonts.Wrap(_print.Body, _issue!.Teaser, width).Take(5))
-        {
-            _print.Draw(spriteBatch, _print.Body, line, x, y, PrintTheme.Ink);
-            y += 28;
-        }
-
-        y += 20;
-        _print.Draw(spriteBatch, _print.Caption, "COVER TAPE", x, y, PrintTheme.Masthead);
-        y += 28;
-        _print.Draw(spriteBatch, _print.Title, _issue.CoverGameTitle, x, y, PrintTheme.Ink);
-        y += 40;
-        _print.Draw(spriteBatch, _print.Caption, "NOT YET ON SALE", x, y, PrintTheme.InkMuted);
-        y += 28;
-        _print.Draw(
-            spriteBatch,
-            _print.Caption,
-            "Keep programming. New issues go on sale with your career.",
-            x,
-            y,
-            PrintTheme.InkMuted);
+        layout.Paragraph(_issue!.Teaser, PrintTheme.Ink, maxLines: 5);
+        layout.Space(8);
+        layout.Section("COVER TAPE", PrintTheme.Masthead);
+        layout.Heading(_issue.CoverGameTitle);
+        layout.CaptionLine("NOT YET ON SALE");
+        layout.CaptionLine("Keep programming. New issues go on sale with your career.");
     }
 }

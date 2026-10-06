@@ -14,7 +14,11 @@ public static class SoftwareGrant
 {
     public static void GrantTapes(IEnumerable<string> tapeNames)
     {
-        var sourceDir = Path.Combine(AppContext.BaseDirectory, "Programs");
+        var searchDirs = new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "Programs"),
+            Path.Combine(AppContext.BaseDirectory, "Programs", "CoverTapes")
+        };
         var destDir = TapeFolder.Location;
         Directory.CreateDirectory(destDir);
 
@@ -27,14 +31,22 @@ public static class SoftwareGrant
             if (File.Exists(destBas))
                 continue;
 
-            foreach (var extension in new[]
-                     { ".bas", ".tape", ".cover", ".sprites", ".maps" })
+            foreach (var sourceDir in searchDirs)
             {
-                var source = Path.Combine(sourceDir, name + extension);
-                if (!File.Exists(source))
-                    continue;
+                var copied = false;
+                foreach (var extension in new[]
+                         { ".bas", ".tape", ".cover", ".sprites", ".maps" })
+                {
+                    var source = Path.Combine(sourceDir, name + extension);
+                    if (!File.Exists(source))
+                        continue;
 
-                File.Copy(source, Path.Combine(destDir, name + extension), overwrite: false);
+                    File.Copy(source, Path.Combine(destDir, name + extension), overwrite: false);
+                    copied = true;
+                }
+
+                if (copied)
+                    break;
             }
         }
     }

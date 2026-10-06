@@ -88,10 +88,11 @@ public static class MagazineCatalog
                 Teaser = "YOUR FIRST PROGRAMS START HERE.",
                 FullDescription =
                     "YOU HAVE A CENTAURI64. THIS ISSUE SHOWS THAT YOU CAN MAKE IT DO THINGS TODAY - PRINT WORDS, ASK QUESTIONS, MAKE DECISIONS AND LOOP FOREVER.",
-                CoverGameId = "dungeon_of_ghoule",
+                CoverGameId = "DUNGEON",
                 CoverGameTitle = "DUNGEON OF GHOULE",
-                CoverGameDescription = "A SHORT TEXT ADVENTURE BUILT FROM SIMPLE BASIC.",
-                CoverGameTitleIsWorkingTitle = true,
+                CoverGameDescription = "Explore Castle Ghoule and uncover its secret.",
+                CoverGameTitleIsWorkingTitle = false,
+                CoverTapeReady = true,
                 ConceptsIntroduced = new[]
                 {
                     "PRINT", "VARIABLES", "STRINGS", "INPUT", "IF",

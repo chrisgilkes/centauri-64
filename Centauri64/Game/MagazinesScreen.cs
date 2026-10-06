@@ -314,18 +314,14 @@ public sealed partial class MagazinesScreen
 
         if (_contracts.Count == 0)
         {
-            DrawText(spriteBatch, "NO SMALL ADS THIS MONTH.", 400, 360, PrintTheme.Ink);
-            DrawText(
-                spriteBatch,
-                "THE SOFTWARE MARKET IS STILL WAKING UP.",
-                320,
-                400,
-                PrintTheme.InkMuted);
+            var empty = new PrintLayout(spriteBatch, _whitePixel, _print, 320, 360, 640);
+            empty.BodyLine("NO SMALL ADS THIS MONTH.");
+            empty.CaptionLine("THE SOFTWARE MARKET IS STILL WAKING UP.");
             PrintTheme.Footer(spriteBatch, _whitePixel, _print, "ESC BACK TO SHELF");
             return;
         }
 
-        const int cardH = 150;
+        const int cardH = 168;
         var visibleAds = 4;
         if (_selected < _scroll)
             _scroll = _selected;
@@ -347,24 +343,26 @@ public sealed partial class MagazinesScreen
             var challenge = IsReaderChallenge(contract);
             if (challenge && !drewChallengeHead)
             {
-                DrawText(spriteBatch, "READER CHALLENGES", 48, y, PrintTheme.Masthead);
-                PrintTheme.RuleH(spriteBatch, _whitePixel, 48, y + 28, 360);
-                y += 40;
+                var head = new PrintLayout(spriteBatch, _whitePixel, _print, 48, y, 400);
+                head.Section("READER CHALLENGES", PrintTheme.Masthead);
+                head.Rule();
+                y = head.Y + 4;
                 drewChallengeHead = true;
             }
             else if (!challenge && !drewWantedHead)
             {
                 if (drewChallengeHead)
-                    y += 12;
-                DrawText(spriteBatch, "SOFTWARE WANTED", 48, y, PrintTheme.SpotBlue);
-                PrintTheme.RuleH(spriteBatch, _whitePixel, 48, y + 28, 360);
-                y += 40;
+                    y += 8;
+                var head = new PrintLayout(spriteBatch, _whitePixel, _print, 48, y, 400);
+                head.Section("SOFTWARE WANTED", PrintTheme.SpotBlue);
+                head.Rule();
+                y = head.Y + 4;
                 drewWantedHead = true;
             }
 
             var bounds = new Rectangle(48, y, 1184, cardH);
             DrawAdvert(spriteBatch, contract, bounds, i == _selected, progress);
-            y += cardH + 12;
+            y += cardH + 14;
         }
 
         PrintTheme.Footer(
@@ -386,43 +384,47 @@ public sealed partial class MagazinesScreen
             ? PrintTheme.Rule
             : CentauriPalette.Get(org.PrintAccentIndex);
         var availability = _career.GetAvailability(contract, progress);
-        var fill = selected ? PrintTheme.Highlight : PrintTheme.Paper;
+        var fill = selected ? PrintTheme.Highlight : Color.White;
 
         PrintTheme.Box(spriteBatch, _whitePixel, bounds, fill);
-        var thickness = org?.AdvertStyle == PrintAdvertStyle.Bold ? 3 : 1;
+        var thickness = org?.AdvertStyle == PrintAdvertStyle.Bold ? 3 : 2;
         PrintTheme.Frame(spriteBatch, _whitePixel, bounds, accent, thickness);
 
         if (org?.AdvertStyle == PrintAdvertStyle.Ornate)
             PrintTheme.Frame(
                 spriteBatch,
                 _whitePixel,
-                new Rectangle(bounds.X + 3, bounds.Y + 3, bounds.Width - 6, bounds.Height - 6),
+                new Rectangle(bounds.X + 4, bounds.Y + 4, bounds.Width - 8, bounds.Height - 8),
                 accent);
 
         if (org?.AdvertStyle == PrintAdvertStyle.Technical)
             PrintTheme.Box(
                 spriteBatch,
                 _whitePixel,
-                new Rectangle(bounds.X, bounds.Y, 6, bounds.Height),
+                new Rectangle(bounds.X, bounds.Y, 8, bounds.Height),
                 accent);
 
-        var textX = bounds.X + 20;
-        DrawText(spriteBatch, org?.Name ?? contract.OrganisationId, textX, bounds.Y + 12, accent);
-        DrawText(spriteBatch, contract.Title, textX, bounds.Y + 40, PrintTheme.Ink);
-
-        var copyY = bounds.Y + 72;
-        foreach (var line in PrintFonts.Wrap(_print.Caption, contract.AdvertText.Replace('\n', ' '), bounds.Width - 40).Take(2))
-        {
-            _print.Draw(spriteBatch, _print.Caption, line, textX, copyY, PrintTheme.InkMuted);
-            copyY += 22;
-        }
-
-        DrawText(
+        var textWidth = bounds.Width - 40;
+        var layout = new PrintLayout(
             spriteBatch,
-            "PAYMENT: " + PlayerProgress.FormatPounds(contract.RewardPennies),
-            textX,
-            bounds.Bottom - 32,
-            PrintTheme.Ink);
+            _whitePixel,
+            _print,
+            bounds.X + 20,
+            bounds.Y + 14,
+            textWidth,
+            bounds.Bottom - 44);
+
+        layout.Section(org?.Name ?? contract.OrganisationId, accent);
+        layout.Heading(contract.Title);
+        layout.Paragraph(contract.AdvertText.Replace('\n', ' '), PrintTheme.InkMuted, maxLines: 2);
+
+        _print.Draw(
+            spriteBatch,
+            _print.Caption,
+            "WE PAY  " + PlayerProgress.FormatPounds(contract.RewardPennies),
+            bounds.X + 20,
+            bounds.Bottom - 34,
+            PrintTheme.Masthead);
 
         var stamp = FictionalStamp(availability);
         if (stamp != null)
@@ -447,9 +449,9 @@ public sealed partial class MagazinesScreen
         var progress = _career.LoadProgress();
         var availability = _career.GetAvailability(_contract, progress);
         var submission = _career.GetLatestSubmission(_contract.Id, progress);
-        var kicker = IsReaderChallenge(_contract)
-            ? "READER CHALLENGE"
-            : "CLASSIFIED ADVERT";
+        var challenge = IsReaderChallenge(_contract);
+        var kicker = challenge ? "READER CHALLENGE" : "CLASSIFIED ADVERT";
+        var era = MagazineProgression.EraLabel(GameSession.Career, _referenceLibrary);
 
         PrintTheme.DrawMasthead(
             spriteBatch,
@@ -457,78 +459,100 @@ public sealed partial class MagazinesScreen
             _print,
             kicker,
             org?.Name ?? "ORGANISATION",
-            MagazineProgression.EraLabel(GameSession.Career, _referenceLibrary));
+            era);
 
-        var y = 120;
-        DrawText(spriteBatch, _contract.Title, 28, y, PrintTheme.Ink);
-        y += 20;
-        PrintTheme.RuleH(spriteBatch, _whitePixel, 28, y, 584);
-        y += 12;
+        var column = new Rectangle(56, 120, 760, 740);
+        var side = new Rectangle(860, 120, 360, 740);
+        var layout = new PrintLayout(
+            spriteBatch,
+            _whitePixel,
+            _print,
+            column.X,
+            column.Y,
+            column.Width,
+            860);
+
+        layout.Heading(_contract.Title);
+        layout.Rule();
 
         if (availability is ContractAvailability.Pending
             or ContractAvailability.ResponseReady)
         {
-            DrawText(spriteBatch, FictionalStamp(availability) ?? "SUBMITTED", 28, y, PrintTheme.Stamp);
-            y += 20;
-            var tapeLabel = submission?.TapeName ?? "?";
-            DrawText(spriteBatch, "TAPE ENCLOSED: \"" + tapeLabel + "\"", 28, y, PrintTheme.Ink);
-            y += 24;
-            DrawText(
-                spriteBatch,
+            layout.Section(FictionalStamp(availability) ?? "SUBMITTED", PrintTheme.Stamp);
+            layout.BodyLine("TAPE ENCLOSED: \"" + (submission?.TapeName ?? "?") + "\"");
+            layout.Space(8);
+            layout.Paragraph(
                 availability == ContractAvailability.Pending
-                    ? "THE EDITORS HAVE YOUR CASSETTE. A REPLY WILL FOLLOW."
-                    : "A LETTER IS WAITING ON THE NOTICE BOARD.",
-                28,
-                y,
-                PrintTheme.InkMuted);
+                    ? "The editors have your cassette. A reply will follow by post."
+                    : "A letter is waiting on the Notice Board.");
             PrintTheme.Footer(spriteBatch, _whitePixel, _print, "ESC BACK TO CLASSIFIEDS");
             return;
         }
 
         if (availability == ContractAvailability.Completed)
         {
-            DrawText(spriteBatch, "CONTRACT AWARDED", 28, y, PrintTheme.Stamp);
-            y += 20;
+            layout.Section("CONTRACT AWARDED", PrintTheme.Stamp);
             if (submission != null)
-            {
-                DrawText(
-                    spriteBatch,
-                    "PUBLISHED FROM TAPE \"" + submission.TapeName + "\"",
-                    28,
-                    y,
-                    PrintTheme.Ink);
-            }
-
+                layout.BodyLine("Published from tape \"" + submission.TapeName + "\".");
+            else
+                layout.Paragraph("This opportunity is no longer accepting submissions.");
             PrintTheme.Footer(spriteBatch, _whitePixel, _print, "ESC BACK TO CLASSIFIEDS");
             return;
         }
 
-        foreach (var line in _contract.AdvertText.Split('\n'))
-        {
-            DrawText(spriteBatch, line, 28, y, PrintTheme.Ink);
-            y += 16;
-        }
+        layout.Paragraph(_contract.AdvertText, PrintTheme.Ink, maxLines: 14);
+        layout.Space(8);
+        layout.Section(challenge ? "WHAT WE'RE LOOKING FOR" : "WHAT THEY WANT", PrintTheme.Masthead);
+        layout.BulletList(PrintRequirements.Describe(_contract.Requirements), PrintTheme.Ink, "* ");
 
-        y += 12;
-        DrawText(spriteBatch, "WHAT THEY WANT", 28, y, PrintTheme.Masthead);
-        y += 18;
-
-        foreach (var line in CareerService.DescribeRequirements(_contract.Requirements)
-                     .Split('\n', StringSplitOptions.RemoveEmptyEntries))
-        {
-            DrawText(spriteBatch, line, 28, y, PrintTheme.InkMuted);
-            y += 16;
-        }
-
-        y += 12;
-        DrawText(
+        DrawPaymentCallout(spriteBatch, side, challenge);
+        PrintTheme.Footer(
             spriteBatch,
-            "PAYMENT: " + PlayerProgress.FormatPounds(_contract.RewardPennies),
-            28,
-            y,
-            PrintTheme.Ink);
+            _whitePixel,
+            _print,
+            challenge
+                ? "S - SEND YOUR TAPE    ESC BACK"
+                : "S - SEND YOUR TAPE    ESC BACK");
+    }
 
-        PrintTheme.Footer(spriteBatch, _whitePixel, _print, "S SUBMIT SOFTWARE    ESC BACK");
+    private void DrawPaymentCallout(SpriteBatch spriteBatch, Rectangle side, bool challenge)
+    {
+        var box = new Rectangle(side.X, side.Y + 24, side.Width, 180);
+        PrintTheme.Box(spriteBatch, _whitePixel, box, PrintTheme.Highlight);
+        PrintTheme.Frame(spriteBatch, _whitePixel, box, PrintTheme.Masthead, 2);
+
+        var layout = new PrintLayout(
+            spriteBatch,
+            _whitePixel,
+            _print,
+            box.X + 20,
+            box.Y + 18,
+            box.Width - 40,
+            box.Bottom - 12);
+
+        layout.Section(challenge ? "WE'LL PAY" : "PAYMENT", PrintTheme.Masthead);
+        layout.Heading(PlayerProgress.FormatPounds(_contract!.RewardPennies));
+        layout.CaptionLine(
+            challenge
+                ? "For every program we print."
+                : "For software we accept.");
+
+        var note = new Rectangle(side.X, box.Bottom + 24, side.Width, 220);
+        PrintTheme.Box(spriteBatch, _whitePixel, note, Color.White);
+        PrintTheme.Frame(spriteBatch, _whitePixel, note, PrintTheme.Rule, 1);
+        var noteLayout = new PrintLayout(
+            spriteBatch,
+            _whitePixel,
+            _print,
+            note.X + 18,
+            note.Y + 16,
+            note.Width - 36,
+            note.Bottom - 12);
+        noteLayout.Section("HOW TO ENTER", PrintTheme.SpotBlue);
+        noteLayout.Paragraph(
+            "Save your program to cassette, then press S to choose a tape. " +
+            "We check that it meets this advert before you post it. " +
+            "Acceptance or rejection arrives later by letter.");
     }
 
     private void DrawSelectTape(SpriteBatch spriteBatch)
@@ -541,22 +565,25 @@ public sealed partial class MagazinesScreen
             "SELECT A CASSETTE",
             "");
 
+        var layout = new PrintLayout(spriteBatch, _whitePixel, _print, 80, 130, 1100, 860);
+
         if (_tapes.Count == 0)
         {
-            DrawText(spriteBatch, "NO TAPES SAVED YET.", 232, 180, PrintTheme.Ink);
-            DrawText(spriteBatch, "SAVE A PROGRAM FIRST.", 224, 204, PrintTheme.InkMuted);
+            layout.BodyLine("NO TAPES SAVED YET.");
+            layout.CaptionLine("SAVE A PROGRAM FIRST.");
             PrintTheme.Footer(spriteBatch, _whitePixel, _print, "ESC BACK");
             return;
         }
 
-        var y = 72;
+        layout.CaptionLine("Choose the cassette you want to enclose with this advert.");
+        layout.Space(12);
+
         for (var i = 0; i < _tapes.Count; i++)
         {
             var colour = i == _tapeSelected ? PrintTheme.Masthead : PrintTheme.Ink;
-            var marker = i == _tapeSelected ? ">" : " ";
-            DrawText(spriteBatch, $"{marker} {_tapes[i]}", 40, y, colour);
-            y += 18;
-            if (y > 400)
+            var marker = i == _tapeSelected ? "> " : "  ";
+            layout.BodyLine(marker + _tapes[i], colour);
+            if (layout.Y > 820)
                 break;
         }
 
@@ -575,48 +602,33 @@ public sealed partial class MagazinesScreen
             spriteBatch,
             _whitePixel,
             _print,
-            org?.Name ?? "",
-            "CHECKING \"" + tape + "\"",
-            "");
+            org?.Name ?? "CLASSIFIEDS",
+            "CHECKING YOUR TAPE",
+            tape);
 
-        var y = 120;
-        var checks = _result.Checks.Skip(_scroll).Take(12).ToList();
+        var layout = new PrintLayout(spriteBatch, _whitePixel, _print, 80, 130, 900, 860);
+        layout.CaptionLine("Factual check only. Editors reply by post.");
+        layout.Space(10);
+        layout.Rule();
 
+        var checks = _result.Checks.Skip(_scroll).Take(10).ToList();
         foreach (var check in checks)
         {
             var mark = check.Passed ? "+" : "X";
             var colour = check.Passed ? PrintTheme.Ink : PrintTheme.Stamp;
-            DrawText(spriteBatch, $"{mark} {check.Label}", 28, y, colour);
-            y += 16;
-
+            layout.BodyLine(mark + "  " + PrintRequirements.FriendlyCheckLabel(check.Label), colour);
             if (!string.IsNullOrWhiteSpace(check.Detail))
-            {
-                foreach (var detail in check.Detail.Split('\n'))
-                {
-                    DrawText(spriteBatch, "  " + detail, 28, y, PrintTheme.InkMuted);
-                    y += 14;
-                }
-            }
+                layout.CaptionLine(check.Detail.Replace('\n', ' '));
         }
 
-        y += 8;
-        DrawText(
-            spriteBatch,
-            "PAYMENT: " + PlayerProgress.FormatPounds(_contract.RewardPennies),
-            28,
-            y,
-            PrintTheme.Ink);
-        y += 24;
+        layout.Space(16);
 
         if (_result.AlreadyCompleted)
         {
             var pending = _career.GetAvailability(_contract) is
                 ContractAvailability.Pending or ContractAvailability.ResponseReady;
-            DrawText(
-                spriteBatch,
+            layout.Section(
                 pending ? "THIS TAPE IS ALREADY IN THE POST." : "THIS ADVERT HAS BEEN FILLED.",
-                28,
-                y,
                 PrintTheme.Stamp);
             PrintTheme.Footer(spriteBatch, _whitePixel, _print, "ESC BACK");
             return;
@@ -624,18 +636,25 @@ public sealed partial class MagazinesScreen
 
         if (_result.Accepted)
         {
-            DrawText(spriteBatch, "READY TO POST.", 28, y, PrintTheme.Ink);
-            PrintTheme.Footer(spriteBatch, _whitePixel, _print, "Y SEND TAPE    N CANCEL");
+            layout.Section("READY TO POST", PrintTheme.SpotBlue);
+            layout.Paragraph(
+                "Your tape meets this advert. Post it now, then watch the Notice Board for a reply.");
+            PrintTheme.Footer(spriteBatch, _whitePixel, _print, "Y / ENTER SEND TAPE    N / ESC KEEP WORKING");
         }
         else
         {
-            DrawText(spriteBatch, "NOT READY TO POST.", 28, y, PrintTheme.Stamp);
-            y += 20;
+            layout.Section("NOT READY YET", PrintTheme.Stamp);
+            layout.Paragraph("Your program does not yet meet this challenge.");
             var failed = _result.FailedChecks.FirstOrDefault();
             if (failed != null)
-                DrawText(spriteBatch, HintFor(failed), 28, y, PrintTheme.InkMuted);
+            {
+                layout.Space(6);
+                layout.Section("MISSING", PrintTheme.Masthead);
+                layout.BulletList(new[] { PrintRequirements.FriendlyCheckLabel(failed.Label) });
+                layout.CaptionLine(HintFor(failed));
+            }
 
-            PrintTheme.Footer(spriteBatch, _whitePixel, _print, "ESC BACK");
+            PrintTheme.Footer(spriteBatch, _whitePixel, _print, "ESC RETURN");
         }
     }
 
@@ -649,27 +668,23 @@ public sealed partial class MagazinesScreen
             "TAPE IN THE POST",
             "");
 
-        var y = 120;
-        foreach (var line in _sentMessage.Split('\n'))
-        {
-            DrawText(spriteBatch, line, 80, y, PrintTheme.Ink);
-            y += 20;
-        }
-
-        DrawText(spriteBatch, "WATCH THE NOTICE BOARD FOR A REPLY.", 80, 320, PrintTheme.Masthead);
+        var layout = new PrintLayout(spriteBatch, _whitePixel, _print, 120, 160, 1000, 860);
+        layout.Paragraph(_sentMessage);
+        layout.Space(24);
+        layout.Section("WATCH THE NOTICE BOARD FOR A REPLY.", PrintTheme.Masthead);
         PrintTheme.Footer(spriteBatch, _whitePixel, _print, "ENTER / ESC RETURN TO BEDROOM");
     }
 
     private static string HintFor(SubmissionCheck check)
     {
         if (check.Label.Contains("COVER", StringComparison.OrdinalIgnoreCase))
-            return "CREATE A COVER FOR YOUR CASSETTE AND TRY AGAIN.";
+            return "Create a cover for your cassette and try again.";
 
         if (check.Label.Contains("INPUT", StringComparison.OrdinalIgnoreCase))
-            return "TRY USING KEY, KEYPRESSED OR INPUT.";
+            return "Try using KEY, KEYPRESSED or INPUT.";
 
         if (check.Label.Contains("NETWORK", StringComparison.OrdinalIgnoreCase))
-            return "SEE NETWORK BASIC IN THE PROGRAMMING MANUAL.";
+            return "See Network BASIC in the Programming Manual.";
 
         if (check.Label.Contains("MAXIMUM", StringComparison.OrdinalIgnoreCase) &&
             !string.IsNullOrWhiteSpace(check.Detail))
@@ -677,12 +692,7 @@ public sealed partial class MagazinesScreen
             return check.Detail.Replace('\n', ' ');
         }
 
-        return "FIX THE FAILED REQUIREMENT AND TRY AGAIN.";
-    }
-
-    private void DrawText(SpriteBatch spriteBatch, string text, int x, int y, Color colour)
-    {
-        _print.Draw(spriteBatch, _print.Body, text, x, y, colour);
+        return "Fix the failed requirement and try again.";
     }
 
     private bool Pressed(KeyboardState keyboard, Keys key)

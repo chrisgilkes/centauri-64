@@ -146,6 +146,14 @@ public sealed class TextConsole
         Clear();
     }
 
+    public char GetCharacterAt(int column, int row)
+    {
+        if (column < 0 || column >= _columns || row < 0 || row >= _rows)
+            return ' ';
+
+        return GetDisplayCell(row, column).Character;
+    }
+
     public string GetCurrentLine()
     {
         var characters = new char[_columns];

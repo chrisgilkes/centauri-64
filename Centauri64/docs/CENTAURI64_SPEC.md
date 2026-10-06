@@ -492,7 +492,7 @@ Sources: `Basic/TapeFolder.cs`, `ProgramStorage.cs`, `TapeLabel.cs`, `TapeCover.
 |-----------|---------|
 | `.bas` | Program source lines |
 | `.tape` | Label metadata |
-| `.cover` | 80×112 colour indices (`TapeCover.Width` / `Height`) |
+| `.cover` | 40×56 colour indices (`TapeCover.Width` / `Height`). Legacy 80×112 sidecars downsample 2× on load. |
 | `.sprites` | Sprite assets |
 | `.maps` | Map assets |
 | `.images` | Image assets |

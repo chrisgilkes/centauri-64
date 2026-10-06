@@ -130,40 +130,112 @@ public sealed class ProgramStorage
         if (!File.Exists(path))
             return cover;
 
-        var lines = File.ReadAllLines(path);
+        try
+        {
+            var lines = File.ReadAllLines(path);
 
-        if (lines.Length == 0)
+            if (lines.Length == 0)
+                return cover;
+
+            var header = lines[0].Trim();
+
+            if (!header.StartsWith("COVER ", StringComparison.OrdinalIgnoreCase))
+            {
+                System.Console.Error.WriteLine(
+                    "Tape cover ignored (bad header): " + path);
+                return cover;
+            }
+
+            if (!TryParseCoverHeader(header, out var fileWidth, out var fileHeight))
+            {
+                System.Console.Error.WriteLine(
+                    "Tape cover ignored (bad dimensions): " + path);
+                return cover;
+            }
+
+            var rows = ReadCoverRows(lines, fileWidth, fileHeight);
+            if (rows == null)
+            {
+                System.Console.Error.WriteLine(
+                    "Tape cover ignored (malformed pixels): " + path);
+                return cover;
+            }
+
+            if (fileWidth == TapeCover.Width && fileHeight == TapeCover.Height)
+            {
+                for (var y = 0; y < TapeCover.Height; y++)
+                {
+                    for (var x = 0; x < TapeCover.Width; x++)
+                        cover.Pixels[y, x] = rows[y, x];
+                }
+
+                return cover;
+            }
+
+            if (fileWidth == TapeCover.LegacyWidth &&
+                fileHeight == TapeCover.LegacyHeight)
+            {
+                TapeCover.DownsampleLegacy(rows, cover.Pixels);
+                return cover;
+            }
+
+            System.Console.Error.WriteLine(
+                "Tape cover ignored (unsupported size " +
+                fileWidth + "x" + fileHeight + "): " + path);
             return cover;
+        }
+        catch (Exception ex)
+        {
+            System.Console.Error.WriteLine(
+                "Tape cover load failed (" + path + "): " + ex.Message);
+            return new TapeCover();
+        }
+    }
 
-        var header = lines[0].Trim();
+    private static bool TryParseCoverHeader(string header, out int width, out int height)
+    {
+        width = 0;
+        height = 0;
+        var parts = header.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 3)
+            return false;
 
-        if (!header.StartsWith("COVER "))
-            return cover;
+        return int.TryParse(parts[1], out width) &&
+               int.TryParse(parts[2], out height) &&
+               width > 0 &&
+               height > 0;
+    }
 
+    private static int[,]? ReadCoverRows(string[] lines, int width, int height)
+    {
+        var rows = new int[height, width];
         var y = 0;
 
-        for (var i = 1; i < lines.Length && y < TapeCover.Height; i++)
+        for (var i = 1; i < lines.Length && y < height; i++)
         {
             var line = lines[i].Trim();
-
             if (line.Length == 0)
                 continue;
 
             var values = line.Split(',');
+            if (values.Length != width)
+                return null;
 
-            if (values.Length != TapeCover.Width)
-                continue;
-
-            for (var x = 0; x < TapeCover.Width; x++)
+            for (var x = 0; x < width; x++)
             {
-                if (int.TryParse(values[x], out var colour))
-                    cover.Pixels[y, x] = colour;
+                if (!int.TryParse(values[x], out var colour))
+                    return null;
+
+                if (colour < 0 || colour >= 32)
+                    colour = 0;
+
+                rows[y, x] = colour;
             }
 
             y++;
         }
 
-        return cover;
+        return y == height ? rows : null;
     }
 
     public void SaveCover(string name, TapeCover cover)

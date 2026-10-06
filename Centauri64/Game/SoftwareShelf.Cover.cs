@@ -13,19 +13,19 @@ public sealed partial class SoftwareShelf
 {
     private const int CoverGridX = 16;
     private const int CoverGridY = 72;
-    private const int CoverPixelSize = 3;
+    // Integer scale so the editor canvas matches the old 80x112*3 footprint.
+    private const int CoverPixelSize = 6;
     private const int CoverPaletteX = 280;
     private const int CoverPaletteY = 72;
     private const int CoverPaletteCell = 16;
     private const int CoverPaletteColumns = 8;
     private const int CoverPreviewX = 280;
     private const int CoverPreviewY = 152;
-    private const int CoverPreviewWidth = 48;
-    private const int CoverPreviewHeight = 72;
     private const int CoverUndoLimit = 32;
     private const int InlayCoverX = 448;
     private const int InlayCoverY = 96;
-    private const int InlayCoverScale = 2;
+    // 40x56 at 4x = 160x224 — same on-screen footprint as old 80x112 at 2x.
+    private const int InlayCoverScale = 4;
 
     private bool _paintingCover;
     private TapeCover? _cover;
@@ -163,6 +163,13 @@ public sealed partial class SoftwareShelf
 
         var pixelX = (mouse.X - CoverGridX) / CoverPixelSize;
         var pixelY = (mouse.Y - CoverGridY) / CoverPixelSize;
+
+        if (pixelX < 0 || pixelX >= TapeCover.Width ||
+            pixelY < 0 || pixelY >= TapeCover.Height)
+        {
+            return;
+        }
+
         var altDown =
             keyboard.IsKeyDown(Keys.LeftAlt) ||
             keyboard.IsKeyDown(Keys.RightAlt);
