@@ -80,6 +80,7 @@ public sealed partial class CentauriMachine
 
         _spriteEditor = new SpriteEditor(_spriteAssets);
         _mapEditor = new MapEditor(_mapAssets, _spriteAssets);
+        CreateImageEditor();
 
         CreateBuiltInSpriteAssets();
     }
@@ -88,9 +89,12 @@ public sealed partial class CentauriMachine
     {
         _spriteAssets.Clear();
         _mapAssets.Clear();
+        _imageAssets.Clear();
+        ClearImageLayers();
         CreateBuiltInSpriteAssets();
         _spriteEditor.MarkSaved();
         _mapEditor.MarkSaved();
+        _imageEditor.MarkSaved();
     }
 
     public void EnsureBuiltInSpriteAssets()
@@ -167,6 +171,7 @@ public sealed partial class CentauriMachine
         _lines.Clear();
         _rectangles.Clear();
         _circles.Clear();
+        ClearImageBlits();
         ClearTileMap();
     }
 
@@ -218,6 +223,7 @@ public sealed partial class CentauriMachine
         _circles.Clear();
 
         ClearTiles();
+        ClearImageLayers();
 
         _displayMode = CentauriDisplayMode.HighResolution;
     }

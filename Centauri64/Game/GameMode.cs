@@ -7,5 +7,12 @@ public enum GameMode
     ProgrammingManual,
     Software,
     Magazines,
-    Mail
+    Mail,
+    Settings,
+    HistoricalIntro,
+    ModeSelect,
+    CareerName,
+    BundleSelect,
+    SystemMenu,
+    ConfirmType
 }

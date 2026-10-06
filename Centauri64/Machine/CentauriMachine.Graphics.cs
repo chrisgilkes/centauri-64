@@ -116,6 +116,9 @@ public sealed partial class CentauriMachine
 
     public void DrawGraphics(SpriteBatch spriteBatch, Texture2D pixel)
     {
+        // IMAGE "NAME",X,Y blits — classic BASIC draw ops, cleared by CLS.
+        DrawImageBlits(spriteBatch, pixel);
+
         foreach (var point in _plotPoints.Values)
         {
             spriteBatch.Draw(pixel,new Rectangle(point.X - _cameraX,point.Y - _cameraY,1,1),CentauriPalette.Get(point.Colour));

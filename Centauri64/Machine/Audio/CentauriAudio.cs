@@ -36,7 +36,7 @@ public sealed class CentauriAudio
                     time);
 
             samples[i] =
-                (short)(wave * short.MaxValue * 0.20);
+                (short)(wave * short.MaxValue * 0.20 * Volume);
         }
 
         var data =
@@ -74,4 +74,9 @@ public sealed class CentauriAudio
             _effect = null;
         }
     }
+
+    /// <summary>
+    /// Combined master × SFX gain (0–1). Applied to future beeps.
+    /// </summary>
+    public float Volume { get; set; } = 1f;
 }

@@ -6,6 +6,7 @@ using Centauri64.Analysis;
 using Centauri64.Basic;
 using Centauri64.Career;
 using Centauri64.Progression;
+using Centauri64.Session;
 
 namespace Centauri64.Publishing;
 
@@ -20,8 +21,18 @@ public enum ContractAvailability
 
 public sealed class CareerService
 {
-    private readonly PlayerProgressStorage _storage = new();
+    private readonly IPlayerProgressStore _storage;
     private readonly SoftwareAnalyser _analyser = new();
+
+    public CareerService()
+        : this(new FilePlayerProgressStore())
+    {
+    }
+
+    public CareerService(IPlayerProgressStore storage)
+    {
+        _storage = storage;
+    }
 
     public PlayerProgress LoadProgress()
     {
@@ -32,6 +43,17 @@ public sealed class CareerService
 
     public void SaveProgress(PlayerProgress progress) =>
         _storage.Save(progress);
+
+    /// <summary>
+    /// Clears career progression only. Never deletes tapes, programs, or assets.
+    /// Active Bedroom slot identity (name / bundle) is kept by the caller.
+    /// </summary>
+    public void ResetCareer()
+    {
+        CareerLog.Info("Resetting career progress");
+        SaveProgress(new PlayerProgress());
+        CareerLog.Info("Career reset complete");
+    }
 
     public SubmissionResult Evaluate(
         SubmissionContract contract,

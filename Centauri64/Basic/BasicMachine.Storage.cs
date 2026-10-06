@@ -49,6 +49,10 @@ public sealed partial class BasicMachine
         _mapStorage.Load(name, _machine.MapAssets);
         _machine.MapEditor.MarkSaved();
 
+        _imageStorage.Load(name, _machine.ImageAssets);
+        _machine.ImageEditor.MarkSaved();
+        _machine.ClearImageLayers();
+
         var label = _storage.LoadLabel(name);
         EnsureLabelIdentity(label);
         _storage.SaveLabel(name, label);
@@ -85,6 +89,9 @@ public sealed partial class BasicMachine
 
         _mapStorage.Save(name, _machine.MapAssets);
         _machine.MapEditor.MarkSaved();
+
+        _imageStorage.Save(name, _machine.ImageAssets);
+        _machine.ImageEditor.MarkSaved();
 
         var label = _storage.LoadLabel(name);
         var sameTape = _tapeName != null &&
@@ -193,6 +200,7 @@ public sealed partial class BasicMachine
         _storage.Delete(name);
         _spriteStorage.Delete(name);
         _mapStorage.Delete(name);
+        _imageStorage.Delete(name);
 
         _console.WriteLine("");
         _console.WriteLine(

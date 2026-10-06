@@ -106,6 +106,7 @@ Centauri BASIC currently supports things including:
 - `SAVE` / `LOAD` / `DIR` / `MEM` / `ANALYSE` tapes with sprites, maps, and covers
 - Software analyser foundation for magazine/publisher submissions (see `docs/SOFTWARE-ANALYSER.md`)
 - Career Loop V1: Magazines opportunities, Notice Board mail, delayed payment (see `docs/CAREER-LOOP.md`)
+- Settings V1: display, CRT (computer only), editor prefs, audio, reset career (see `docs/SETTINGS.md`)
 
 There is still a lot I want to add, but the aim is to add features by actually using the language rather than designing everything up front.
 
@@ -152,6 +153,8 @@ A simple networked Tank Battle game is planned as the main test/tutorial for thi
 If that can be written in a small and understandable BASIC program, the multiplayer API is doing its job.
 
 ## Technical
+
+The implemented machine (display modes, palette, sprites, images, BASIC, tape format, networking, limits) is specified in [`Centauri64/docs/CENTAURI64_SPEC.md`](Centauri64/docs/CENTAURI64_SPEC.md). That file is the technical source of truth; magazine and marketing copy should not invent hardware beyond it.
 
 Centauri64 is currently built with:
 

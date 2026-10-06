@@ -22,7 +22,7 @@ public sealed class MailScreen
 
     private readonly BitmapFont _font;
     private readonly Texture2D _whitePixel;
-    private readonly CareerService _career = new();
+    private readonly CareerService _career;
 
     private static readonly Color Background = new(22, 55, 72);
     private static readonly Color Header = new(36, 72, 110);
@@ -43,10 +43,11 @@ public sealed class MailScreen
 
     public event Action? ExitSelected;
 
-    public MailScreen(BitmapFont font, Texture2D whitePixel)
+    public MailScreen(BitmapFont font, Texture2D whitePixel, CareerService career)
     {
         _font = font;
         _whitePixel = whitePixel;
+        _career = career;
     }
 
     public void Open()

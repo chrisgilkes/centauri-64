@@ -10,7 +10,10 @@ public sealed partial class BasicMachine
 
     private void AnalyseCurrentProgram()
     {
-        var analysis = _analyser.AnalyseProgram(_program, _tapeName ?? string.Empty);
+        var analysis = _analyser.AnalyseProgram(
+            _program,
+            _tapeName ?? string.Empty,
+            _machine.ImageAssets);
 
         _console.WriteLine("");
 

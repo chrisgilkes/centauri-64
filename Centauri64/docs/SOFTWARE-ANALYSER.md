@@ -40,10 +40,14 @@ Current capabilities:
 
 ```text
 Text, Input, Graphics, Sprites, Animation,
-Sound, Maps, Strings, Random, Networking, Camera
+Sound, Maps, Strings, Random, Networking, Camera,
+Images, Backgrounds, Foreground
 ```
 
-Future values can include `Backgrounds`, `Parallax`, `Music` without redesigning `SoftwareAnalysis`.
+Future values can include `Parallax`, `Music` without redesigning `SoftwareAnalysis`.
+
+Asset counts include `ImageCount`. Capability `Images` is set when `IMAGE` is used
+and/or image assets exist; `Backgrounds` / `Foreground` require `BG` / `FG`.
 
 ## Cover analysis
 

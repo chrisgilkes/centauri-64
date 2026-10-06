@@ -8,16 +8,19 @@ using Centauri64.Graphics;
 using Centauri64.Machine;
 using Centauri64.Progression;
 using Centauri64.Publishing;
+using Centauri64.Session;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
 namespace Centauri64.Game;
 
-public sealed class MagazinesScreen
+public sealed partial class MagazinesScreen
 {
     private enum View
     {
+        Shelf,
+        Issue,
         List,
         Detail,
         SelectTape,
@@ -28,7 +31,7 @@ public sealed class MagazinesScreen
     private readonly BitmapFont _font;
     private readonly Texture2D _whitePixel;
     private readonly BasicMachine _machine;
-    private readonly CareerService _career = new();
+    private readonly CareerService _career;
     private readonly SoftwareAnalyser _analyser = new();
 
     private static readonly Color Background = new(22, 55, 72);
@@ -50,29 +53,44 @@ public sealed class MagazinesScreen
     private SubmissionResult? _result;
     private SoftwareAnalysis? _analysis;
     private string _sentMessage = string.Empty;
+    private bool _referenceLibrary;
+    private MagazineIssue? _issue;
+    private int _issueSelected;
+    private int _issueScroll;
 
     public event Action? ExitSelected;
 
     public MagazinesScreen(
         BitmapFont font,
         Texture2D whitePixel,
-        BasicMachine machine)
+        BasicMachine machine,
+        CareerService career)
     {
         _font = font;
         _whitePixel = whitePixel;
         _machine = machine;
+        _career = career;
     }
 
-    public void Open()
+    public void Open(bool referenceLibrary = false)
     {
+        _referenceLibrary = referenceLibrary;
         _previousKeyboard = Keyboard.GetState();
-        _view = View.List;
+        _view = View.Shelf;
+        _issueSelected = 0;
+        _issueScroll = 0;
         _selected = 0;
         _scroll = 0;
         _contract = null;
         _result = null;
         _analysis = null;
-        RefreshList();
+        _issue = null;
+
+        if (!_referenceLibrary && GameSession.Career != null)
+        {
+            MagazineProgression.EnsureStartingIssue(GameSession.Career);
+            PersistCareer();
+        }
     }
 
     public void Update(GameTime gameTime)
@@ -81,6 +99,12 @@ public sealed class MagazinesScreen
 
         switch (_view)
         {
+            case View.Shelf:
+                UpdateShelf(keyboard);
+                break;
+            case View.Issue:
+                UpdateIssue(keyboard);
+                break;
             case View.List:
                 UpdateList(keyboard);
                 break;
@@ -118,6 +142,12 @@ public sealed class MagazinesScreen
 
         switch (_view)
         {
+            case View.Shelf:
+                DrawShelf(spriteBatch);
+                break;
+            case View.Issue:
+                DrawIssue(spriteBatch);
+                break;
             case View.List:
                 DrawList(spriteBatch);
                 break;
@@ -151,7 +181,7 @@ public sealed class MagazinesScreen
     {
         if (Pressed(keyboard, Keys.Escape))
         {
-            ExitSelected?.Invoke();
+            _view = View.Shelf;
             return;
         }
 
@@ -271,7 +301,7 @@ public sealed class MagazinesScreen
 
     private void DrawList(SpriteBatch spriteBatch)
     {
-        DrawText(spriteBatch, "SOFTWARE WANTED", 248, 24, Cream);
+        DrawText(spriteBatch, "CLASSIFIEDS — SOFTWARE WANTED", 160, 24, Cream);
 
         var progress = _career.LoadProgress();
         var cash = "CASH " + PlayerProgress.FormatPounds(progress.CashPennies);

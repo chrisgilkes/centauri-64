@@ -48,6 +48,10 @@ public sealed class ComputerRoom
 
     public event Action? MailSelected;
 
+    public event Action? SettingsSelected;
+
+    public event Action? RebootSelected;
+
     private bool _computerPoweredOn;
     private bool _hasUnreadMail;
     private string _cashLabel = "CASH £0.00";
@@ -67,6 +71,11 @@ public sealed class ComputerRoom
     public void SetComputerPoweredOn()
     {
         _computerPoweredOn = true;
+    }
+
+    public void ResetPowerState()
+    {
+        _computerPoweredOn = false;
     }
 
     public void SetCareerStatus(int cashPennies, bool hasUnreadMail)
@@ -123,6 +132,18 @@ public sealed class ComputerRoom
             Pressed(keyboard, Keys.NumPad5))
         {
             MailSelected?.Invoke();
+        }
+
+        if (Pressed(keyboard, Keys.D6) ||
+            Pressed(keyboard, Keys.NumPad6))
+        {
+            SettingsSelected?.Invoke();
+        }
+
+        if (Pressed(keyboard, Keys.D7) ||
+            Pressed(keyboard, Keys.NumPad7))
+        {
+            RebootSelected?.Invoke();
         }
 
         var delta = gameTime.ElapsedGameTime.TotalSeconds;
@@ -283,6 +304,12 @@ public sealed class ComputerRoom
 
         DrawText(spriteBatch, noticeLabel, 112, 280, noticeColour);
 
+        DrawText(spriteBatch, "[6]", 72, 304, Yellow);
+        DrawText(spriteBatch, "SETTINGS", 112, 304, Cream);
+
+        DrawText(spriteBatch, "[7]", 72, 328, Yellow);
+        DrawText(spriteBatch, "REBOOT", 112, 328, Cream);
+
         DrawText(spriteBatch, _cashLabel, 400, 184, Yellow);
 
         DrawBanner(
@@ -299,7 +326,7 @@ public sealed class ComputerRoom
 
         DrawText(
             spriteBatch,
-            "[1]-[5] SELECT",
+            "[1]-[7] SELECT",
             48,
             432,
             Dark);

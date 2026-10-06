@@ -234,6 +234,21 @@ public sealed class Parser
             return ParseCamOffStatement();
         }
 
+        if (token.Type == TokenType.Image)
+        {
+            return ParseImageStatement();
+        }
+
+        if (token.Type == TokenType.Bg)
+        {
+            return ParseBgStatement();
+        }
+
+        if (token.Type == TokenType.Fg)
+        {
+            return ParseFgStatement();
+        }
+
         if (token.Type == TokenType.Net)
         {
             return ParseNetStatement();
@@ -398,6 +413,63 @@ public sealed class Parser
         Expect(TokenType.CamOff);
 
         return new CamOffStatement();
+    }
+
+    private ImageStatement ParseImageStatement()
+    {
+        Expect(TokenType.Image);
+
+        if (Current().Type == TokenType.Off)
+        {
+            Advance();
+            return ImageStatement.Hide();
+        }
+
+        var name = ParseExpression();
+
+        if (Current().Type != TokenType.Comma)
+            return ImageStatement.Show(name);
+
+        Expect(TokenType.Comma);
+        var x = ParseExpression();
+        Expect(TokenType.Comma);
+        var y = ParseExpression();
+
+        if (Current().Type != TokenType.Comma)
+            return ImageStatement.Show(name, x, y);
+
+        Expect(TokenType.Comma);
+        var frame = ParseExpression();
+        return ImageStatement.Show(name, x, y, frame);
+    }
+
+    private BgStatement ParseBgStatement()
+    {
+        Expect(TokenType.Bg);
+
+        var layer = ParseExpression();
+        Expect(TokenType.Comma);
+
+        if (Current().Type == TokenType.Off)
+        {
+            Advance();
+            return BgStatement.Hide(layer);
+        }
+
+        return BgStatement.Show(layer, ParseExpression());
+    }
+
+    private FgStatement ParseFgStatement()
+    {
+        Expect(TokenType.Fg);
+
+        if (Current().Type == TokenType.Off)
+        {
+            Advance();
+            return FgStatement.Hide();
+        }
+
+        return FgStatement.Show(ParseExpression());
     }
 
     private Statement ParseNetStatement()

@@ -175,6 +175,10 @@ public sealed class BasicSourceRenderer
             TokenType.Host or
             TokenType.Join or
             TokenType.Send or
-            TokenType.Leave;
+            TokenType.Leave or
+            TokenType.Image or
+            TokenType.Bg or
+            TokenType.Fg or
+            TokenType.Off;
     }
 }

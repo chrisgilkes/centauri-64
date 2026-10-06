@@ -6,6 +6,7 @@ using Centauri64.Basic.Syntax;
 using Centauri64.Console;
 using Centauri64.Machine;
 using Centauri64.Network;
+using Centauri64.Session;
 
 namespace Centauri64.Basic;
 
@@ -285,6 +286,8 @@ public sealed partial class Interpreter
 
     private ExecutionResult Execute(Statement statement)
     {
+        EnsureAuthoringFeature(statement);
+
         if (statement is PrintStatement print)
         {
             var value = Evaluate(print.Expression);
@@ -482,6 +485,21 @@ public sealed partial class Interpreter
             return ExecuteCamOff();
         }
 
+        if (statement is ImageStatement image)
+        {
+            return ExecuteImage(image);
+        }
+
+        if (statement is BgStatement bg)
+        {
+            return ExecuteBg(bg);
+        }
+
+        if (statement is FgStatement fg)
+        {
+            return ExecuteFg(fg);
+        }
+
         if (statement is NetHostStatement)
         {
             return ExecuteNetHost();
@@ -624,6 +642,13 @@ public sealed partial class Interpreter
 
     private BasicValue EvaluateFunction(FunctionCallExpression function)
     {
+        if (function.Name is "COLLIDE" or "ANIMPLAYING")
+            EnsureAuthoringFeature(FeatureId.Sprites);
+        else if (function.Name == "TILEAT")
+            EnsureAuthoringFeature(FeatureId.Maps);
+        else if (function.Name is "NET" or "NETPLAYER" or "NETCONNECTED")
+            EnsureAuthoringFeature(FeatureId.Networking);
+
         return function.Name switch
         {
             "KEY" => EvaluateKeyFunction(function),
@@ -875,5 +900,22 @@ public sealed partial class Interpreter
         }
 
         return new BasicValue(0);
+    }
+
+    private static void EnsureAuthoringFeature(Statement statement)
+    {
+        var required = FeatureGate.RequiredFor(statement);
+        if (required == null)
+            return;
+
+        EnsureAuthoringFeature(required.Value);
+    }
+
+    private static void EnsureAuthoringFeature(FeatureId feature)
+    {
+        if (FeatureGate.Current.IsAvailable(feature))
+            return;
+
+        throw new InvalidOperationException(FeatureGate.LockedMessage(feature));
     }
 }

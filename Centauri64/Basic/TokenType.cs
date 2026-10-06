@@ -68,5 +68,9 @@ public enum TokenType
     Join,
     Send,
     Leave,
+    Image,
+    Bg,
+    Fg,
+    Off,
     EndOfLine
 }

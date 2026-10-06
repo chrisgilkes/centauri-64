@@ -267,6 +267,10 @@ public sealed class Tokenizer
             "JOIN" => TokenType.Join,
             "SEND" => TokenType.Send,
             "LEAVE" => TokenType.Leave,
+            "IMAGE" => TokenType.Image,
+            "BG" => TokenType.Bg,
+            "FG" => TokenType.Fg,
+            "OFF" => TokenType.Off,
             _ => TokenType.Identifier
         };
 

@@ -5,6 +5,7 @@ using Centauri64.Console;
 using Centauri64.Machine;
 using Centauri64.Machine.Sprites;
 using Centauri64.Machine.Maps;
+using Centauri64.Machine.Images;
 using Centauri64.Network;
 
 namespace Centauri64.Basic;
@@ -30,6 +31,8 @@ public sealed partial class BasicMachine
     private readonly SpriteStorage _spriteStorage;
 
     private readonly MapStorage _mapStorage;
+
+    private readonly ImageStorage _imageStorage;
 
     private readonly CentauriMachine _machine;
 
@@ -70,6 +73,9 @@ public sealed partial class BasicMachine
 
         _spriteStorage  = new SpriteStorage();
         _mapStorage     = new MapStorage();
+        _imageStorage   = new ImageStorage();
+
+        _machine.ImageEditor.SetListingLookup(GetProgramSourceText);
 
         _console.LineEntered += OnLineEntered;
         _console.InputChanged += UpdateInputHighlighting;
@@ -85,6 +91,11 @@ public sealed partial class BasicMachine
     private static string NewProgramId()
     {
         return Guid.NewGuid().ToString("N");
+    }
+
+    private string GetProgramSourceText()
+    {
+        return string.Join('\n', _program.SourceLines);
     }
 
     private void EnsureLabelIdentity(TapeLabel label, bool forceNewId = false)

@@ -41,7 +41,8 @@ public static class TapeFolder
                 extension != ".sprites" &&
                 extension != ".tape" &&
                 extension != ".cover" &&
-                extension != ".maps")
+                extension != ".maps" &&
+                extension != ".images")
             {
                 continue;
             }

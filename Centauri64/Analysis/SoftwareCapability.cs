@@ -23,5 +23,8 @@ public enum SoftwareCapability
     Strings = 1 << 7,
     Random = 1 << 8,
     Networking = 1 << 9,
-    Camera = 1 << 10
+    Camera = 1 << 10,
+    Images = 1 << 11,
+    Backgrounds = 1 << 12,
+    Foreground = 1 << 13
 }

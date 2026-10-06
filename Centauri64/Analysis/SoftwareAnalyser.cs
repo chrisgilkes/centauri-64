@@ -4,6 +4,7 @@ using System.Linq;
 
 using Centauri64.Basic;
 using Centauri64.Basic.Syntax;
+using Centauri64.Machine.Images;
 using Centauri64.Machine.Maps;
 using Centauri64.Machine.Sprites;
 
@@ -23,6 +24,7 @@ public sealed class SoftwareAnalyser
     private readonly ProgramStorage _programs = new();
     private readonly SpriteStorage _sprites = new();
     private readonly MapStorage _maps = new();
+    private readonly ImageStorage _images = new();
 
     public SoftwareAnalysis AnalyseTape(string tapeName)
     {
@@ -40,13 +42,17 @@ public sealed class SoftwareAnalyser
             var mapStore = new MapAssetStore();
             _maps.Load(tapeName, mapStore);
 
+            var imageStore = new ImageAssetStore();
+            _images.Load(tapeName, imageStore);
+
             return Analyse(
                 tapeName,
                 program,
                 cover,
                 coverSaved,
                 spriteStore,
-                mapStore);
+                mapStore,
+                imageStore);
         }
         catch (Exception exception)
         {
@@ -58,12 +64,14 @@ public sealed class SoftwareAnalyser
 
     public SoftwareAnalysis AnalyseProgram(
         BasicProgram program,
-        string tapeName = "")
+        string tapeName = "",
+        ImageAssetStore? liveImages = null)
     {
         var cover = new TapeCover();
         var coverSaved = false;
         var spriteStore = new SpriteAssetStore();
         var mapStore = new MapAssetStore();
+        var imageStore = liveImages ?? new ImageAssetStore();
 
         if (!string.IsNullOrWhiteSpace(tapeName))
         {
@@ -75,6 +83,8 @@ public sealed class SoftwareAnalyser
 
                 _sprites.Load(tapeName, spriteStore);
                 _maps.Load(tapeName, mapStore);
+                if (liveImages == null)
+                    _images.Load(tapeName, imageStore);
             }
             catch
             {
@@ -88,7 +98,8 @@ public sealed class SoftwareAnalyser
             cover,
             coverSaved,
             spriteStore,
-            mapStore);
+            mapStore,
+            imageStore);
     }
 
     private BasicProgram LoadProgram(string tapeName)
@@ -113,7 +124,8 @@ public sealed class SoftwareAnalyser
         TapeCover cover,
         bool coverSaved,
         SpriteAssetStore sprites,
-        MapAssetStore maps)
+        MapAssetStore maps,
+        ImageAssetStore images)
     {
         var lines = program.GetLines();
         var commands = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -155,6 +167,12 @@ public sealed class SoftwareAnalyser
             SpriteCount = sprites.Assets.Count,
             AnimationCount = animationCount,
             MapCount = maps.Maps.Count,
+            ImageCount = images.Count,
+            ImageFrameCount = images.Images.Sum(image => image.FrameCount),
+            GeneralImageCount = images.Images.Count(image => image.Category == ImageCategory.General),
+            SpriteImageCount = images.Images.Count(image => image.Category == ImageCategory.Sprite),
+            TilesetImageCount = images.Images.Count(image => image.Category == ImageCategory.Tileset),
+            BackgroundImageCount = images.Images.Count(image => image.Category == ImageCategory.Background),
             HasCover = coverStats.HasCover,
             HasCustomCover = coverStats.HasCustomCover,
             CoverChangedPixelCount = coverStats.ChangedPixels,

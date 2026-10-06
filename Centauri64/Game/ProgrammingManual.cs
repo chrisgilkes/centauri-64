@@ -2,6 +2,7 @@ using System;
 
 using Centauri64.Graphics;
 using Centauri64.Machine;
+using Centauri64.Session;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -34,6 +35,7 @@ public sealed class ProgrammingManual
         TextColour,
         Palette,
         Graphics,
+        Images,
         Sprites,
         Sound,
         Input,
@@ -135,9 +137,20 @@ public sealed class ProgrammingManual
         else if (Pressed(keyboard, Keys.D3) || Pressed(keyboard, Keys.NumPad3))
             _currentPage = ManualPage.TextColour;
         else if (Pressed(keyboard, Keys.D4) || Pressed(keyboard, Keys.NumPad4))
-            _currentPage = ManualPage.Graphics;
+        {
+            if (Unlocked(FeatureId.Graphics))
+                _currentPage = ManualPage.Graphics;
+        }
+        else if (Pressed(keyboard, Keys.D0) || Pressed(keyboard, Keys.NumPad0))
+        {
+            if (Unlocked(FeatureId.Images))
+                _currentPage = ManualPage.Images;
+        }
         else if (Pressed(keyboard, Keys.D5) || Pressed(keyboard, Keys.NumPad5))
-            _currentPage = ManualPage.Sprites;
+        {
+            if (Unlocked(FeatureId.Sprites))
+                _currentPage = ManualPage.Sprites;
+        }
         else if (Pressed(keyboard, Keys.D6) || Pressed(keyboard, Keys.NumPad6))
             _currentPage = ManualPage.Sound;
         else if (Pressed(keyboard, Keys.D7) || Pressed(keyboard, Keys.NumPad7))
@@ -145,7 +158,10 @@ public sealed class ProgrammingManual
         else if (Pressed(keyboard, Keys.D8) || Pressed(keyboard, Keys.NumPad8))
             _currentPage = ManualPage.Memory;
         else if (Pressed(keyboard, Keys.D9) || Pressed(keyboard, Keys.NumPad9))
-            _currentPage = ManualPage.Network1;
+        {
+            if (Unlocked(FeatureId.Networking))
+                _currentPage = ManualPage.Network1;
+        }
     }
 
     private void Navigate(
@@ -200,6 +216,9 @@ public sealed class ProgrammingManual
             case ManualPage.Graphics:
                 DrawGraphics(spriteBatch);
                 break;
+            case ManualPage.Images:
+                DrawImages(spriteBatch);
+                break;
             case ManualPage.Sprites:
                 DrawSprites(spriteBatch);
                 break;
@@ -243,21 +262,46 @@ public sealed class ProgrammingManual
         DrawText(spriteBatch, "CENTAURI BASIC", 104, 144, Ink);
         DrawText(spriteBatch, "[3]", 64, 168, Header);
         DrawText(spriteBatch, "TEXT & COLOUR", 104, 168, Ink);
-        DrawText(spriteBatch, "[4]", 64, 192, Header);
-        DrawText(spriteBatch, "GRAPHICS", 104, 192, Ink);
-        DrawText(spriteBatch, "[5]", 64, 216, Header);
-        DrawText(spriteBatch, "SPRITES", 104, 216, Ink);
-        DrawText(spriteBatch, "[6]", 64, 240, Header);
-        DrawText(spriteBatch, "SOUND", 104, 240, Ink);
-        DrawText(spriteBatch, "[7]", 64, 264, Header);
-        DrawText(spriteBatch, "INPUT", 104, 264, Ink);
-        DrawText(spriteBatch, "[8]", 64, 288, Header);
-        DrawText(spriteBatch, "MEMORY & MACHINE", 104, 288, Ink);
-        DrawText(spriteBatch, "[9]", 64, 312, Header);
-        DrawText(spriteBatch, "NETWORK BASIC", 104, 312, Ink);
 
-        DrawText(spriteBatch, "LEARN IT. TYPE IT. CHANGE IT.", 184, 360, Muted);
-        DrawManualFooter(spriteBatch, "[1]-[9] SELECT       ESC BACK");
+        var y = 192;
+        if (Unlocked(FeatureId.Graphics))
+        {
+            DrawText(spriteBatch, "[4]", 64, y, Header);
+            DrawText(spriteBatch, "GRAPHICS", 104, y, Ink);
+            y += 24;
+        }
+        if (Unlocked(FeatureId.Images))
+        {
+            DrawText(spriteBatch, "[0]", 64, y, Header);
+            DrawText(spriteBatch, "IMAGES / SCREEN IMAGES", 104, y, Ink);
+            y += 24;
+        }
+
+        if (Unlocked(FeatureId.Sprites))
+        {
+            DrawText(spriteBatch, "[5]", 64, y, Header);
+            DrawText(spriteBatch, "SPRITES", 104, y, Ink);
+            y += 24;
+        }
+
+        DrawText(spriteBatch, "[6]", 64, y, Header);
+        DrawText(spriteBatch, "SOUND", 104, y, Ink);
+        y += 24;
+        DrawText(spriteBatch, "[7]", 64, y, Header);
+        DrawText(spriteBatch, "INPUT", 104, y, Ink);
+        y += 24;
+        DrawText(spriteBatch, "[8]", 64, y, Header);
+        DrawText(spriteBatch, "MEMORY & MACHINE", 104, y, Ink);
+        y += 24;
+
+        if (Unlocked(FeatureId.Networking))
+        {
+            DrawText(spriteBatch, "[9]", 64, y, Header);
+            DrawText(spriteBatch, "NETWORK BASIC", 104, y, Ink);
+        }
+
+        DrawText(spriteBatch, "LEARN IT. TYPE IT. CHANGE IT.", 184, 380, Muted);
+        DrawManualFooter(spriteBatch, "[0]-[9] SELECT       ESC BACK");
     }
 
     private void DrawGettingStarted1(SpriteBatch spriteBatch)
@@ -399,6 +443,29 @@ public sealed class ProgrammingManual
             ("RND(N)", "0 TO N-1"),
             ("WAIT MS", "PAUSE MS"));
         DrawText(spriteBatch, "COLOURS ARE 0 TO 31", 48, 380, Muted);
+        DrawManualFooter(spriteBatch, "ESC CONTENTS");
+    }
+
+    private void DrawImages(SpriteBatch spriteBatch)
+    {
+        DrawManualHeader(spriteBatch, "0. IMAGES", "GENERAL PIXEL ARTWORK");
+        DrawReference(spriteBatch,
+            ("F7", "IMAGE EDITOR"),
+            ("IMAGE \"N\",X,Y", "DRAW IMAGE AT X,Y"),
+            ("IMAGE \"N\"", "DRAW AT 0,0"),
+            ("IMAGE \"N\",X,Y,F", "DRAW FRAME F (0+)"),
+            ("IMAGE OFF", "CLEAR IMAGE DRAWS"),
+            ("BG 0,\"N\"", "FULL-SCREEN BG LAYER 0"),
+            ("BG 1,\"N\"", "FULL-SCREEN BG LAYER 1"),
+            ("FG \"N\"", "FULL-SCREEN FOREGROUND"),
+            ("BG/FG OFF", "HIDE LAYER"));
+        DrawText(spriteBatch, "IMAGES: VARIABLE SIZE + FRAMES. CATEGORIES:", 48, 250, Muted);
+        DrawText(spriteBatch, "GENERAL / SPRITE / TILESET / BACKGROUND", 48, 274, Muted);
+        DrawText(spriteBatch, "IMAGE DRAWS ONCE (CLS CLEARS). BG/FG PERSIST.", 48, 298, Muted);
+        DrawText(spriteBatch, "BG/FG NEED FULL-SCREEN SIZE FOR CURRENT MODE.", 48, 322, Muted);
+        DrawText(spriteBatch, "10 CLS", 80, 352, Header);
+        DrawText(spriteBatch, "20 IMAGE \"FOREST\",80,8", 80, 376, Header);
+        DrawText(spriteBatch, "30 PRINT \"YOU ARE IN A DARK FOREST.\"", 80, 400, Header);
         DrawManualFooter(spriteBatch, "ESC CONTENTS");
     }
 
@@ -623,6 +690,9 @@ public sealed class ProgrammingManual
     {
         spriteBatch.Draw(_whitePixel, rectangle, colour);
     }
+
+    private static bool Unlocked(FeatureId feature) =>
+        FeatureGate.Current.IsAvailable(feature);
 
     private bool Pressed(KeyboardState keyboard, Keys key)
     {

@@ -37,10 +37,19 @@ public sealed class SoftwareAnalysis
     public bool UsesRandom => Has(SoftwareCapability.Random);
     public bool UsesNetworking => Has(SoftwareCapability.Networking);
     public bool UsesCamera => Has(SoftwareCapability.Camera);
+    public bool UsesImages => Has(SoftwareCapability.Images) || ImageCount > 0;
+    public bool UsesBackgrounds => Has(SoftwareCapability.Backgrounds);
+    public bool UsesForeground => Has(SoftwareCapability.Foreground);
 
     public int SpriteCount { get; init; }
     public int AnimationCount { get; init; }
     public int MapCount { get; init; }
+    public int ImageCount { get; init; }
+    public int ImageFrameCount { get; init; }
+    public int GeneralImageCount { get; init; }
+    public int SpriteImageCount { get; init; }
+    public int TilesetImageCount { get; init; }
+    public int BackgroundImageCount { get; init; }
 
     /// <summary>
     /// True when a cover asset file exists for the tape.
