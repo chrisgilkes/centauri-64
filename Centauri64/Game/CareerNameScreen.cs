@@ -81,13 +81,18 @@ public sealed class CareerNameScreen
         spriteBatch.Begin(samplerState: SamplerState.PointClamp);
         BootUi.DrawBox(spriteBatch, _pixel,
             new Rectangle(0, 0, CentauriMachine.DEVELOPMENT_WIDTH, CentauriMachine.DEVELOPMENT_HEIGHT),
-            BootUi.Background);
-        BootUi.DrawBox(spriteBatch, _pixel, new Rectangle(16, 16, 608, 40), BootUi.Header);
-        BootUi.DrawText(_font, spriteBatch, "NEW CAREER", 256, 28, Color.White);
-        BootUi.DrawText(_font, spriteBatch, "YOUR NAME", 256, 160, BootUi.Yellow);
-        BootUi.DrawText(_font, spriteBatch, "> " + _buffer + "_", 200, 200, BootUi.Cream);
-        BootUi.DrawText(_font, spriteBatch, _status, 120, 280, BootUi.Muted);
-        BootUi.DrawText(_font, spriteBatch, "ENTER CONTINUE    ESC CANCEL", 184, 432, BootUi.Muted);
+            SystemUi.Background);
+
+        spriteBatch.Draw(_pixel, new Rectangle(40, 28, 560, 1), SystemUi.Line);
+        BootUi.DrawText(_font, spriteBatch, "CENTAURI64", 40, 40, SystemUi.Green);
+        BootUi.DrawText(_font, spriteBatch, "NEW CAREER", 424, 40, SystemUi.Amber);
+        spriteBatch.Draw(_pixel, new Rectangle(40, 64, 560, 1), SystemUi.Line);
+
+        BootUi.DrawText(_font, spriteBatch, "YOUR NAME", 40, 160, SystemUi.Muted);
+        BootUi.DrawText(_font, spriteBatch, "> " + _buffer + "_", 40, 200, SystemUi.Text);
+        spriteBatch.Draw(_pixel, new Rectangle(40, 228, 320, 1), SystemUi.Line);
+        BootUi.DrawText(_font, spriteBatch, _status, 40, 280, SystemUi.Muted);
+        BootUi.DrawText(_font, spriteBatch, "ENTER CONTINUE    ESC CANCEL", 40, 440, SystemUi.Muted);
         spriteBatch.End();
     }
 

@@ -32,6 +32,16 @@ public sealed class MagazineIssue
     public bool IsMajorMilestone { get; init; }
     public string FictionalMonth { get; init; } = string.Empty;
     public string CoverAssetId { get; init; } = string.Empty;
+
+    /// <summary>Price in pennies. Issue #1 is included (£0).</summary>
+    public int PricePennies { get; init; }
+
+    /// <summary>
+    /// When set, this issue goes on sale only after that contract is completed
+    /// and the previous issue is owned. Empty: on sale once the previous issue
+    /// is owned. Never uses real-world time.
+    /// </summary>
+    public string OnSaleAfterContractId { get; init; } = string.Empty;
 }
 
 /// <summary>
@@ -77,7 +87,7 @@ public static class MagazineCatalog
                 CoverHeadline = "WELCOME TO YOUR CENTAURI64!",
                 Teaser = "YOUR FIRST PROGRAMS START HERE.",
                 FullDescription =
-                    "YOU HAVE A CENTAURI64. THIS ISSUE SHOWS THAT YOU CAN MAKE IT DO THINGS TODAY — PRINT WORDS, ASK QUESTIONS, MAKE DECISIONS AND LOOP FOREVER.",
+                    "YOU HAVE A CENTAURI64. THIS ISSUE SHOWS THAT YOU CAN MAKE IT DO THINGS TODAY - PRINT WORDS, ASK QUESTIONS, MAKE DECISIONS AND LOOP FOREVER.",
                 CoverGameId = "dungeon_of_ghoule",
                 CoverGameTitle = "DUNGEON OF GHOULE",
                 CoverGameDescription = "A SHORT TEXT ADVENTURE BUILT FROM SIMPLE BASIC.",
@@ -94,7 +104,9 @@ public static class MagazineCatalog
                 ContractUnlockIds = new[] { "career_first_program" },
                 NextIssueId = i2,
                 IsMajorMilestone = false,
-                FictionalMonth = "JAN 1986"
+                FictionalMonth = "JAN 1986",
+                CoverAssetId = "issue01",
+                PricePennies = 0
             },
             new MagazineIssue
             {
@@ -104,7 +116,7 @@ public static class MagazineCatalog
                 CoverHeadline = "GRAPHICS!",
                 Teaser = "DRAW ON YOUR CENTAURI64! MAKE YOUR FIRST ARCADE GAME!",
                 FullDescription =
-                    "PUT PIXELS ON THE SCREEN. PLOT, LINE, RECT AND CIRCLE ARE ENOUGH TO BUILD A REAL ARCADE GAME — NO SPRITES REQUIRED.",
+                    "PUT PIXELS ON THE SCREEN. PLOT, LINE, RECT AND CIRCLE ARE ENOUGH TO BUILD A REAL ARCADE GAME - NO SPRITES REQUIRED.",
                 CoverGameId = "lunar_rescue",
                 CoverGameTitle = "LUNAR RESCUE",
                 CoverGameDescription = "A LUNAR-LANDER-INSPIRED GAME USING BASIC DRAWING COMMANDS.",
@@ -116,11 +128,15 @@ public static class MagazineCatalog
                 },
                 GrantedFeatures = new[] { FeatureId.Graphics },
                 ManualSectionsUnlocked = new[] { "Graphics" },
+                PublisherUnlockIds = new[] { "publisher_arcade_01" },
                 PreviousIssueId = i1,
                 NextIssueId = i3,
                 AvailabilityRequirement = i1,
                 IsMajorMilestone = true,
-                FictionalMonth = "FEB 1986"
+                FictionalMonth = "FEB 1986",
+                CoverAssetId = "issue02",
+                PricePennies = 125,
+                OnSaleAfterContractId = "career_interactive_program"
             },
             new MagazineIssue
             {
@@ -148,7 +164,10 @@ public static class MagazineCatalog
                 NextIssueId = i4,
                 AvailabilityRequirement = i2,
                 IsMajorMilestone = true,
-                FictionalMonth = "MAR 1986"
+                FictionalMonth = "MAR 1986",
+                CoverAssetId = "issue03",
+                PricePennies = 125,
+                OnSaleAfterContractId = "career_graphical_program"
             },
             new MagazineIssue
             {
@@ -159,10 +178,11 @@ public static class MagazineCatalog
                 Teaser = "MAPS. TILES. MAZES. YOUR BIGGEST GAMES YET.",
                 FullDescription =
                     "THE MAP EDITOR BUILDS WORLD GEOMETRY. BASIC STILL CREATES THE GAMEPLAY. TILE ROOMS, COLLECT KEYS AND EXPLORE BEYOND A SINGLE SCREEN.",
-                CoverGameId = "crypt_raider",
-                CoverGameTitle = "CRYPT RAIDER",
-                CoverGameDescription = "A TOP-DOWN MAZE ADVENTURE THROUGH LINKED ROOMS.",
-                CoverGameTitleIsWorkingTitle = true,
+                CoverGameId = "castle_creator",
+                CoverGameTitle = "CASTLE CREATOR",
+                CoverGameDescription =
+                    "A MAP EDITOR DEMO GAME FOR YOUR CENTAURI64.",
+                CoverGameTitleIsWorkingTitle = false,
                 ConceptsIntroduced = new[]
                 {
                     "TILES", "TILESETS", "MAP CONSTRUCTION", "MAP COLLISION",
@@ -170,11 +190,15 @@ public static class MagazineCatalog
                 },
                 GrantedFeatures = new[] { FeatureId.Maps },
                 ManualSectionsUnlocked = Array.Empty<string>(),
+                PublisherUnlockIds = new[] { "publisher_puzzle_01" },
                 PreviousIssueId = i3,
                 NextIssueId = i5,
                 AvailabilityRequirement = i3,
                 IsMajorMilestone = true,
-                FictionalMonth = "APR 1986"
+                FictionalMonth = "APR 1986",
+                CoverAssetId = "issue04",
+                PricePennies = 150,
+                OnSaleAfterContractId = "career_first_game"
             },
             new MagazineIssue
             {
@@ -185,11 +209,10 @@ public static class MagazineCatalog
                 Teaser = "ADD ILLUSTRATIONS TO YOUR GAMES!",
                 FullDescription =
                     "PAINT IMAGES, PLACE THEM WITH IMAGE, BG AND FG, AND BUILD ATMOSPHERIC STORY GAMES AS WELL AS ARCADE ACTION.",
-                CoverGameId = "haunted_house_adventure",
-                CoverGameTitle = "HOUSE ON BLACKWELL HILL",
-                CoverGameDescription =
-                    "AN ILLUSTRATED MYSTERY. ABOUT 15-20 LOCATIONS. DISPLAY TITLE IS A WORKING PLACEHOLDER.",
-                CoverGameTitleIsWorkingTitle = true,
+                CoverGameId = "hell_house",
+                CoverGameTitle = "HELL HOUSE",
+                CoverGameDescription = "AN ILLUSTRATED ADVENTURE.",
+                CoverGameTitleIsWorkingTitle = false,
                 ConceptsIntroduced = new[]
                 {
                     "IMAGE ASSETS", "IMAGE SIZES", "CATEGORIES", "FRAMES",
@@ -197,11 +220,14 @@ public static class MagazineCatalog
                 },
                 GrantedFeatures = new[] { FeatureId.Images },
                 ManualSectionsUnlocked = new[] { "Images" },
+                PublisherUnlockIds = new[] { "publisher_adventure_01" },
                 PreviousIssueId = i4,
                 NextIssueId = i6,
                 AvailabilityRequirement = i4,
                 IsMajorMilestone = true,
-                FictionalMonth = "MAY 1986"
+                FictionalMonth = "MAY 1986",
+                CoverAssetId = "issue05",
+                PricePennies = 150
             },
             new MagazineIssue
             {
@@ -228,7 +254,9 @@ public static class MagazineCatalog
                 NextIssueId = i7,
                 AvailabilityRequirement = i5,
                 IsMajorMilestone = true,
-                FictionalMonth = "JUN 1986"
+                FictionalMonth = "JUN 1986",
+                CoverAssetId = "issue06",
+                PricePennies = 175
             },
             new MagazineIssue
             {
@@ -255,7 +283,9 @@ public static class MagazineCatalog
                 NextIssueId = i8,
                 AvailabilityRequirement = i6,
                 IsMajorMilestone = true,
-                FictionalMonth = "JUL 1986"
+                FictionalMonth = "JUL 1986",
+                CoverAssetId = "issue07",
+                PricePennies = 175
             },
             new MagazineIssue
             {
@@ -277,11 +307,14 @@ public static class MagazineCatalog
                 },
                 GrantedFeatures = new[] { FeatureId.Networking },
                 ManualSectionsUnlocked = new[] { "Network1" },
+                PublisherUnlockIds = new[] { "publisher_technical_01" },
                 PreviousIssueId = i7,
                 NextIssueId = i9,
                 AvailabilityRequirement = i7,
                 IsMajorMilestone = true,
-                FictionalMonth = "AUG 1986"
+                FictionalMonth = "AUG 1986",
+                CoverAssetId = "issue08",
+                PricePennies = 200
             },
             new MagazineIssue
             {
@@ -291,23 +324,24 @@ public static class MagazineCatalog
                 CoverHeadline = "MAKE A COMMERCIAL GAME!",
                 Teaser = "TITLE SCREENS. DIFFICULTY. PACKAGING. FINISH SOMETHING REAL.",
                 FullDescription =
-                    "NO NEW EDITOR. COMBINE EVERYTHING YOU KNOW INTO A COMPLETE, POLISHED RELEASE — THE SORT OF TAPE A SERIOUS HOUSE MIGHT TAKE SERIOUSLY.",
+                    "NO NEW EDITOR. COMBINE EVERYTHING YOU KNOW INTO A COMPLETE, POLISHED RELEASE - THE SORT OF TAPE A SERIOUS HOUSE MIGHT TAKE SERIOUSLY.",
                 CoverGameId = "caverns_of_centauri",
                 CoverGameTitle = "CAVERNS OF CENTAURI",
-                CoverGameDescription = "A SUBSTANTIAL MULTI-SCREEN ARCADE ADVENTURE. DESIGN COMES LATER.",
-                CoverGameTitleIsWorkingTitle = true,
+                CoverGameDescription = "A FULL-SIZE ARCADE ADVENTURE.",
+                CoverGameTitleIsWorkingTitle = false,
                 ConceptsIntroduced = new[]
                 {
                     "TITLE SCREENS", "INSTRUCTIONS", "DIFFICULTY CURVES",
                     "GAME-OVER / WIN STATES", "POLISH", "METADATA", "COVER ARTWORK"
                 },
                 GrantedFeatures = Array.Empty<FeatureId>(),
-                PublisherUnlockIds = new[] { "publisher_arcade_01" },
                 PreviousIssueId = i8,
                 NextIssueId = i10,
                 AvailabilityRequirement = i8,
                 IsMajorMilestone = true,
-                FictionalMonth = "SEP 1986"
+                FictionalMonth = "SEP 1986",
+                CoverAssetId = "issue09",
+                PricePennies = 200
             },
             new MagazineIssue
             {
@@ -317,11 +351,11 @@ public static class MagazineCatalog
                 CoverHeadline = "INSIDE YOUR CENTAURI64!",
                 Teaser = "CUSTOM ASSETS. SECRET VIDEO TRICKS. PUSH YOUR MACHINE BEYOND ITS LIMITS...",
                 FullDescription =
-                    "YOU KNOW HOW TO USE THE MACHINE. THIS ISSUE BEGINS TO ASK HOW TO PUSH IT. CUSTOM FONTS, IMPORTED ART AND SAFE LOW-LEVEL VIDEO TRICKS — NOT ARBITRARY MACHINE CODE.",
+                    "YOU KNOW HOW TO USE THE MACHINE. THIS ISSUE BEGINS TO ASK HOW TO PUSH IT. CUSTOM FONTS, IMPORTED ART AND SAFE LOW-LEVEL VIDEO TRICKS - NOT ARBITRARY MACHINE CODE.",
                 CoverGameId = "neon_runner",
                 CoverGameTitle = "NEON RUNNER",
-                CoverGameDescription = "A FAST ARCADE SHOWCASE FOR EFFECTS THAT LOOK IMPOSSIBLE ON PAPER.",
-                CoverGameTitleIsWorkingTitle = true,
+                CoverGameDescription = "PUSH YOUR CENTAURI64 TO THE LIMIT.",
+                CoverGameTitleIsWorkingTitle = false,
                 ConceptsIntroduced = new[]
                 {
                     "CUSTOM BITMAP FONTS", "IMPORTED IMAGES",
@@ -332,7 +366,9 @@ public static class MagazineCatalog
                 PreviousIssueId = i9,
                 AvailabilityRequirement = i9,
                 IsMajorMilestone = true,
-                FictionalMonth = "OCT 1986"
+                FictionalMonth = "OCT 1986",
+                CoverAssetId = "issue10",
+                PricePennies = 225
             }
         };
     }

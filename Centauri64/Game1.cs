@@ -29,6 +29,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
     private RenderTarget2D _gameRenderTarget = null!;
 
     private BitmapFont _font = null!;
+    private PrintFonts _printFonts = null!;
 
     private TextConsole _console = null!;
     private TextConsole _programConsole = null!;
@@ -158,6 +159,10 @@ public class Game1 : Microsoft.Xna.Framework.Game
         var fontTexture = Content.Load<Texture2D>("Fonts/centauri64-font");
 
         _font           = new BitmapFont(fontTexture);
+        _printFonts = new PrintFonts(
+            Content.Load<SpriteFont>("Fonts/print-title"),
+            Content.Load<SpriteFont>("Fonts/print-body"),
+            Content.Load<SpriteFont>("Fonts/print-caption"));
 
         _console        = new TextConsole(80, CODE_EDITOR_ROWS);
         _programConsole = new TextConsole(80, 60);
@@ -193,7 +198,12 @@ public class Game1 : Microsoft.Xna.Framework.Game
             cassetteSideA,
             _basicMachine);
 
-        _magazinesScreen = new MagazinesScreen(_font, _pixel, _basicMachine, _career);
+        _magazinesScreen = new MagazinesScreen(
+            _pixel,
+            _basicMachine,
+            _career,
+            GraphicsDevice,
+            _printFonts);
         _mailScreen = new MailScreen(_font, _pixel, _career);
         _settingsScreen = new SettingsScreen(
             _font,
@@ -205,7 +215,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
         _historicalIntro = new HistoricalIntroScreen(_font, _pixel);
         _modeSelect = new ModeSelectScreen(_font, _pixel);
         _careerName = new CareerNameScreen(_font, _pixel);
-        _bundleSelect = new BundleSelectScreen(_font, _pixel);
+        _bundleSelect = new BundleSelectScreen(_printFonts, _pixel);
         _systemMenu = new SystemMenuScreen(_font, _pixel);
         _confirmType = new ConfirmTypeScreen(_font, _pixel);
 
@@ -817,7 +827,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         if (_gameMode == GameMode.BundleSelect)
         {
-            _bundleSelect.Update(gameTime, virtualMouse);
+            _bundleSelect.Update(gameTime, GetMetaMouse());
             _previousKeyboardState = keyboardState;
             base.Update(gameTime);
             return;
@@ -873,7 +883,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         if (_gameMode == GameMode.Magazines)
         {
-            _magazinesScreen.Update(gameTime);
+            _magazinesScreen.Update(gameTime, GetMetaMouse());
 
             _previousKeyboardState = keyboardState;
 
@@ -1123,11 +1133,8 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     private void DrawMagazines()
     {
-        GraphicsDevice.SetRenderTarget(_codeEditorRenderTarget);
-        GraphicsDevice.Clear(Color.Black);
-        _magazinesScreen.Draw(_spriteBatch);
-        GraphicsDevice.SetRenderTarget(null);
-        DrawRenderTargetToWindow(_codeEditorRenderTarget);
+        DrawMetaScreen((spriteBatch, transform) =>
+            _magazinesScreen.Draw(spriteBatch, transform));
     }
 
     private void DrawMail()
@@ -1180,7 +1187,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         if (_gameMode == GameMode.BundleSelect)
         {
-            DrawBootScreen(sb => _bundleSelect.Draw(sb));
+            DrawMetaScreen((sb, transform) => _bundleSelect.Draw(sb, transform));
             base.Draw(gameTime);
             return;
         }
@@ -1426,6 +1433,40 @@ public class Game1 : Microsoft.Xna.Framework.Game
         DrawRenderTargetToWindow(
             _gameRenderTarget,
             applyCrt: true);
+    }
+
+    private MouseState GetMetaMouse()
+    {
+        var viewport = GraphicsDevice.Viewport;
+        return MetaUi.ToLogical(
+            Mouse.GetState(),
+            MetaUi.Destination(viewport.Width, viewport.Height));
+    }
+
+    private void DrawMetaScreen(Action<SpriteBatch, Matrix> draw)
+    {
+        GraphicsDevice.SetRenderTarget(null);
+        GraphicsDevice.Clear(new Color(18, 14, 10));
+        var viewport = GraphicsDevice.Viewport;
+        var destination = MetaUi.Destination(viewport.Width, viewport.Height);
+        draw(_spriteBatch, MetaUi.Transform(destination));
+
+        if (_fade <= 0f)
+            return;
+
+        _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+        _spriteBatch.Draw(
+            _pixel,
+            new Rectangle(0, 0, viewport.Width, viewport.Height),
+            Color.Black * _fade);
+        if (_fade >= 0.55f && !string.IsNullOrEmpty(_fadeCaption))
+        {
+            var x = (viewport.Width - _fadeCaption.Length * 8) / 2;
+            var y = viewport.Height / 2 - 8;
+            _font.Draw(_spriteBatch, _fadeCaption, new Vector2(x, y), Color.White);
+        }
+
+        _spriteBatch.End();
     }
 
     private MouseState GetVirtualMouse(int virtualWidth, int virtualHeight)

@@ -52,6 +52,11 @@ public sealed class SubmissionContract
     public bool Repeatable { get; init; }
 
     /// <summary>
+    /// Extra magazine-issue gate (1–10). 0 means publisher presence only.
+    /// </summary>
+    public int AvailableFromIssue { get; init; }
+
+    /// <summary>
     /// Contract IDs that must be completed before this one is available.
     /// </summary>
     public string[] PrerequisiteContractIds { get; init; } =

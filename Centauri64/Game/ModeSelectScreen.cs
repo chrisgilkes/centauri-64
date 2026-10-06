@@ -81,15 +81,22 @@ public sealed class ModeSelectScreen
         spriteBatch.Begin(samplerState: SamplerState.PointClamp);
         BootUi.DrawBox(spriteBatch, _pixel,
             new Rectangle(0, 0, CentauriMachine.DEVELOPMENT_WIDTH, CentauriMachine.DEVELOPMENT_HEIGHT),
-            BootUi.Background);
+            SystemUi.Background);
 
-        BootUi.DrawBox(spriteBatch, _pixel, new Rectangle(16, 16, 608, 40), BootUi.Header);
-        BootUi.DrawText(_font, spriteBatch, "WELCOME TO CENTAURI64", 216, 28, Color.White);
+        spriteBatch.Draw(_pixel, new Rectangle(40, 28, 560, 1), SystemUi.Line);
+        BootUi.DrawText(_font, spriteBatch, "CENTAURI64", 40, 40, SystemUi.Green);
+        BootUi.DrawText(_font, spriteBatch, "SYSTEM", 520, 40, SystemUi.Muted);
+        spriteBatch.Draw(_pixel, new Rectangle(40, 64, 560, 1), SystemUi.Line);
 
-        BootUi.DrawText(_font, spriteBatch, "BEDROOM CODER", 64, 72,
-            !_hardcore ? BootUi.Yellow : BootUi.Muted);
-        BootUi.DrawText(_font, spriteBatch, "HARDCORE CODER", 400, 72,
-            _hardcore ? BootUi.Yellow : BootUi.Muted);
+        BootUi.DrawText(_font, spriteBatch, "BEDROOM CODER", 40, 80,
+            !_hardcore ? SystemUi.Amber : SystemUi.Muted);
+        BootUi.DrawText(_font, spriteBatch, "HARDCORE CODER", 392, 80,
+            _hardcore ? SystemUi.Amber : SystemUi.Muted);
+
+        if (!_hardcore)
+            spriteBatch.Draw(_pixel, new Rectangle(40, 100, 136, 2), SystemUi.Amber);
+        else
+            spriteBatch.Draw(_pixel, new Rectangle(392, 100, 144, 2), SystemUi.Amber);
 
         DrawBedroomColumn(spriteBatch);
         DrawHardcoreColumn(spriteBatch);
@@ -97,9 +104,9 @@ public sealed class ModeSelectScreen
         var flavour = _hardcore
             ? "EVERYTHING UNLOCKED FROM THE START. NO CAREER. JUST PROGRAM."
             : "START IN 1986. LEARN TO PROGRAM. BUILD GAMES. BUILD YOUR CAREER.";
-        BootUi.DrawBox(spriteBatch, _pixel, new Rectangle(16, 400, 608, 64), BootUi.Header);
-        BootUi.DrawText(_font, spriteBatch, flavour, 32, 412, BootUi.Cream);
-        BootUi.DrawText(_font, spriteBatch, "ARROWS MOVE   ENTER SELECT   DEL DELETE SLOT   MOUSE CLICK", 32, 436, BootUi.Muted);
+        spriteBatch.Draw(_pixel, new Rectangle(40, 396, 560, 1), SystemUi.Line);
+        BootUi.DrawText(_font, spriteBatch, flavour, 40, 412, SystemUi.Text);
+        BootUi.DrawText(_font, spriteBatch, "ARROWS MOVE   ENTER SELECT   DEL DELETE SLOT   MOUSE CLICK", 40, 440, SystemUi.Muted);
         spriteBatch.End();
     }
 
@@ -108,22 +115,22 @@ public sealed class ModeSelectScreen
         for (var i = 0; i < _slots.Count; i++)
         {
             var slot = _slots[i];
-            var y = 104 + i * 88;
             var bounds = SlotBounds(i);
             var selected = !_hardcore && i == _slotIndex;
-            BootUi.DrawBox(spriteBatch, _pixel, bounds, selected ? BootUi.Highlight : BootUi.Panel);
-            BootUi.DrawBorder(spriteBatch, _pixel, bounds, selected ? BootUi.Yellow : BootUi.Cyan);
+            BootUi.DrawBox(spriteBatch, _pixel, bounds, selected ? SystemUi.Highlight : SystemUi.Panel);
+            BootUi.DrawBorder(spriteBatch, _pixel, bounds, selected ? SystemUi.Amber : SystemUi.Line);
 
+            var marker = selected ? ">" : " ";
             if (!slot.Occupied)
             {
-                BootUi.DrawText(_font, spriteBatch, "NEW CAREER", bounds.X + 16, y + 28, BootUi.Cream);
+                BootUi.DrawText(_font, spriteBatch, marker + " NEW CAREER", bounds.X + 12, bounds.Y + 28, SystemUi.Text);
                 continue;
             }
 
-            BootUi.DrawText(_font, spriteBatch, slot.Name, bounds.X + 16, y + 12, Color.White);
-            BootUi.DrawText(_font, spriteBatch, slot.Rank, bounds.X + 16, y + 32, BootUi.Cyan);
+            BootUi.DrawText(_font, spriteBatch, marker + " " + slot.Name, bounds.X + 12, bounds.Y + 12, SystemUi.Text);
+            BootUi.DrawText(_font, spriteBatch, slot.Rank, bounds.X + 28, bounds.Y + 32, SystemUi.Green);
             BootUi.DrawText(_font, spriteBatch, PlayerProgress.FormatPounds(slot.CashPennies),
-                bounds.X + 16, y + 52, BootUi.Yellow);
+                bounds.X + 28, bounds.Y + 52, SystemUi.Amber);
         }
     }
 
@@ -131,14 +138,14 @@ public sealed class ModeSelectScreen
     {
         var bounds = HardcoreBounds();
         var selected = _hardcore;
-        BootUi.DrawBox(spriteBatch, _pixel, bounds, selected ? BootUi.Highlight : BootUi.Panel);
-        BootUi.DrawBorder(spriteBatch, _pixel, bounds, selected ? BootUi.Yellow : BootUi.Cyan);
+        BootUi.DrawBox(spriteBatch, _pixel, bounds, selected ? SystemUi.Highlight : SystemUi.Panel);
+        BootUi.DrawBorder(spriteBatch, _pixel, bounds, selected ? SystemUi.Amber : SystemUi.Line);
 
-        BootUi.DrawText(_font, spriteBatch, "CENTAURI64", bounds.X + 40, 160, Color.White);
-        BootUi.DrawText(_font, spriteBatch, "EVERYTHING UNLOCKED", bounds.X + 16, 200, BootUi.Yellow);
-        BootUi.DrawText(_font, spriteBatch, "NO CAREER", bounds.X + 56, 232, BootUi.Cream);
-        BootUi.DrawText(_font, spriteBatch, "NO PROGRESSION", bounds.X + 32, 256, BootUi.Cream);
-        BootUi.DrawText(_font, spriteBatch, "JUST PROGRAM.", bounds.X + 40, 304, BootUi.Cyan);
+        BootUi.DrawText(_font, spriteBatch, "CENTAURI64", bounds.X + 40, 160, SystemUi.Text);
+        BootUi.DrawText(_font, spriteBatch, "EVERYTHING UNLOCKED", bounds.X + 16, 200, SystemUi.Amber);
+        BootUi.DrawText(_font, spriteBatch, "NO CAREER", bounds.X + 56, 232, SystemUi.Muted);
+        BootUi.DrawText(_font, spriteBatch, "NO PROGRESSION", bounds.X + 32, 256, SystemUi.Muted);
+        BootUi.DrawText(_font, spriteBatch, "JUST PROGRAM.", bounds.X + 40, 304, SystemUi.Green);
     }
 
     private void HandleMouse(MouseState mouse)

@@ -21,6 +21,9 @@ public static class PublisherCatalog
                 Name = "CENTAURI USER",
                 ShortName = "CENTAURI USER",
                 Type = OrganisationType.Magazine,
+                AvailableFromIssue = 1,
+                AdvertStyle = PrintAdvertStyle.Plain,
+                PrintAccentIndex = 2,
                 Tagline = "BEGINNER MAGAZINE FOR BEDROOM PROGRAMMERS",
                 Description = "READER CHALLENGES AND FIRST PROGRAMS.",
                 SubmissionReceivedText =
@@ -36,6 +39,10 @@ public static class PublisherCatalog
                 Name = "NOVABYTE SOFTWARE",
                 ShortName = "NOVABYTE",
                 Type = OrganisationType.SoftwareHouse,
+                AvailableFromIssue = 2,
+                AdvertStyle = PrintAdvertStyle.Bold,
+                PrintAccentIndex = 8,
+                ArrivalNotice = "NOVABYTE ANNOUNCES CENTAURI64 SUPPORT!",
                 Tagline = "COLOURFUL ARCADE GAMES",
                 Description = "ARCADE AND ACTION SOFTWARE.",
                 SubmissionReceivedText =
@@ -51,6 +58,10 @@ public static class PublisherCatalog
                 Name = "QUILL & LANTERN",
                 ShortName = "QUILL & LANTERN",
                 Type = OrganisationType.SoftwareHouse,
+                AvailableFromIssue = 5,
+                AdvertStyle = PrintAdvertStyle.Ornate,
+                PrintAccentIndex = 9,
+                ArrivalNotice = "QUILL & LANTERN SEEKS CENTAURI64 AUTHORS.",
                 Tagline = "ADVENTURES AND STORIES",
                 Description = "TEXT ADVENTURES AND NARRATIVE GAMES.",
                 SubmissionReceivedText =
@@ -66,6 +77,10 @@ public static class PublisherCatalog
                 Name = "MICROMOTH SOFTWARE",
                 ShortName = "MICROMOTH",
                 Type = OrganisationType.SoftwareHouse,
+                AvailableFromIssue = 4,
+                AdvertStyle = PrintAdvertStyle.Plain,
+                PrintAccentIndex = 21,
+                ArrivalNotice = "MICROMOTH SOFTWARE OPENS A CENTAURI64 DESK.",
                 Tagline = "PUZZLES AND ODD EXPERIMENTS",
                 Description = "PUZZLE, STRATEGY AND EXPERIMENTAL SOFTWARE.",
                 SubmissionReceivedText =
@@ -81,6 +96,10 @@ public static class PublisherCatalog
                 Name = "VECTOR CROWN",
                 ShortName = "VECTOR CROWN",
                 Type = OrganisationType.SoftwareHouse,
+                AvailableFromIssue = 8,
+                AdvertStyle = PrintAdvertStyle.Technical,
+                PrintAccentIndex = 6,
+                ArrivalNotice = "VECTOR CROWN COMMISSIONS NETWORK SOFTWARE.",
                 Tagline = "TECHNICAL AND NETWORK GAMES",
                 Description = "AMBITIOUS CENTAURI64 SOFTWARE.",
                 SubmissionReceivedText =
@@ -105,6 +124,7 @@ public static class PublisherCatalog
                     "HAVE YOU WRITTEN YOUR FIRST\nCENTAURI64 PROGRAM?\n\nWE WANT TO SEE IT!\n\nIT DOESN'T NEED GRAPHICS,\nSOUND OR FANCY SPRITES.\n\nIF YOU'VE MADE SOMETHING RUN,\nSEND US YOUR TAPE.",
                 RewardPennies = 200,
                 Repeatable = false,
+                AvailableFromIssue = 1,
                 Requirements = new SubmissionRequirements
                 {
                     ProgramValid = true,
@@ -121,6 +141,7 @@ public static class PublisherCatalog
                     "CAN YOU WRITE A PROGRAM\nTHAT RESPONDS TO THE PLAYER?",
                 RewardPennies = 350,
                 Repeatable = false,
+                AvailableFromIssue = 1,
                 PrerequisiteContractIds = new[] { "career_first_program" },
                 Requirements = new SubmissionRequirements
                 {
@@ -139,6 +160,7 @@ public static class PublisherCatalog
                     "USE THE SCREEN!\n\nDRAW WITH GRAPHICS COMMANDS\nOR PLACE A SPRITE.",
                 RewardPennies = 500,
                 Repeatable = false,
+                AvailableFromIssue = 2,
                 PrerequisiteContractIds = new[] { "career_interactive_program" },
                 Requirements = new SubmissionRequirements
                 {
@@ -161,6 +183,7 @@ public static class PublisherCatalog
                     "A REAL GAME WITH INPUT,\nGRAPHICS OR SPRITES,\nAND A CASSETTE COVER.",
                 RewardPennies = 750,
                 Repeatable = false,
+                AvailableFromIssue = 3,
                 PrerequisiteContractIds = new[] { "career_graphical_program" },
                 Requirements = new SubmissionRequirements
                 {
@@ -185,6 +208,7 @@ public static class PublisherCatalog
                     "WE WANT FUN ARCADE ACTION\nFOR THE CENTAURI64.\n\nGRAPHICS OR SPRITES WELCOME.",
                 RewardPennies = 1250,
                 Repeatable = false,
+                AvailableFromIssue = 2,
                 PrerequisiteContractIds = new[] { "career_first_game" },
                 Requirements = new SubmissionRequirements
                 {
@@ -217,6 +241,7 @@ public static class PublisherCatalog
                     "SHOW US WHAT YOU CAN DO\nWITH HARDWARE SPRITES.",
                 RewardPennies = 1750,
                 Repeatable = false,
+                AvailableFromIssue = 7,
                 PrerequisiteContractIds = new[] { "arcade_first_game" },
                 Requirements = new SubmissionRequirements
                 {
@@ -237,6 +262,7 @@ public static class PublisherCatalog
                     "TEXT ADVENTURES AND STORIES\nWANTED.\n\nGRAPHICS ARE NOT REQUIRED.",
                 RewardPennies = 1250,
                 Repeatable = false,
+                AvailableFromIssue = 5,
                 PrerequisiteContractIds = new[] { "career_first_game" },
                 Requirements = new SubmissionRequirements
                 {
@@ -260,6 +286,7 @@ public static class PublisherCatalog
                     "CAN YOU CREATE A COMPLETE\nTEXT ADVENTURE IN FEWER\nTHAN 1000 LINES OF BASIC?",
                 RewardPennies = 2500,
                 Repeatable = false,
+                AvailableFromIssue = 5,
                 PrerequisiteContractIds = new[] { "adventure_first_adventure" },
                 Requirements = new SubmissionRequirements
                 {
@@ -284,6 +311,7 @@ public static class PublisherCatalog
                     "PUZZLES, STRATEGY AND\nCURIOUS LITTLE EXPERIMENTS.",
                 RewardPennies = 1000,
                 Repeatable = false,
+                AvailableFromIssue = 4,
                 PrerequisiteContractIds = new[] { "career_first_game" },
                 Requirements = new SubmissionRequirements
                 {
@@ -304,6 +332,7 @@ public static class PublisherCatalog
                     "WE'RE LOOKING FOR THE NEXT\nGENERATION OF CENTAURI64\nSOFTWARE.\n\nTWO PLAYER NETWORK TITLES\nWANTED.",
                 RewardPennies = 2500,
                 Repeatable = false,
+                AvailableFromIssue = 8,
                 PrerequisiteContractIds = new[] { "career_first_game" },
                 Requirements = new SubmissionRequirements
                 {

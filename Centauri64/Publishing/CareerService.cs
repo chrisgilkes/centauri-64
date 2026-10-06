@@ -123,10 +123,31 @@ public sealed class CareerService
         return ContractAvailability.Available;
     }
 
+    public MagazinePurchaseResult TryPurchaseIssue(string issueId)
+    {
+        var career = GameSession.Career;
+        if (career == null)
+            return MagazinePurchaseResult.NoCareer;
+
+        var issue = MagazineCatalog.Find(issueId);
+        if (issue == null)
+            return MagazinePurchaseResult.NotOnSale;
+
+        var result = MagazineProgression.Purchase(career, issue);
+        if (result == MagazinePurchaseResult.Purchased)
+            SaveProgress(career.Progress);
+
+        return result;
+    }
+
     public IReadOnlyList<SubmissionContract> GetVisibleContracts(
         PlayerProgress? progress = null)
     {
         progress ??= LoadProgress();
+        var career = GameSession.Career;
+        var highest = career == null
+            ? 0
+            : MagazineProgression.HighestOwnedNumber(career);
         var list = new List<SubmissionContract>();
 
         foreach (var contract in PublisherCatalog.Contracts)
@@ -135,10 +156,45 @@ public sealed class CareerService
             if (availability == ContractAvailability.Locked)
                 continue;
 
+            if (career != null && !IsOnTheMarket(contract, career, highest))
+                continue;
+
             list.Add(contract);
         }
 
         return list;
+    }
+
+    public static bool IsOnTheMarket(
+        SubmissionContract contract,
+        CareerState career,
+        int highestOwned)
+    {
+        var organisation = PublisherCatalog.GetOrganisation(contract.OrganisationId);
+        if (organisation == null)
+            return false;
+
+        if (!PublisherIsPresent(organisation, career, highestOwned))
+            return false;
+
+        if (contract.AvailableFromIssue > 0 &&
+            highestOwned < contract.AvailableFromIssue)
+            return false;
+
+        return true;
+    }
+
+    public static bool PublisherIsPresent(
+        OrganisationDefinition organisation,
+        CareerState career,
+        int highestOwned)
+    {
+        if (career.UnlockedPublisherIds.Contains(
+                organisation.Id,
+                StringComparer.OrdinalIgnoreCase))
+            return true;
+
+        return highestOwned >= organisation.AvailableFromIssue;
     }
 
     public bool PrerequisitesMet(

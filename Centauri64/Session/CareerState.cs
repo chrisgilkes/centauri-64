@@ -93,6 +93,8 @@ public sealed class CareerState
 
         if (OwnedMagazineIds.Count == 0)
             MagazineProgression.EnsureStartingIssue(this);
+        else
+            MagazineProgression.OwnThrough(this, MagazineProgression.HighestOwnedNumber(this));
     }
 
     public IEnumerable<FeatureId> GetUnlockedFeatures()

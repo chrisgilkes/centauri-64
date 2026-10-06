@@ -1,6 +1,7 @@
 using System;
+using System.Linq;
 
-using Centauri64.Machine;
+using Centauri64.Progression;
 using Centauri64.Session;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -10,6 +11,14 @@ namespace Centauri64.Game;
 
 public sealed partial class MagazinesScreen
 {
+    private const int CoverColumns = 5;
+    private const int CoverWidth = 216;
+    private const int CoverHeight = 300;
+    private const int CoverGapX = 22;
+    private const int CoverGapY = 62;
+    private const int CoverOriginX = 48;
+    private const int CoverOriginY = 152;
+
     public event Action? CareerChanged;
 
     private void PersistCareer()
@@ -17,7 +26,16 @@ public sealed partial class MagazinesScreen
         CareerChanged?.Invoke();
     }
 
-    private void UpdateShelf(KeyboardState keyboard)
+    private Rectangle CoverBounds(int index)
+    {
+        var col = index % CoverColumns;
+        var row = index / CoverColumns;
+        var x = CoverOriginX + col * (CoverWidth + CoverGapX);
+        var y = CoverOriginY + row * (CoverHeight + CoverGapY);
+        return new Rectangle(x, y, CoverWidth, CoverHeight);
+    }
+
+    private void UpdateShelf(KeyboardState keyboard, MouseState mouse)
     {
         if (Pressed(keyboard, Keys.Escape))
         {
@@ -26,23 +44,24 @@ public sealed partial class MagazinesScreen
         }
 
         var issues = MagazineCatalog.Issues;
-        if (Pressed(keyboard, Keys.Up))
+        var columns = CoverColumns;
+
+        if (Pressed(keyboard, Keys.Left))
             _issueSelected = Math.Max(0, _issueSelected - 1);
 
-        if (Pressed(keyboard, Keys.Down))
+        if (Pressed(keyboard, Keys.Right))
             _issueSelected = Math.Min(issues.Length - 1, _issueSelected + 1);
 
-        const int visible = 8;
-        if (_issueSelected < _issueScroll)
-            _issueScroll = _issueSelected;
-        if (_issueSelected >= _issueScroll + visible)
-            _issueScroll = _issueSelected - visible + 1;
+        if (Pressed(keyboard, Keys.Up))
+            _issueSelected = Math.Max(0, _issueSelected - columns);
+
+        if (Pressed(keyboard, Keys.Down))
+            _issueSelected = Math.Min(issues.Length - 1, _issueSelected + columns);
+
+        HandleShelfMouse(mouse, issues.Length);
 
         if (Pressed(keyboard, Keys.Enter) || Pressed(keyboard, Keys.Space))
-        {
-            _issue = issues[_issueSelected];
-            _view = View.Issue;
-        }
+            OpenSelectedIssue();
 
         if (!_referenceLibrary && Pressed(keyboard, Keys.C))
         {
@@ -51,23 +70,67 @@ public sealed partial class MagazinesScreen
         }
     }
 
-    private void UpdateIssue(KeyboardState keyboard)
+    private void HandleShelfMouse(MouseState mouse, int issueCount)
+    {
+        for (var i = 0; i < issueCount; i++)
+        {
+            if (!CoverBounds(i).Contains(mouse.X, mouse.Y))
+                continue;
+
+            _issueSelected = i;
+            var clicked = mouse.LeftButton == ButtonState.Pressed &&
+                          _previousMouse.LeftButton == ButtonState.Released;
+            if (clicked)
+                OpenSelectedIssue();
+            return;
+        }
+    }
+
+    private void OpenSelectedIssue()
+    {
+        _issue = MagazineCatalog.Issues[_issueSelected];
+        _purchaseNotice = string.Empty;
+        _view = View.Issue;
+    }
+
+    private void UpdateIssue(KeyboardState keyboard, MouseState mouse)
     {
         if (Pressed(keyboard, Keys.Escape))
         {
             _view = View.Shelf;
             _issue = null;
+            _purchaseNotice = string.Empty;
             return;
         }
 
+        if (_referenceLibrary || _issue == null)
+            return;
+
+        if (CurrentState(_issue) != MagazineIssueState.OnSale)
+            return;
+
+        if (!Pressed(keyboard, Keys.Y) && !Pressed(keyboard, Keys.Enter))
+            return;
+
+        TryBuySelected();
+    }
+
+    private void TryBuySelected()
+    {
         if (_issue == null)
             return;
 
-        var state = CurrentState(_issue);
-        if (state == MagazineIssueState.Owned && Pressed(keyboard, Keys.Enter))
+        var result = _career.TryPurchaseIssue(_issue.Id);
+        _purchaseNotice = result switch
         {
-            // Summary is the readable content for this foundation phase.
-        }
+            MagazinePurchaseResult.Purchased => string.Empty,
+            MagazinePurchaseResult.CannotAfford => "NOT ENOUGH MONEY",
+            MagazinePurchaseResult.AlreadyOwned => string.Empty,
+            _ => "NOT ON SALE"
+        };
+
+        if (result == MagazinePurchaseResult.Purchased)
+            PersistCareer();
     }
 
     private MagazineIssueState CurrentState(MagazineIssue issue) =>
@@ -75,245 +138,310 @@ public sealed partial class MagazinesScreen
 
     private void DrawShelf(SpriteBatch spriteBatch)
     {
-        DrawText(spriteBatch, "CENTAURI64 MAGAZINE", 216, 24, Cream);
-        var subtitle = _referenceLibrary
-            ? "YEAR ONE  /  REFERENCE LIBRARY"
-            : "YEAR ONE  /  THE BEDROOM CODER";
-        DrawText(spriteBatch, subtitle, 200, 44, Cyan);
+        var kicker = _referenceLibrary
+            ? "REFERENCE LIBRARY"
+            : "YOUR CENTAURI64 MAGAZINES";
+        PrintTheme.DrawMasthead(
+            spriteBatch,
+            _whitePixel,
+            _print,
+            kicker,
+            "YEAR ONE",
+            MagazineProgression.EraLabel(GameSession.Career, _referenceLibrary));
 
-        var career = GameSession.Career;
-        var y = 72;
         var issues = MagazineCatalog.Issues;
-        const int visible = 8;
+        DrawSelectedIssueStrip(spriteBatch, issues[_issueSelected]);
 
-        for (var i = _issueScroll; i < issues.Length && i < _issueScroll + visible; i++)
-        {
-            var issue = issues[i];
-            var state = CurrentState(issue);
-            var selected = i == _issueSelected;
-            var marker = selected ? ">" : " ";
-            var colour = selected
-                ? Yellow
-                : state == MagazineIssueState.Owned
-                    ? Cream
-                    : state == MagazineIssueState.ComingNext
-                        ? Cyan
-                        : Muted;
-
-            var badge = state switch
-            {
-                MagazineIssueState.Owned => "IN",
-                MagazineIssueState.ComingNext => "NEXT",
-                _ => "LATER"
-            };
-
-            DrawText(
-                spriteBatch,
-                $"{marker} #{issue.IssueNumber}  {issue.CoverHeadline}",
-                32,
-                y,
-                colour);
-            DrawText(spriteBatch, badge, 560, y, colour);
-            y += 18;
-
-            if (selected)
-            {
-                var line = state == MagazineIssueState.Owned
-                    ? "COVER: " + issue.CoverGameTitle
-                    : state == MagazineIssueState.ComingNext
-                        ? issue.Teaser
-                        : DistantTeaser(issue);
-                DrawText(spriteBatch, WrapOne(line, 68), 48, y, Muted);
-                y += 20;
-            }
-        }
+        for (var i = 0; i < issues.Length; i++)
+            DrawShelfCover(spriteBatch, issues[i], CoverBounds(i), i == _issueSelected);
 
         var hint = _referenceLibrary
-            ? "UP DOWN    ENTER OPEN    ESC BACK"
-            : "UP DOWN    ENTER OPEN    C CLASSIFIEDS    ESC BACK";
-        DrawFooter(spriteBatch, hint);
+            ? "ARROWS    ENTER OPEN    ESC BACK"
+            : "ARROWS    ENTER OPEN    C CLASSIFIEDS    ESC BACK";
+        PrintTheme.Footer(spriteBatch, _whitePixel, _print, hint);
+    }
 
-        if (career != null && !_referenceLibrary)
+    private void DrawSelectedIssueStrip(SpriteBatch spriteBatch, MagazineIssue selected)
+    {
+        var month = string.IsNullOrEmpty(selected.FictionalMonth)
+            ? string.Empty
+            : selected.FictionalMonth;
+        var strip = string.IsNullOrEmpty(month)
+            ? "ISSUE " + selected.IssueNumber + "     " + selected.CoverHeadline
+            : "ISSUE " + selected.IssueNumber + "     " + month + "     " + selected.CoverHeadline;
+
+        _print.Draw(spriteBatch, _print.Caption, strip, 48, 114, PrintTheme.InkMuted);
+        PrintTheme.RuleH(spriteBatch, _whitePixel, 48, 136, MetaUi.Width - 96);
+    }
+
+    private void DrawShelfCover(
+        SpriteBatch spriteBatch,
+        MagazineIssue issue,
+        Rectangle bounds,
+        bool selected)
+    {
+        var state = CurrentState(issue);
+        DrawCover(spriteBatch, issue, bounds, CoverTint(state));
+
+        if (selected)
+            DrawSelectionMarker(spriteBatch, bounds);
+
+        var label = FictionLabel(issue, state);
+        var labelColour = CaptionColour(state, label);
+        _print.Draw(spriteBatch, _print.Caption, "ISSUE " + issue.IssueNumber, bounds.X, bounds.Bottom + 8, PrintTheme.Ink);
+        _print.Draw(spriteBatch, _print.Caption, label, bounds.X, bounds.Bottom + 28, labelColour);
+    }
+
+    private void DrawSelectionMarker(SpriteBatch spriteBatch, Rectangle bounds)
+    {
+        var outer = bounds;
+        outer.Inflate(5, 5);
+        var inner = bounds;
+        inner.Inflate(2, 2);
+        PrintTheme.Frame(spriteBatch, _whitePixel, outer, PrintTheme.Masthead, 2);
+        PrintTheme.Frame(spriteBatch, _whitePixel, inner, PrintTheme.Masthead, 1);
+    }
+
+    private static Color CoverTint(MagazineIssueState state)
+    {
+        // Modest only — future covers must stay colourful and readable.
+        if (state == MagazineIssueState.ComingLater)
+            return new Color(228, 222, 212);
+        if (state == MagazineIssueState.ComingNext)
+            return new Color(246, 244, 238);
+        return Color.White;
+    }
+
+    private static Color CaptionColour(MagazineIssueState state, string label)
+    {
+        if (state == MagazineIssueState.OnSale)
+            return PrintTheme.Masthead;
+        if (state == MagazineIssueState.ComingNext || label == "NEXT MONTH")
+            return PrintTheme.Masthead;
+        if (label == "CURRENT ISSUE")
+            return PrintTheme.SpotBlue;
+        return PrintTheme.InkMuted;
+    }
+
+    private string FictionLabel(MagazineIssue issue, MagazineIssueState state)
+    {
+        if (state == MagazineIssueState.OnSale)
+            return issue.PricePennies > 0
+                ? "ON SALE - " + PlayerProgress.FormatPounds(issue.PricePennies)
+                : "ON SALE";
+        if (state == MagazineIssueState.ComingNext)
+            return "NEXT MONTH";
+        if (state == MagazineIssueState.ComingLater)
+            return "NOT YET ON SALE";
+
+        if (_referenceLibrary)
+            return "ON THE SHELF";
+
+        // CURRENT ISSUE = fictional career month, not the selected cover.
+        var currentMonth = MagazineProgression.CalendarIssueNumber(GameSession.Career, false);
+        return issue.IssueNumber == currentMonth ? "CURRENT ISSUE" : "ON YOUR SHELF";
+    }
+
+    private void DrawCover(
+        SpriteBatch spriteBatch,
+        MagazineIssue issue,
+        Rectangle bounds,
+        Color tint)
+    {
+        var texture = _covers.Get(issue);
+        if (texture != null)
         {
-            var owned = MagazineProgression.HighestOwnedNumber(career);
-            DrawText(spriteBatch, "ISSUES ON THE SHELF: " + owned + " / 10", 400, 44, Yellow);
+            spriteBatch.End();
+            spriteBatch.Begin(
+                samplerState: SamplerState.LinearClamp,
+                transformMatrix: _uiTransform);
+            spriteBatch.Draw(texture, bounds, tint);
+            spriteBatch.End();
+            spriteBatch.Begin(
+                samplerState: SamplerState.PointClamp,
+                transformMatrix: _uiTransform);
+            PrintTheme.Frame(spriteBatch, _whitePixel, bounds, PrintTheme.Rule, 2);
+            return;
+        }
+
+        PrintTheme.Box(spriteBatch, _whitePixel, bounds, PrintTheme.PaperDark);
+        PrintTheme.Frame(spriteBatch, _whitePixel, bounds, PrintTheme.Masthead, 2);
+        PrintTheme.Box(
+            spriteBatch,
+            _whitePixel,
+            new Rectangle(bounds.X, bounds.Y, bounds.Width, 28),
+            PrintTheme.Masthead);
+        _print.Draw(spriteBatch, _print.Caption, "CENTAURI64", bounds.X + 12, bounds.Y + 6, PrintTheme.Paper);
+        _print.Draw(
+            spriteBatch,
+            _print.Body,
+            "ISSUE " + issue.IssueNumber.ToString("00"),
+            bounds.X + 12,
+            bounds.Y + 44,
+            PrintTheme.Ink);
+
+        var y = bounds.Y + 80;
+        foreach (var line in PrintFonts.Wrap(_print.Title, issue.CoverHeadline, bounds.Width - 24).Take(4))
+        {
+            _print.Draw(spriteBatch, _print.Title, line, bounds.X + 12, y, PrintTheme.Ink);
+            y += 34;
+        }
+
+        if (!string.IsNullOrEmpty(issue.FictionalMonth))
+        {
+            _print.Draw(
+                spriteBatch,
+                _print.Caption,
+                issue.FictionalMonth,
+                bounds.X + 12,
+                bounds.Bottom - 28,
+                PrintTheme.InkMuted);
         }
     }
 
+    /// <summary>
+    /// Temporary contents/teaser page. Later replaced by real magazine pages
+    /// using the same cover asset, print type, and meta UI transform.
+    /// </summary>
     private void DrawIssue(SpriteBatch spriteBatch)
     {
         if (_issue == null)
             return;
 
         var state = CurrentState(_issue);
-        DrawText(spriteBatch, "ISSUE #" + _issue.IssueNumber, 48, 24, Cream);
-        if (!string.IsNullOrEmpty(_issue.FictionalMonth))
-            DrawText(spriteBatch, _issue.FictionalMonth, 480, 24, Muted);
+        PrintTheme.DrawMasthead(
+            spriteBatch,
+            _whitePixel,
+            _print,
+            "CENTAURI64 MAGAZINE",
+            "ISSUE #" + _issue.IssueNumber,
+            _issue.FictionalMonth);
 
-        DrawText(spriteBatch, _issue.CoverHeadline, 48, 44, Yellow);
+        var cover = new Rectangle(48, 120, 420, 592);
+        DrawCover(spriteBatch, _issue, cover, CoverTint(state));
 
-        var y = 80;
-        var status = state switch
-        {
-            MagazineIssueState.Owned => _referenceLibrary ? "IN THE LIBRARY" : "AVAILABLE NOW",
-            MagazineIssueState.ComingNext => "COMING NEXT",
-            _ => "COMING LATER"
-        };
-        DrawText(spriteBatch, status, 48, y, Cyan);
-        y += 24;
+        var y = 120;
+        var textX = 500;
+        var textWidth = MetaUi.Width - textX - 48;
+        _print.Draw(spriteBatch, _print.Title, _issue.CoverHeadline, textX, y, PrintTheme.Ink);
+        y += 48;
+        _print.Draw(spriteBatch, _print.Body, FictionLabel(_issue, state), textX, y, PrintTheme.Masthead);
+        y += 40;
 
         if (state == MagazineIssueState.Owned)
-            DrawOwnedIssue(spriteBatch, ref y);
-        else if (state == MagazineIssueState.ComingNext)
-            DrawNextIssue(spriteBatch, ref y);
+            DrawOwnedIssue(spriteBatch, textX, textWidth, ref y);
+        else if (state == MagazineIssueState.OnSale)
+            DrawOnSaleIssue(spriteBatch, textX, textWidth, ref y);
         else
-            DrawLaterIssue(spriteBatch, ref y);
+            DrawFutureIssue(spriteBatch, textX, textWidth, ref y, state);
 
-        DrawFooter(spriteBatch, "ESC BACK TO SHELF");
+        var footer = state == MagazineIssueState.OnSale && !_referenceLibrary
+            ? "Y BUY THIS ISSUE    ESC BACK TO SHELF"
+            : "ESC BACK TO SHELF";
+        PrintTheme.Footer(spriteBatch, _whitePixel, _print, footer);
     }
 
-    private void DrawOwnedIssue(SpriteBatch spriteBatch, ref int y)
+    private void DrawOnSaleIssue(SpriteBatch spriteBatch, int x, int width, ref int y)
     {
-        DrawText(spriteBatch, "COVER TAPE", 48, y, Cyan);
-        y += 18;
-        DrawText(spriteBatch, _issue!.CoverGameTitle, 48, y, Yellow);
-        y += 18;
-        foreach (var line in Wrap(_issue.CoverGameDescription, 68))
+        var cash = GameSession.Career?.Progress.CashPennies ?? 0;
+        var price = Math.Max(0, _issue!.PricePennies);
+
+        foreach (var line in PrintFonts.Wrap(_print.Body, _issue.Teaser, width).Take(5))
         {
-            DrawText(spriteBatch, line, 48, y, Cream);
-            y += 16;
+            _print.Draw(spriteBatch, _print.Body, line, x, y, PrintTheme.Ink);
+            y += 28;
         }
 
-        y += 8;
-        DrawText(spriteBatch, "THIS ISSUE:", 48, y, Cyan);
-        y += 18;
-        foreach (var line in Wrap(_issue.FullDescription, 68))
-        {
-            DrawText(spriteBatch, line, 48, y, Cream);
-            y += 16;
-        }
+        y += 20;
+        _print.Draw(spriteBatch, _print.Caption, "COVER TAPE", x, y, PrintTheme.Masthead);
+        y += 28;
+        _print.Draw(spriteBatch, _print.Title, _issue.CoverGameTitle, x, y, PrintTheme.Ink);
+        y += 40;
+        _print.Draw(spriteBatch, _print.Body, "NOW ON SALE", x, y, PrintTheme.Masthead);
+        y += 36;
+        _print.Draw(spriteBatch, _print.Body, "PRICE ........ " + PlayerProgress.FormatPounds(price), x, y, PrintTheme.Ink);
+        y += 28;
+        _print.Draw(spriteBatch, _print.Body, "YOU HAVE ..... " + PlayerProgress.FormatPounds(cash), x, y, PrintTheme.Ink);
+        y += 40;
 
-        if (_issue.ConceptsIntroduced.Count > 0 && y < 300)
-        {
-            y += 6;
-            DrawText(spriteBatch, "LEARN:", 48, y, Cyan);
-            y += 18;
-            var learn = string.Join("  •  ", _issue.ConceptsIntroduced);
-            foreach (var line in Wrap(learn, 68))
-            {
-                if (y > 360)
-                    break;
-                DrawText(spriteBatch, line, 48, y, Cream);
-                y += 16;
-            }
-        }
+        if (cash < price)
+            _print.Draw(spriteBatch, _print.Body, "NOT ENOUGH MONEY", x, y, PrintTheme.Stamp);
+        else
+            _print.Draw(spriteBatch, _print.Body, "Y  BUY THIS ISSUE", x, y, PrintTheme.Ink);
 
-        if (_issue.GrantedFeatures.Count > 0)
+        if (!string.IsNullOrEmpty(_purchaseNotice))
         {
-            y += 6;
-            DrawText(spriteBatch, "NEW:", 48, y, Cyan);
-            y += 18;
-            DrawText(spriteBatch, FeatureLabel(_issue.GrantedFeatures[0]), 48, y, Yellow);
-            y += 18;
-        }
-
-        var next = MagazineCatalog.Next(_issue);
-        if (next != null && y < 390)
-        {
-            y += 8;
-            DrawText(spriteBatch, "NEXT ISSUE  " + next.CoverHeadline, 48, y, Cyan);
-            y += 16;
-            DrawText(spriteBatch, WrapOne(next.Teaser, 68), 48, y, Muted);
+            y += 32;
+            _print.Draw(spriteBatch, _print.Body, _purchaseNotice, x, y, PrintTheme.Stamp);
         }
     }
 
-    private void DrawNextIssue(SpriteBatch spriteBatch, ref int y)
+    private void DrawOwnedIssue(SpriteBatch spriteBatch, int x, int width, ref int y)
     {
-        DrawText(spriteBatch, "COVER TAPE", 48, y, Cyan);
-        y += 18;
-        DrawText(spriteBatch, _issue!.CoverGameTitle, 48, y, Yellow);
-        y += 22;
-        foreach (var line in Wrap(_issue.Teaser, 68))
+        _print.Draw(spriteBatch, _print.Caption, "CONTENTS", x, y, PrintTheme.SpotBlue);
+        y += 28;
+        foreach (var line in PrintFonts.Wrap(_print.Body, _issue!.FullDescription, width).Take(8))
         {
-            DrawText(spriteBatch, line, 48, y, Cream);
-            y += 16;
-        }
-
-        y += 12;
-        DrawText(spriteBatch, "KEEP PROGRAMMING!", 48, y, Yellow);
-        y += 18;
-        DrawText(spriteBatch, "NEW ISSUES ARRIVE AS YOUR CAREER DEVELOPS.", 48, y, Muted);
-    }
-
-    private void DrawLaterIssue(SpriteBatch spriteBatch, ref int y)
-    {
-        foreach (var line in Wrap(DistantTeaser(_issue!), 68))
-        {
-            DrawText(spriteBatch, line, 48, y, Cream);
-            y += 18;
+            _print.Draw(spriteBatch, _print.Body, line, x, y, PrintTheme.Ink);
+            y += 26;
         }
 
         y += 16;
-        DrawText(spriteBatch, "KEEP PROGRAMMING!", 48, y, Muted);
-    }
-
-    private static string DistantTeaser(MagazineIssue issue)
-    {
-        if (issue.IssueNumber >= 10)
-            return issue.Teaser;
-
-        if (issue.IssueNumber >= 8)
-            return issue.Teaser;
-
-        return issue.CoverHeadline + "  —  " + issue.Teaser;
-    }
-
-    private static string FeatureLabel(FeatureId feature) =>
-        feature switch
+        _print.Draw(spriteBatch, _print.Caption, "COVER TAPE", x, y, PrintTheme.Masthead);
+        y += 28;
+        _print.Draw(spriteBatch, _print.Title, _issue.CoverGameTitle, x, y, PrintTheme.Ink);
+        y += 40;
+        foreach (var line in PrintFonts.Wrap(_print.Body, _issue.CoverGameDescription, width).Take(4))
         {
-            FeatureId.Graphics => "BASIC GRAPHICS",
-            FeatureId.Sprites => "SPRITE DESIGNER",
-            FeatureId.Maps => "MAP EDITOR",
-            FeatureId.Images => "IMAGE EDITOR",
-            FeatureId.Networking => "NETWORKING",
-            FeatureId.Arrays => "ARRAYS / BIGGER GAMES",
-            FeatureId.DataStatements => "DATA STATEMENTS",
-            FeatureId.CustomAssets => "CUSTOM ASSETS",
-            FeatureId.LowLevelMachine => "LOW-LEVEL VIDEO TRICKS",
-            _ => feature.ToString().ToUpperInvariant()
-        };
-
-    private static string WrapOne(string text, int width)
-    {
-        var lines = Wrap(text, width);
-        return lines.Length == 0 ? text : lines[0];
-    }
-
-    private static string[] Wrap(string text, int width)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return Array.Empty<string>();
-
-        var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var lines = new System.Collections.Generic.List<string>();
-        var current = "";
-        foreach (var word in words)
-        {
-            var next = current.Length == 0 ? word : current + " " + word;
-            if (next.Length > width && current.Length > 0)
-            {
-                lines.Add(current);
-                current = word;
-            }
-            else
-            {
-                current = next;
-            }
+            _print.Draw(spriteBatch, _print.Caption, line, x, y, PrintTheme.InkMuted);
+            y += 24;
         }
 
-        if (current.Length > 0)
-            lines.Add(current);
+        y += 16;
+        _print.Draw(
+            spriteBatch,
+            _print.Caption,
+            "Pages of this issue will appear here in a later printing.",
+            x,
+            Math.Min(y, 820),
+            PrintTheme.InkMuted);
+    }
 
-        return lines.ToArray();
+    private void DrawFutureIssue(
+        SpriteBatch spriteBatch,
+        int x,
+        int width,
+        ref int y,
+        MagazineIssueState state)
+    {
+        _print.Draw(
+            spriteBatch,
+            _print.Body,
+            state == MagazineIssueState.ComingNext ? "COMING SOON" : "NOT YET ON SALE",
+            x,
+            y,
+            PrintTheme.Stamp);
+        y += 36;
+
+        foreach (var line in PrintFonts.Wrap(_print.Body, _issue!.Teaser, width).Take(5))
+        {
+            _print.Draw(spriteBatch, _print.Body, line, x, y, PrintTheme.Ink);
+            y += 28;
+        }
+
+        y += 20;
+        _print.Draw(spriteBatch, _print.Caption, "COVER TAPE", x, y, PrintTheme.Masthead);
+        y += 28;
+        _print.Draw(spriteBatch, _print.Title, _issue.CoverGameTitle, x, y, PrintTheme.Ink);
+        y += 40;
+        _print.Draw(spriteBatch, _print.Caption, "NOT YET ON SALE", x, y, PrintTheme.InkMuted);
+        y += 28;
+        _print.Draw(
+            spriteBatch,
+            _print.Caption,
+            "Keep programming. New issues go on sale with your career.",
+            x,
+            y,
+            PrintTheme.InkMuted);
     }
 }

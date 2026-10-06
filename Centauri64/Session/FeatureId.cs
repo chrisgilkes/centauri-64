@@ -22,6 +22,7 @@ public enum FeatureId
 public enum MagazineIssueState
 {
     Owned,
+    OnSale,
     ComingNext,
     ComingLater
 }

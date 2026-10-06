@@ -29,5 +29,6 @@
   <ItemGroup>
     <None Include="Programs\**\*" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Listings\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Content\MagazineCovers\**\*" CopyToOutputDirectory="PreserveNewest" Link="Content\MagazineCovers\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

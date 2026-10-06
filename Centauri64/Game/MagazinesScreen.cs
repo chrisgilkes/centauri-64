@@ -4,7 +4,6 @@ using System.Linq;
 
 using Centauri64.Analysis;
 using Centauri64.Basic;
-using Centauri64.Graphics;
 using Centauri64.Machine;
 using Centauri64.Progression;
 using Centauri64.Publishing;
@@ -28,21 +27,16 @@ public sealed partial class MagazinesScreen
         Sent
     }
 
-    private readonly BitmapFont _font;
+    private readonly PrintFonts _print;
     private readonly Texture2D _whitePixel;
     private readonly BasicMachine _machine;
     private readonly CareerService _career;
+    private readonly MagazineCoverStore _covers;
     private readonly SoftwareAnalyser _analyser = new();
-
-    private static readonly Color Background = new(22, 55, 72);
-    private static readonly Color Header = new(36, 72, 110);
-    private static readonly Color Cyan = new(91, 214, 205);
-    private static readonly Color Cream = new(238, 232, 190);
-    private static readonly Color Yellow = new(232, 205, 92);
-    private static readonly Color Muted = new(130, 165, 170);
-    private static readonly Color Dark = new(14, 28, 38);
+    private Matrix _uiTransform = Matrix.Identity;
 
     private KeyboardState _previousKeyboard;
+    private MouseState _previousMouse;
     private View _view = View.List;
     private List<SubmissionContract> _contracts = new();
     private List<string> _tapes = new();
@@ -56,35 +50,38 @@ public sealed partial class MagazinesScreen
     private bool _referenceLibrary;
     private MagazineIssue? _issue;
     private int _issueSelected;
-    private int _issueScroll;
+    private string _purchaseNotice = string.Empty;
 
     public event Action? ExitSelected;
 
     public MagazinesScreen(
-        BitmapFont font,
         Texture2D whitePixel,
         BasicMachine machine,
-        CareerService career)
+        CareerService career,
+        GraphicsDevice graphicsDevice,
+        PrintFonts print)
     {
-        _font = font;
         _whitePixel = whitePixel;
         _machine = machine;
         _career = career;
+        _covers = new MagazineCoverStore(graphicsDevice);
+        _print = print;
     }
 
     public void Open(bool referenceLibrary = false)
     {
         _referenceLibrary = referenceLibrary;
         _previousKeyboard = Keyboard.GetState();
+        _previousMouse = Mouse.GetState();
         _view = View.Shelf;
         _issueSelected = 0;
-        _issueScroll = 0;
         _selected = 0;
         _scroll = 0;
         _contract = null;
         _result = null;
         _analysis = null;
         _issue = null;
+        _purchaseNotice = string.Empty;
 
         if (!_referenceLibrary && GameSession.Career != null)
         {
@@ -93,17 +90,17 @@ public sealed partial class MagazinesScreen
         }
     }
 
-    public void Update(GameTime gameTime)
+    public void Update(GameTime gameTime, MouseState mouse)
     {
         var keyboard = Keyboard.GetState();
 
         switch (_view)
         {
             case View.Shelf:
-                UpdateShelf(keyboard);
+                UpdateShelf(keyboard, mouse);
                 break;
             case View.Issue:
-                UpdateIssue(keyboard);
+                UpdateIssue(keyboard, mouse);
                 break;
             case View.List:
                 UpdateList(keyboard);
@@ -123,22 +120,16 @@ public sealed partial class MagazinesScreen
         }
 
         _previousKeyboard = keyboard;
+        _previousMouse = mouse;
     }
 
-    public void Draw(SpriteBatch spriteBatch)
+    public void Draw(SpriteBatch spriteBatch, Matrix transform)
     {
-        spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-
-        DrawBox(
-            spriteBatch,
-            new Rectangle(
-                0,
-                0,
-                CentauriMachine.DEVELOPMENT_WIDTH,
-                CentauriMachine.DEVELOPMENT_HEIGHT),
-            Background);
-
-        DrawBox(spriteBatch, new Rectangle(16, 16, 608, 48), Header);
+        _uiTransform = transform;
+        spriteBatch.Begin(
+            samplerState: SamplerState.PointClamp,
+            transformMatrix: transform);
+        PrintTheme.FillPaper(spriteBatch, _whitePixel);
 
         switch (_view)
         {
@@ -171,10 +162,19 @@ public sealed partial class MagazinesScreen
     private void RefreshList()
     {
         var progress = _career.LoadProgress();
-        _contracts = _career.GetVisibleContracts(progress).ToList();
+        var visible = _career.GetVisibleContracts(progress);
+        var challenges = visible.Where(IsReaderChallenge).ToList();
+        var wanted = visible.Where(c => !IsReaderChallenge(c)).ToList();
+        _contracts = challenges.Concat(wanted).ToList();
 
         if (_selected >= _contracts.Count)
             _selected = Math.Max(0, _contracts.Count - 1);
+    }
+
+    private static bool IsReaderChallenge(SubmissionContract contract)
+    {
+        var org = PublisherCatalog.GetOrganisation(contract.OrganisationId);
+        return org?.Type == OrganisationType.Magazine;
     }
 
     private void UpdateList(KeyboardState keyboard)
@@ -188,10 +188,10 @@ public sealed partial class MagazinesScreen
         if (_contracts.Count == 0)
             return;
 
-        if (Pressed(keyboard, Keys.Up))
+        if (Pressed(keyboard, Keys.Up) || Pressed(keyboard, Keys.Left))
             _selected = Math.Max(0, _selected - 1);
 
-        if (Pressed(keyboard, Keys.Down))
+        if (Pressed(keyboard, Keys.Down) || Pressed(keyboard, Keys.Right))
             _selected = Math.Min(_contracts.Count - 1, _selected + 1);
 
         if (Pressed(keyboard, Keys.Enter))
@@ -301,67 +301,142 @@ public sealed partial class MagazinesScreen
 
     private void DrawList(SpriteBatch spriteBatch)
     {
-        DrawText(spriteBatch, "CLASSIFIEDS — SOFTWARE WANTED", 160, 24, Cream);
-
+        var era = MagazineProgression.EraLabel(GameSession.Career, _referenceLibrary);
         var progress = _career.LoadProgress();
-        var cash = "CASH " + PlayerProgress.FormatPounds(progress.CashPennies);
-        DrawText(spriteBatch, cash, 48, 44, Yellow);
+        var cash = PlayerProgress.FormatPounds(progress.CashPennies);
+        PrintTheme.DrawMasthead(
+            spriteBatch,
+            _whitePixel,
+            _print,
+            "CENTAURI64 CLASSIFIEDS",
+            era,
+            cash);
 
         if (_contracts.Count == 0)
         {
-            DrawText(spriteBatch, "NO OPPORTUNITIES YET.", 216, 180, Cream);
-            DrawText(spriteBatch, "CHECK BACK AFTER YOUR FIRST PROGRAM.", 160, 212, Muted);
-            DrawFooter(spriteBatch, "ESC BACK");
+            DrawText(spriteBatch, "NO SMALL ADS THIS MONTH.", 400, 360, PrintTheme.Ink);
+            DrawText(
+                spriteBatch,
+                "THE SOFTWARE MARKET IS STILL WAKING UP.",
+                320,
+                400,
+                PrintTheme.InkMuted);
+            PrintTheme.Footer(spriteBatch, _whitePixel, _print, "ESC BACK TO SHELF");
             return;
         }
 
-        var y = 80;
-        string? lastOrg = null;
+        const int cardH = 150;
+        var visibleAds = 4;
+        if (_selected < _scroll)
+            _scroll = _selected;
+        if (_selected >= _scroll + visibleAds)
+            _scroll = _selected - visibleAds + 1;
+
+        var y = 120;
+        var drewChallengeHead = false;
+        var drewWantedHead = false;
 
         for (var i = 0; i < _contracts.Count; i++)
         {
-            var contract = _contracts[i];
-            var org = PublisherCatalog.GetOrganisation(contract.OrganisationId);
-            var orgName = org?.Name ?? contract.OrganisationId;
+            if (i < _scroll)
+                continue;
+            if (y + cardH > 880)
+                break;
 
-            if (orgName != lastOrg)
+            var contract = _contracts[i];
+            var challenge = IsReaderChallenge(contract);
+            if (challenge && !drewChallengeHead)
             {
-                y += 8;
-                DrawText(spriteBatch, orgName, 48, y, Cyan);
-                y += 20;
-                lastOrg = orgName;
+                DrawText(spriteBatch, "READER CHALLENGES", 48, y, PrintTheme.Masthead);
+                PrintTheme.RuleH(spriteBatch, _whitePixel, 48, y + 28, 360);
+                y += 40;
+                drewChallengeHead = true;
+            }
+            else if (!challenge && !drewWantedHead)
+            {
+                if (drewChallengeHead)
+                    y += 12;
+                DrawText(spriteBatch, "SOFTWARE WANTED", 48, y, PrintTheme.SpotBlue);
+                PrintTheme.RuleH(spriteBatch, _whitePixel, 48, y + 28, 360);
+                y += 40;
+                drewWantedHead = true;
             }
 
-            var availability = _career.GetAvailability(contract, progress);
-            var marker = i == _selected ? ">" : " ";
-            var status = availability switch
-            {
-                ContractAvailability.Completed => " [DONE]",
-                ContractAvailability.Pending => " [SENT]",
-                ContractAvailability.ResponseReady => " [MAIL]",
-                _ => ""
-            };
-
-            var colour = i == _selected
-                ? Yellow
-                : availability == ContractAvailability.Completed
-                    ? Muted
-                    : Cream;
-
-            DrawText(
-                spriteBatch,
-                $"{marker} {contract.Title}{status}",
-                56,
-                y,
-                colour);
-            y += 18;
-
-            if (y > 390)
-                break;
+            var bounds = new Rectangle(48, y, 1184, cardH);
+            DrawAdvert(spriteBatch, contract, bounds, i == _selected, progress);
+            y += cardH + 12;
         }
 
-        DrawFooter(spriteBatch, "UP DOWN SELECT    ENTER OPEN    ESC BACK");
+        PrintTheme.Footer(
+            spriteBatch,
+            _whitePixel,
+            _print,
+            "UP DOWN    ENTER OPEN ADVERT    ESC BACK TO SHELF");
     }
+
+    private void DrawAdvert(
+        SpriteBatch spriteBatch,
+        SubmissionContract contract,
+        Rectangle bounds,
+        bool selected,
+        PlayerProgress progress)
+    {
+        var org = PublisherCatalog.GetOrganisation(contract.OrganisationId);
+        var accent = org == null
+            ? PrintTheme.Rule
+            : CentauriPalette.Get(org.PrintAccentIndex);
+        var availability = _career.GetAvailability(contract, progress);
+        var fill = selected ? PrintTheme.Highlight : PrintTheme.Paper;
+
+        PrintTheme.Box(spriteBatch, _whitePixel, bounds, fill);
+        var thickness = org?.AdvertStyle == PrintAdvertStyle.Bold ? 3 : 1;
+        PrintTheme.Frame(spriteBatch, _whitePixel, bounds, accent, thickness);
+
+        if (org?.AdvertStyle == PrintAdvertStyle.Ornate)
+            PrintTheme.Frame(
+                spriteBatch,
+                _whitePixel,
+                new Rectangle(bounds.X + 3, bounds.Y + 3, bounds.Width - 6, bounds.Height - 6),
+                accent);
+
+        if (org?.AdvertStyle == PrintAdvertStyle.Technical)
+            PrintTheme.Box(
+                spriteBatch,
+                _whitePixel,
+                new Rectangle(bounds.X, bounds.Y, 6, bounds.Height),
+                accent);
+
+        var textX = bounds.X + 20;
+        DrawText(spriteBatch, org?.Name ?? contract.OrganisationId, textX, bounds.Y + 12, accent);
+        DrawText(spriteBatch, contract.Title, textX, bounds.Y + 40, PrintTheme.Ink);
+
+        var copyY = bounds.Y + 72;
+        foreach (var line in PrintFonts.Wrap(_print.Caption, contract.AdvertText.Replace('\n', ' '), bounds.Width - 40).Take(2))
+        {
+            _print.Draw(spriteBatch, _print.Caption, line, textX, copyY, PrintTheme.InkMuted);
+            copyY += 22;
+        }
+
+        DrawText(
+            spriteBatch,
+            "PAYMENT: " + PlayerProgress.FormatPounds(contract.RewardPennies),
+            textX,
+            bounds.Bottom - 32,
+            PrintTheme.Ink);
+
+        var stamp = FictionalStamp(availability);
+        if (stamp != null)
+            PrintTheme.DrawStamp(spriteBatch, _whitePixel, _print, bounds, stamp);
+    }
+
+    private static string? FictionalStamp(ContractAvailability availability) =>
+        availability switch
+        {
+            ContractAvailability.Completed => "FILLED",
+            ContractAvailability.Pending => "UNDER REVIEW",
+            ContractAvailability.ResponseReady => "SUBMITTED",
+            _ => null
+        };
 
     private void DrawDetail(SpriteBatch spriteBatch)
     {
@@ -372,74 +447,76 @@ public sealed partial class MagazinesScreen
         var progress = _career.LoadProgress();
         var availability = _career.GetAvailability(_contract, progress);
         var submission = _career.GetLatestSubmission(_contract.Id, progress);
+        var kicker = IsReaderChallenge(_contract)
+            ? "READER CHALLENGE"
+            : "CLASSIFIED ADVERT";
 
-        DrawText(spriteBatch, org?.Name ?? "ORGANISATION", 48, 24, Cream);
-        DrawText(spriteBatch, _contract.Subtitle, 48, 44, Cyan);
+        PrintTheme.DrawMasthead(
+            spriteBatch,
+            _whitePixel,
+            _print,
+            kicker,
+            org?.Name ?? "ORGANISATION",
+            MagazineProgression.EraLabel(GameSession.Career, _referenceLibrary));
 
-        var y = 80;
-        DrawText(spriteBatch, _contract.Title, 48, y, Yellow);
-        y += 28;
+        var y = 120;
+        DrawText(spriteBatch, _contract.Title, 28, y, PrintTheme.Ink);
+        y += 20;
+        PrintTheme.RuleH(spriteBatch, _whitePixel, 28, y, 584);
+        y += 12;
 
         if (availability is ContractAvailability.Pending
             or ContractAvailability.ResponseReady)
         {
-            DrawText(spriteBatch, "STATUS:", 48, y, Cyan);
+            DrawText(spriteBatch, FictionalStamp(availability) ?? "SUBMITTED", 28, y, PrintTheme.Stamp);
             y += 20;
-            DrawText(spriteBatch, "TAPE SUBMITTED", 48, y, Cream);
-            y += 20;
-
             var tapeLabel = submission?.TapeName ?? "?";
-            DrawText(spriteBatch, "\"" + tapeLabel + "\"", 48, y, Yellow);
-            y += 28;
-
-            if (availability == ContractAvailability.Pending)
-            {
-                DrawText(spriteBatch, "AWAITING RESPONSE...", 48, y, Muted);
-            }
-            else
-            {
-                DrawText(spriteBatch, "CHECK THE NOTICE BOARD", 48, y, Yellow);
-                y += 20;
-                DrawText(spriteBatch, "FOR YOUR MAIL.", 48, y, Yellow);
-            }
-
-            DrawFooter(spriteBatch, "ESC BACK");
+            DrawText(spriteBatch, "TAPE ENCLOSED: \"" + tapeLabel + "\"", 28, y, PrintTheme.Ink);
+            y += 24;
+            DrawText(
+                spriteBatch,
+                availability == ContractAvailability.Pending
+                    ? "THE EDITORS HAVE YOUR CASSETTE. A REPLY WILL FOLLOW."
+                    : "A LETTER IS WAITING ON THE NOTICE BOARD.",
+                28,
+                y,
+                PrintTheme.InkMuted);
+            PrintTheme.Footer(spriteBatch, _whitePixel, _print, "ESC BACK TO CLASSIFIEDS");
             return;
         }
 
         if (availability == ContractAvailability.Completed)
         {
-            DrawText(spriteBatch, "STATUS: COMPLETED", 48, y, Muted);
-            y += 24;
+            DrawText(spriteBatch, "CONTRACT AWARDED", 28, y, PrintTheme.Stamp);
+            y += 20;
             if (submission != null)
             {
                 DrawText(
                     spriteBatch,
-                    "SUBMITTED: \"" + submission.TapeName + "\"",
-                    48,
+                    "PUBLISHED FROM TAPE \"" + submission.TapeName + "\"",
+                    28,
                     y,
-                    Cream);
+                    PrintTheme.Ink);
             }
 
-            DrawFooter(spriteBatch, "ESC BACK");
+            PrintTheme.Footer(spriteBatch, _whitePixel, _print, "ESC BACK TO CLASSIFIEDS");
             return;
         }
 
-        // AVAILABLE — opportunity only (never acceptance/rejection text).
         foreach (var line in _contract.AdvertText.Split('\n'))
         {
-            DrawText(spriteBatch, line, 48, y, Cream);
+            DrawText(spriteBatch, line, 28, y, PrintTheme.Ink);
             y += 16;
         }
 
         y += 12;
-        DrawText(spriteBatch, "REQUIREMENTS", 48, y, Cyan);
-        y += 20;
+        DrawText(spriteBatch, "WHAT THEY WANT", 28, y, PrintTheme.Masthead);
+        y += 18;
 
         foreach (var line in CareerService.DescribeRequirements(_contract.Requirements)
                      .Split('\n', StringSplitOptions.RemoveEmptyEntries))
         {
-            DrawText(spriteBatch, line, 48, y, Cream);
+            DrawText(spriteBatch, line, 28, y, PrintTheme.InkMuted);
             y += 16;
         }
 
@@ -447,39 +524,43 @@ public sealed partial class MagazinesScreen
         DrawText(
             spriteBatch,
             "PAYMENT: " + PlayerProgress.FormatPounds(_contract.RewardPennies),
-            48,
+            28,
             y,
-            Yellow);
+            PrintTheme.Ink);
 
-        DrawFooter(spriteBatch, "S SUBMIT SOFTWARE    ESC BACK");
+        PrintTheme.Footer(spriteBatch, _whitePixel, _print, "S SUBMIT SOFTWARE    ESC BACK");
     }
 
     private void DrawSelectTape(SpriteBatch spriteBatch)
     {
-        DrawText(spriteBatch, "SELECT SOFTWARE TO SUBMIT", 184, 24, Cream);
+        PrintTheme.DrawMasthead(
+            spriteBatch,
+            _whitePixel,
+            _print,
+            "CLASSIFIEDS",
+            "SELECT A CASSETTE",
+            "");
 
         if (_tapes.Count == 0)
         {
-            DrawText(spriteBatch, "NO TAPES SAVED YET.", 232, 180, Cream);
-            DrawText(spriteBatch, "SAVE A PROGRAM FIRST.", 224, 212, Muted);
-            DrawFooter(spriteBatch, "ESC BACK");
+            DrawText(spriteBatch, "NO TAPES SAVED YET.", 232, 180, PrintTheme.Ink);
+            DrawText(spriteBatch, "SAVE A PROGRAM FIRST.", 224, 204, PrintTheme.InkMuted);
+            PrintTheme.Footer(spriteBatch, _whitePixel, _print, "ESC BACK");
             return;
         }
 
-        var y = 88;
-
+        var y = 72;
         for (var i = 0; i < _tapes.Count; i++)
         {
+            var colour = i == _tapeSelected ? PrintTheme.Masthead : PrintTheme.Ink;
             var marker = i == _tapeSelected ? ">" : " ";
-            var colour = i == _tapeSelected ? Yellow : Cream;
-            DrawText(spriteBatch, $"{marker} {_tapes[i]}", 48, y, colour);
+            DrawText(spriteBatch, $"{marker} {_tapes[i]}", 40, y, colour);
             y += 18;
-
-            if (y > 390)
+            if (y > 400)
                 break;
         }
 
-        DrawFooter(spriteBatch, "UP DOWN    ENTER SELECT    ESC CANCEL");
+        PrintTheme.Footer(spriteBatch, _whitePixel, _print, "UP DOWN    ENTER SELECT    ESC CANCEL");
     }
 
     private void DrawResult(SpriteBatch spriteBatch)
@@ -490,27 +571,29 @@ public sealed partial class MagazinesScreen
         var org = PublisherCatalog.GetOrganisation(_contract.OrganisationId);
         var tape = _tapes.Count > 0 ? _tapes[_tapeSelected] : "";
 
-        DrawText(spriteBatch, tape, 48, 24, Cream);
-        DrawText(spriteBatch, org?.Name ?? "", 48, 44, Cyan);
+        PrintTheme.DrawMasthead(
+            spriteBatch,
+            _whitePixel,
+            _print,
+            org?.Name ?? "",
+            "CHECKING \"" + tape + "\"",
+            "");
 
-        var y = 80;
-        DrawText(spriteBatch, "CHECKING \"" + tape + "\"...", 48, y, Yellow);
-        y += 24;
-
+        var y = 120;
         var checks = _result.Checks.Skip(_scroll).Take(12).ToList();
 
         foreach (var check in checks)
         {
             var mark = check.Passed ? "+" : "X";
-            var colour = check.Passed ? Cream : Yellow;
-            DrawText(spriteBatch, $"{mark} {check.Label}", 48, y, colour);
+            var colour = check.Passed ? PrintTheme.Ink : PrintTheme.Stamp;
+            DrawText(spriteBatch, $"{mark} {check.Label}", 28, y, colour);
             y += 16;
 
             if (!string.IsNullOrWhiteSpace(check.Detail))
             {
                 foreach (var detail in check.Detail.Split('\n'))
                 {
-                    DrawText(spriteBatch, "  " + detail, 48, y, Muted);
+                    DrawText(spriteBatch, "  " + detail, 28, y, PrintTheme.InkMuted);
                     y += 14;
                 }
             }
@@ -520,9 +603,9 @@ public sealed partial class MagazinesScreen
         DrawText(
             spriteBatch,
             "PAYMENT: " + PlayerProgress.FormatPounds(_contract.RewardPennies),
-            48,
+            28,
             y,
-            Yellow);
+            PrintTheme.Ink);
         y += 24;
 
         if (_result.AlreadyCompleted)
@@ -531,46 +614,50 @@ public sealed partial class MagazinesScreen
                 ContractAvailability.Pending or ContractAvailability.ResponseReady;
             DrawText(
                 spriteBatch,
-                pending ? "TAPE ALREADY SENT" : "ALREADY COMPLETED",
-                48,
+                pending ? "THIS TAPE IS ALREADY IN THE POST." : "THIS ADVERT HAS BEEN FILLED.",
+                28,
                 y,
-                Yellow);
-            DrawFooter(spriteBatch, "ESC BACK");
+                PrintTheme.Stamp);
+            PrintTheme.Footer(spriteBatch, _whitePixel, _print, "ESC BACK");
             return;
         }
 
         if (_result.Accepted)
         {
-            DrawText(spriteBatch, "READY TO SUBMIT", 48, y, Cyan);
-            DrawFooter(spriteBatch, "Y SEND TAPE    N CANCEL");
+            DrawText(spriteBatch, "READY TO POST.", 28, y, PrintTheme.Ink);
+            PrintTheme.Footer(spriteBatch, _whitePixel, _print, "Y SEND TAPE    N CANCEL");
         }
         else
         {
-            DrawText(spriteBatch, "NOT READY TO SUBMIT", 48, y, Yellow);
+            DrawText(spriteBatch, "NOT READY TO POST.", 28, y, PrintTheme.Stamp);
             y += 20;
-
             var failed = _result.FailedChecks.FirstOrDefault();
             if (failed != null)
-                DrawText(spriteBatch, HintFor(failed), 48, y, Muted);
+                DrawText(spriteBatch, HintFor(failed), 28, y, PrintTheme.InkMuted);
 
-            DrawFooter(spriteBatch, "ESC BACK");
+            PrintTheme.Footer(spriteBatch, _whitePixel, _print, "ESC BACK");
         }
     }
 
     private void DrawSent(SpriteBatch spriteBatch)
     {
-        DrawText(spriteBatch, "TAPE SENT", 280, 24, Cream);
+        PrintTheme.DrawMasthead(
+            spriteBatch,
+            _whitePixel,
+            _print,
+            "CLASSIFIEDS",
+            "TAPE IN THE POST",
+            "");
 
         var y = 120;
-
         foreach (var line in _sentMessage.Split('\n'))
         {
-            DrawText(spriteBatch, line, 160, y, Cream);
+            DrawText(spriteBatch, line, 80, y, PrintTheme.Ink);
             y += 20;
         }
 
-        DrawText(spriteBatch, "CHECK THE NOTICE BOARD FOR MAIL.", 160, 320, Yellow);
-        DrawFooter(spriteBatch, "ENTER / ESC RETURN TO BEDROOM");
+        DrawText(spriteBatch, "WATCH THE NOTICE BOARD FOR A REPLY.", 80, 320, PrintTheme.Masthead);
+        PrintTheme.Footer(spriteBatch, _whitePixel, _print, "ENTER / ESC RETURN TO BEDROOM");
     }
 
     private static string HintFor(SubmissionCheck check)
@@ -593,20 +680,9 @@ public sealed partial class MagazinesScreen
         return "FIX THE FAILED REQUIREMENT AND TRY AGAIN.";
     }
 
-    private void DrawFooter(SpriteBatch spriteBatch, string text)
-    {
-        DrawBox(spriteBatch, new Rectangle(16, 424, 608, 24), Cyan);
-        DrawText(spriteBatch, text, 48, 432, Dark);
-    }
-
     private void DrawText(SpriteBatch spriteBatch, string text, int x, int y, Color colour)
     {
-        _font.Draw(spriteBatch, text, new Vector2(x, y), colour);
-    }
-
-    private void DrawBox(SpriteBatch spriteBatch, Rectangle rectangle, Color colour)
-    {
-        spriteBatch.Draw(_whitePixel, rectangle, colour);
+        _print.Draw(spriteBatch, _print.Body, text, x, y, colour);
     }
 
     private bool Pressed(KeyboardState keyboard, Keys key)

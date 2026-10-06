@@ -5,6 +5,21 @@ using Centauri64.Graphics;
 
 namespace Centauri64.Game;
 
+/// <summary>
+/// Dark system/boot presentation. Distinct from the Bedroom palette.
+/// </summary>
+internal static class SystemUi
+{
+    public static readonly Color Background = new(4, 4, 6);
+    public static readonly Color Panel = new(14, 14, 16);
+    public static readonly Color Highlight = new(22, 28, 20);
+    public static readonly Color Green = new(72, 196, 88);
+    public static readonly Color Amber = new(220, 176, 64);
+    public static readonly Color Text = new(214, 214, 206);
+    public static readonly Color Muted = new(108, 108, 116);
+    public static readonly Color Line = new(36, 72, 44);
+}
+
 internal static class BootUi
 {
     public static readonly Color Background = new(10, 18, 28);

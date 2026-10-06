@@ -105,7 +105,8 @@ Centauri BASIC currently supports things including:
 - `KEY` / `KEYPRESSED`, `BEEP`, `WAIT`, `YIELD`
 - `SAVE` / `LOAD` / `DIR` / `MEM` / `ANALYSE` tapes with sprites, maps, and covers
 - Software analyser foundation for magazine/publisher submissions (see `docs/SOFTWARE-ANALYSER.md`)
-- Career Loop V1: Magazines opportunities, Notice Board mail, delayed payment (see `docs/CAREER-LOOP.md`)
+- Career Loop V1: Magazines opportunities, Notice Board mail, delayed payment (see `Centauri64/docs/CAREER-LOOP.md`)
+- Career / magazine unlocks: when features, publishers and classifieds become available (see `Centauri64/docs/CAREER.md`)
 - Settings V1: display, CRT (computer only), editor prefs, audio, reset career (see `docs/SETTINGS.md`)
 
 There is still a lot I want to add, but the aim is to add features by actually using the language rather than designing everything up front.

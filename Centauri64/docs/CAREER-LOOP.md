@@ -1,6 +1,8 @@
 # Career Loop V1
 
-The bedroom programmer career loop sits on top of the Software Analyser.
+Magazine ownership, authoring features, and when publishers/contracts appear: [`CAREER.md`](CAREER.md).
+
+The bedroom programmer **submission** loop sits on top of the Software Analyser.
 
 ```text
 Magazines / Notice Board
@@ -41,7 +43,7 @@ Contracts use Ids such as `career_first_program`, `technical_network_game`.
 5. Bedroom `[5] NOTICE BOARD` — `*** NEW MAIL ***`
 6. Open letter — payment claimed once
 
-Cash is stored as integer pennies in `%LocalAppData%\Centauri64\player.json`.
+Cash is stored as integer pennies on the career slot (`%LocalAppData%\Centauri64\Careers\slotN.json`, field `Progress.CashPennies`). Legacy `%LocalAppData%\Centauri64\player.json` is migrated into slot 1.
 
 ## Presentation rules (V1.1)
 

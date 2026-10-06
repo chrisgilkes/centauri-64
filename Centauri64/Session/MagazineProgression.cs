@@ -4,6 +4,15 @@ using System.Linq;
 
 namespace Centauri64.Session;
 
+public enum MagazinePurchaseResult
+{
+    Purchased,
+    AlreadyOwned,
+    NotOnSale,
+    CannotAfford,
+    NoCareer
+}
+
 public readonly struct MagazineGrantResult
 {
     public IReadOnlyList<FeatureId> NewFeatures { get; init; }
@@ -50,11 +59,72 @@ public static class MagazineProgression
         if (Owns(career, issue.Id))
             return MagazineIssueState.Owned;
 
-        var nextNumber = HighestOwnedNumber(career) + 1;
-        if (issue.IssueNumber == nextNumber)
-            return MagazineIssueState.ComingNext;
+        var candidate = HighestOwnedNumber(career) + 1;
+        if (issue.IssueNumber == candidate)
+            return MilestoneMet(career, issue)
+                ? MagazineIssueState.OnSale
+                : MagazineIssueState.ComingNext;
+
+        if (issue.IssueNumber == candidate + 1)
+        {
+            var onSale = MagazineCatalog.FindByNumber(candidate);
+            if (onSale != null && MilestoneMet(career, onSale))
+                return MagazineIssueState.ComingNext;
+        }
 
         return MagazineIssueState.ComingLater;
+    }
+
+    /// <summary>
+    /// Next issue is on sale after the previous issue is owned and, if set,
+    /// <see cref="MagazineIssue.OnSaleAfterContractId"/> is completed.
+    /// Fictional career time only — never wall-clock.
+    /// </summary>
+    public static bool MilestoneMet(CareerState career, MagazineIssue issue)
+    {
+        if (issue.IssueNumber <= 1)
+            return false;
+
+        if (HighestOwnedNumber(career) != issue.IssueNumber - 1)
+            return false;
+
+        if (string.IsNullOrWhiteSpace(issue.OnSaleAfterContractId))
+            return true;
+
+        return career.Progress.HasCompleted(issue.OnSaleAfterContractId);
+    }
+
+    public static int CalendarIssueNumber(CareerState? career, bool referenceLibrary)
+    {
+        if (referenceLibrary)
+            return 10;
+
+        if (career == null)
+            return 1;
+
+        var owned = Math.Max(1, HighestOwnedNumber(career));
+        var next = MagazineCatalog.FindByNumber(owned + 1);
+        if (next != null && MilestoneMet(career, next))
+            return next.IssueNumber;
+
+        return owned;
+    }
+
+    public static MagazinePurchaseResult Purchase(CareerState career, MagazineIssue issue)
+    {
+        if (Owns(career, issue.Id))
+            return MagazinePurchaseResult.AlreadyOwned;
+
+        if (StateOf(career, issue, referenceLibrary: false) != MagazineIssueState.OnSale)
+            return MagazinePurchaseResult.NotOnSale;
+
+        var price = Math.Max(0, issue.PricePennies);
+        if (career.Progress.CashPennies < price)
+            return MagazinePurchaseResult.CannotAfford;
+
+        career.Progress.CashPennies -= price;
+        OwnIssue(career, issue.Id);
+        return MagazinePurchaseResult.Purchased;
     }
 
     public static MagazineGrantResult OwnIssue(CareerState career, string issueId)
@@ -124,6 +194,16 @@ public static class MagazineProgression
 
     public static void EnsureStartingIssue(CareerState career) =>
         OwnThrough(career, 1);
+
+    public static string EraLabel(CareerState? career, bool referenceLibrary)
+    {
+        if (referenceLibrary)
+            return "YEAR ONE";
+
+        var number = CalendarIssueNumber(career, referenceLibrary);
+        var issue = MagazineCatalog.FindByNumber(number);
+        return issue?.FictionalMonth ?? "JAN 1986";
+    }
 
     private static IReadOnlyList<string> AddUnique(List<string> target, IReadOnlyList<string> incoming)
     {
