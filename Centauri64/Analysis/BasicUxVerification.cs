@@ -22,6 +22,7 @@ public static class BasicUxVerification
 
         failed += ImmediatePrint();
         failed += ImmediateExpressionAndAssignment();
+        failed += ImmediatePaper();
         failed += StoredProgramStaysOnConsole();
         failed += ClsStaysOnConsole();
         failed += ModeOneHighRes();
@@ -56,6 +57,27 @@ public static class BasicUxVerification
         var text = Capture(env.Console);
         return Expect("immediate assignment + PRINT 2+2",
             text.Contains("10") && text.Contains("4"));
+    }
+
+    private static int ImmediatePaper()
+    {
+        var env = Create();
+        env.Machine.SetConsoleDefaults(16, 31);
+        env.Machine.ResetDisplay();
+
+        env.Interpreter.ExecuteImmediate(
+            env.Parser.ParseImmediate(env.Tokenizer.Tokenize("PAPER 0"), "PAPER 0"));
+
+        var afterPaper = env.Machine.PaperColour == 0 &&
+                         env.Console.Background == 0;
+
+        env.Machine.ResetDisplay();
+
+        var afterReset = env.Machine.PaperColour == 31 &&
+                         env.Console.Background == 31 &&
+                         env.Console.Foreground == 16;
+
+        return Expect("immediate PAPER + RESET restores defaults", afterPaper && afterReset);
     }
 
     private static int StoredProgramStaysOnConsole()

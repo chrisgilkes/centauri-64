@@ -42,6 +42,13 @@ public sealed partial class CentauriMachine
     public const int DEFAULT_INK = 1;
     public const int DEFAULT_PAPER = 0;
 
+    /// <summary>
+    /// Default ink/paper for the BASIC editor/console environment
+    /// (not graphics MODE). Matches the editor theme unless the player uses INK/PAPER.
+    /// </summary>
+    private int _consoleDefaultInk = 16;
+    private int _consoleDefaultPaper = 31;
+
     private CentauriDisplayMode _displayMode = CentauriDisplayMode.Console;
 
     private int _paperColour = DEFAULT_PAPER;
@@ -109,12 +116,38 @@ public sealed partial class CentauriMachine
     /// </summary>
     public void SetDisplayMode(int mode)
     {
-        _displayMode = mode switch
+        var next = mode switch
         {
             1 => CentauriDisplayMode.HighResolution,
             2 => CentauriDisplayMode.Arcade,
             _ => throw new InvalidOperationException($"Unsupported display mode {mode}.")
         };
+
+        // Entering a graphics MODE starts from the graphics paper/ink defaults.
+        if (_displayMode == CentauriDisplayMode.Console &&
+            next != CentauriDisplayMode.Console)
+        {
+            _paperColour = DEFAULT_PAPER;
+            _programConsole.Foreground = DEFAULT_INK;
+            _programConsole.Background = DEFAULT_PAPER;
+        }
+
+        _displayMode = next;
+    }
+
+    /// <summary>
+    /// Sets the default colours for the BASIC editor/console environment.
+    /// Used by RESET and when returning from a graphics MODE.
+    /// </summary>
+    public void SetConsoleDefaults(int ink, int paper)
+    {
+        ValidateColour(ink);
+        ValidateColour(paper);
+        _consoleDefaultInk = ink;
+        _consoleDefaultPaper = paper;
+
+        if (_displayMode == CentauriDisplayMode.Console)
+            _paperColour = paper;
     }
 
     /// <summary>
@@ -225,15 +258,25 @@ public sealed partial class CentauriMachine
 
     public void ResetDisplay()
     {
-        _console.Foreground = DEFAULT_INK;
-        _console.Background = DEFAULT_PAPER;
+        _console.Foreground = _consoleDefaultInk;
+        _console.Background = _consoleDefaultPaper;
+        _paperColour = _consoleDefaultPaper;
 
         _console.Clear();
     }
 
+    /// <summary>
+    /// Restore default BASIC console ink without clearing the screen.
+    /// Used when returning to the READY prompt so PRINT uses the editor
+    /// text colour until the player (or a program) uses INK.
+    /// </summary>
+    public void RestoreConsoleInk()
+    {
+        _console.Foreground = _consoleDefaultInk;
+    }
+
     public void ResetProgramDisplay()
     {
-        _paperColour = DEFAULT_PAPER;
         _programConsole.Foreground  = DEFAULT_INK;
         _programConsole.Background  = DEFAULT_PAPER;
 
@@ -249,6 +292,11 @@ public sealed partial class CentauriMachine
         ClearImageLayers();
 
         _displayMode = CentauriDisplayMode.Console;
+
+        // Text programs start from the editor ink/paper; INK/PAPER override.
+        _console.Foreground = _consoleDefaultInk;
+        _console.Background = _consoleDefaultPaper;
+        _paperColour = _consoleDefaultPaper;
     }
 
     public void UpdateInput()

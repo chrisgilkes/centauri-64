@@ -406,7 +406,7 @@ Source: `Basic/BasicMachine.cs` (exact string match unless noted)
 | `DELETE name` | Delete a tape |
 | `NEW` | Clear program and editor assets, new program id |
 | `CLS` | Clear editor console |
-| `RESET` | `ResetDisplay` + boot message (**immediate only**) |
+| `RESET` | `ResetDisplay` + boot message — restores default editor ink/paper and clears (**immediate only**) |
 | `SAVE name` | Write tape |
 | `LOAD name` | Read tape |
 

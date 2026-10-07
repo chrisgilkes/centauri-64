@@ -72,6 +72,7 @@ public sealed partial class BasicMachine
             _machine.ResetDisplay();
 
         _machine.ReturnToBasicEnvironment();
+        _machine.RestoreConsoleInk();
 
         _console.WriteLine("BREAK");
         _console.WriteLine("");
@@ -127,6 +128,7 @@ public sealed partial class BasicMachine
         {
             _programFinished = false;
             _machine.HideAllSprites();
+            _machine.RestoreConsoleInk();
 
             if (_runtimeError != null)
             {

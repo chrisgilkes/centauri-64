@@ -1611,7 +1611,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     private void DrawEditorChrome()
     {
-        // Main editor background.
+        // Main editor / PAPER background (immediate and program PAPER update this).
         _spriteBatch.Draw(
             _pixel,
             new Rectangle(
@@ -1619,7 +1619,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
                 0,
                 CentauriMachine.DEVELOPMENT_WIDTH,
                 CentauriMachine.DEVELOPMENT_HEIGHT),
-            EditorBackground);
+            CentauriPalette.Get(_machine.PaperColour));
 
         // Header.
         _spriteBatch.Draw(

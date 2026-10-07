@@ -60,6 +60,10 @@ public sealed partial class BasicMachine
 
         _editorTheme    = new BasicEditorTheme();
 
+        _machine.SetConsoleDefaults(
+            _editorTheme.TextColour,
+            _editorTheme.BackgroundColour);
+
         _console.Background = _editorTheme.BackgroundColour;
         _console.Foreground = _editorTheme.TextColour;
         _console.Clear();
