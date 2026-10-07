@@ -1,0 +1,523 @@
+/* Centauri64 Magazine — Issue 1 print stylesheet
+   Dense 1985–86 British home-computer magazine language.
+   Not a modern web layout. */
+
+@page {
+  size: A4;
+  margin: 0;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #d8d0bc;
+  color: #1c1814;
+  font-family: "Times New Roman", Times, "Liberation Serif", serif;
+  font-size: 9pt;
+  line-height: 1.18;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.page {
+  width: 210mm;
+  height: 297mm;
+  margin: 0 auto 8mm;
+  background: #f3ead4;
+  position: relative;
+  overflow: hidden;
+  page-break-after: always;
+  break-after: page;
+}
+
+.page.cover {
+  background: #000;
+  padding: 0;
+}
+
+.page.cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.inner {
+  position: relative;
+  z-index: 1;
+  padding: 7mm 9mm 12mm;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.inner > .fill {
+  flex: 1;
+  min-height: 0;
+}
+
+/* —— furniture —— */
+.mast {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 2.5pt solid #880000;
+  padding-bottom: 1.5mm;
+  margin-bottom: 2.5mm;
+}
+
+.mast .brand {
+  font-family: Impact, "Haettenschweiler", "Arial Black", sans-serif;
+  font-size: 16pt;
+  letter-spacing: 0.5px;
+  color: #880000;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.mast .meta {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #1c1814;
+}
+
+.section-label {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 6.5pt;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #fff;
+  background: #000078;
+  display: inline-block;
+  padding: 1mm 2.2mm;
+  margin: 0 0 1.5mm;
+  line-height: 1;
+}
+
+.section-label.red { background: #880000; }
+.section-label.black { background: #1c1814; }
+.section-label.green { background: #006644; }
+.section-label.magenta { background: #990066; }
+.section-label.orange { background: #c06000; }
+
+.headline {
+  font-family: Impact, "Haettenschweiler", "Arial Narrow", sans-serif;
+  font-size: 22pt;
+  line-height: 0.9;
+  text-transform: uppercase;
+  margin: 0 0 1mm;
+  color: #1c1814;
+  letter-spacing: 0.2px;
+}
+
+.headline.sm { font-size: 18pt; }
+.headline.lg { font-size: 28pt; }
+
+.deck {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 9pt;
+  font-weight: 700;
+  line-height: 1.12;
+  margin: 0 0 1.4mm;
+  color: #880000;
+}
+
+.rule {
+  border: 0;
+  border-top: 1pt solid #1c1814;
+  margin: 1.5mm 0 2mm;
+}
+
+.rule.thick { border-top-width: 2.5pt; }
+.rule.red { border-top-color: #880000; }
+.rule.blue { border-top-color: #000078; }
+
+.cols-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4.5mm;
+}
+
+.cols-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 3.5mm;
+}
+
+.cols-2-1 {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 4.5mm;
+}
+
+.cols-1-2 {
+  display: grid;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 4.5mm;
+}
+
+p {
+  margin: 0 0 1.6mm;
+  text-align: justify;
+  hyphens: auto;
+}
+
+.lead {
+  font-size: 9.5pt;
+  font-weight: 700;
+}
+
+h3, .subhead {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 9pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin: 2mm 0 1mm;
+  color: #000078;
+  border-bottom: 0.75pt solid #000078;
+  padding-bottom: 0.4mm;
+  line-height: 1.1;
+}
+
+.subhead.red { color: #880000; border-bottom-color: #880000; }
+.subhead.black { color: #1c1814; border-bottom-color: #1c1814; }
+.subhead.inline {
+  border: 0;
+  display: inline;
+  padding: 0;
+  margin: 0;
+}
+
+/* BASIC listing — on the paper, magazine style */
+.listing {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 7.6pt;
+  line-height: 1.12;
+  margin: 1.2mm 0 1.6mm;
+  white-space: pre;
+  color: #1c1814;
+}
+
+.listing.tint {
+  background: rgba(0, 0, 120, 0.045);
+  border-top: 0.5pt solid #8a7a5a;
+  border-bottom: 0.5pt solid #8a7a5a;
+  padding: 1.2mm 1.5mm;
+}
+
+.listing.compact { font-size: 7pt; line-height: 1.06; }
+
+.bottom-band {
+  margin-top: 3mm;
+  padding-top: 2mm;
+  border-top: 2pt solid #1c1814;
+}
+
+.listing-head {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 6.5pt;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: 1.5mm 0 0.6mm;
+  color: #1c1814;
+}
+
+.tip {
+  border: 1pt solid #1c1814;
+  padding: 1.6mm 2mm;
+  margin: 2mm 0;
+  background: #ffe4a8;
+}
+
+.tip .tip-label {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 6.5pt;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: 0 0 0.8mm;
+  color: #880000;
+}
+
+.tip p { margin-bottom: 0; font-size: 8.5pt; }
+
+.callout {
+  background: #000078;
+  color: #fff;
+  padding: 2mm 2.4mm;
+  margin: 2mm 0;
+}
+
+.callout .tip-label {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 6.5pt;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: 0 0 0.8mm;
+  color: #ffe45a;
+}
+
+.callout p { margin: 0; color: #fff; font-size: 8.5pt; text-align: left; }
+
+.box {
+  border: 1pt solid #1c1814;
+  padding: 1.8mm 2.2mm;
+  margin: 1.5mm 0;
+}
+
+.box.filled {
+  background: #1c1814;
+  color: #f3ead4;
+}
+
+.box.filled .subhead { color: #ffe45a; border-bottom-color: #ffe45a; }
+
+.footer {
+  position: absolute;
+  left: 10mm;
+  right: 10mm;
+  bottom: 6mm;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 6.5pt;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  border-top: 1pt solid #1c1814;
+  padding-top: 1.2mm;
+  z-index: 2;
+}
+
+.footer .pg { color: #880000; }
+
+ul.dense {
+  margin: 0 0 1.5mm;
+  padding-left: 3.5mm;
+}
+
+ul.dense li {
+  margin: 0 0 0.6mm;
+}
+
+/* Contents */
+.toc-row {
+  display: grid;
+  grid-template-columns: 22mm 1fr 8mm;
+  gap: 2mm;
+  align-items: start;
+  padding: 1.4mm 0;
+  border-bottom: 0.5pt solid #c8b898;
+}
+
+.toc-row .cat {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 6.5pt;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #000078;
+}
+
+.toc-row .title {
+  font-family: Impact, "Arial Narrow", sans-serif;
+  font-size: 12pt;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.toc-row .blurb {
+  font-size: 8pt;
+  margin-top: 0.6mm;
+}
+
+.toc-row .num {
+  font-family: Impact, sans-serif;
+  font-size: 14pt;
+  color: #880000;
+  text-align: right;
+  line-height: 1;
+}
+
+/* Colour swatches */
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0.8mm;
+  margin: 1.5mm 0 2mm;
+}
+
+.swatch {
+  aspect-ratio: 1;
+  border: 0.5pt solid #1c1814;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  font-family: Arial, sans-serif;
+  font-size: 5.5pt;
+  font-weight: 700;
+  padding-bottom: 0.4mm;
+}
+
+/* Dungeon feature display */
+.dungeon-head {
+  font-family: "Old English Text MT", "Blackadder ITC", "Palatino Linotype", Georgia, serif;
+  font-size: 28pt;
+  line-height: 0.9;
+  margin: 0 0 1mm;
+  color: #4a0018;
+  text-align: left;
+}
+
+.dungeon-head .small {
+  display: block;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 8pt;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #880000;
+  margin-bottom: 1mm;
+}
+
+.dungeon-deck {
+  font-family: "Palatino Linotype", Palatino, Georgia, serif;
+  font-style: italic;
+  font-size: 11pt;
+  color: #4a0018;
+  margin: 0 0 2mm;
+}
+
+.guess-head {
+  font-family: Impact, "Arial Black", sans-serif;
+  font-size: 26pt;
+  line-height: 0.9;
+  color: #000078;
+  margin: 0 0 1mm;
+  text-transform: uppercase;
+}
+
+.anno {
+  font-size: 8pt;
+  border-left: 2pt solid #000078;
+  padding-left: 2mm;
+  margin: 1.2mm 0;
+}
+
+.anno strong {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 7pt;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #000078;
+  display: block;
+  margin-bottom: 0.4mm;
+}
+
+.cols-2.tall, .cols-3.tall, .cols-2-1.tall, .cols-1-2.tall {
+  flex: 1;
+  align-content: start;
+}
+
+.band {
+  background: #880000;
+  color: #fff;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 1.4mm 2.2mm;
+  margin: 0 0 2.5mm;
+}
+
+.band.blue { background: #000078; }
+.band.black { background: #1c1814; }
+
+.challenge-num {
+  font-family: Impact, sans-serif;
+  font-size: 18pt;
+  color: #880000;
+  float: left;
+  margin-right: 2mm;
+  line-height: 1;
+}
+
+.mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 8pt;
+  margin: 1mm 0 2mm;
+}
+
+.mini-table td {
+  border-bottom: 0.4pt solid #c8b898;
+  padding: 0.6mm 1mm 0.6mm 0;
+  vertical-align: top;
+}
+
+.mini-table td:first-child {
+  font-family: "Courier New", monospace;
+  font-weight: 700;
+  white-space: nowrap;
+  width: 18mm;
+}
+
+.ad-kicker {
+  font-family: Impact, sans-serif;
+  font-size: 36pt;
+  line-height: 0.88;
+  text-transform: uppercase;
+  color: #000078;
+  margin: 0 0 2mm;
+}
+
+.price {
+  font-family: Impact, sans-serif;
+  font-size: 40pt;
+  color: #880000;
+  line-height: 1;
+}
+
+.price span {
+  font-family: Arial, sans-serif;
+  font-size: 10pt;
+  display: block;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #1c1814;
+}
+
+.pull {
+  font-family: Impact, "Arial Narrow", sans-serif;
+  font-size: 14pt;
+  line-height: 1.05;
+  text-transform: uppercase;
+  color: #880000;
+  border-left: 3pt solid #880000;
+  padding-left: 2.5mm;
+  margin: 2mm 0;
+}
+
+.stack > * + * { margin-top: 1.5mm; }
+
+.span-2 { grid-column: span 2; }
+.span-3 { grid-column: span 3; }
+
+@media print {
+  body { background: none; }
+  .page {
+    margin: 0;
+    box-shadow: none;
+    page-break-after: always;
+  }
+}
