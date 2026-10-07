@@ -83,6 +83,12 @@ public sealed partial class CentauriMachine
     private readonly List<RectPrimitive> _rectangles = new();
     private readonly List<CirclePrimitive> _circles = new();
 
+    /// <summary>Retained RECT count (cleared by CLS). For headless verification.</summary>
+    public int RetainedRectangleCount => _rectangles.Count;
+
+    /// <summary>Retained LINE count (cleared by CLS). For headless verification.</summary>
+    public int RetainedLineCount => _lines.Count;
+
    public void Plot(int x, int y, int colour)
     {
         ValidateColour(colour);

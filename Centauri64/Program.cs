@@ -25,5 +25,11 @@ if (args.Contains("--verify-basic-ux"))
     return;
 }
 
+if (args.Contains("--verify-presentation"))
+{
+    Environment.ExitCode = Centauri64.Analysis.PresentationVerification.Run();
+    return;
+}
+
 using var game = new Centauri64.Game1();
 game.Run();

@@ -29,6 +29,9 @@ public sealed partial class CentauriMachine
 
     private readonly List<PositionedText> _positionedText = new();
 
+    /// <summary>Retained PRINTAT count (cleared by CLS). For headless verification.</summary>
+    public int RetainedTextCount => _positionedText.Count;
+
     public void Print(string text)
     {
         ActiveTextConsole.WriteLine(text);

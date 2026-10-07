@@ -292,6 +292,9 @@ public sealed partial class Interpreter
             ScreenPresentation.Text =>
                 next is Syntax.PrintStatement or Syntax.PrintAtStatement,
 
+            // GOSUB continues a Clear burst so CLS → GOSUB draw → YIELD can
+            // build one frame. RETURN is not required: after the jump,
+            // draw statements carry Presentation.None and stay in-slice.
             ScreenPresentation.Clear =>
                 next is Syntax.PrintStatement or
                     Syntax.PrintAtStatement or
@@ -304,7 +307,8 @@ public sealed partial class Interpreter
                     Syntax.PaperStatement or
                     Syntax.ForStatement or
                     Syntax.NextStatement or
-                    Syntax.IfStatement,
+                    Syntax.IfStatement or
+                    Syntax.GosubStatement,
 
             ScreenPresentation.Sprite =>
                 next is Syntax.SpritePositionStatement or
