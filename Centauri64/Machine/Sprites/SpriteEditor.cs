@@ -1,22 +1,33 @@
 using System;
+using System.Collections.Generic;
 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
 using Centauri64.Graphics;
+using Centauri64.Machine.Images;
+using Centauri64.Session;
 
 namespace Centauri64.Machine.Sprites;
 
 public sealed partial class SpriteEditor
 {
     private readonly SpriteAssetStore _assets;
+    private ImageAssetStore? _images;
 
     private SpriteAsset? _asset;
     private SpriteAnimation? _animation;
     private SpriteFrame? _frame;
 
+    private bool _selectingArtwork;
+    private int _artworkIndex;
+    private readonly List<ImageAsset> _eligibleArtwork = new();
+
     public bool IsActive { get; private set; }
+
+    /// <summary>Opens restricted Sprite Artwork Image Editor (Issue #3).</summary>
+    public Action? RequestSpriteArtworkEditor { get; set; }
 
     public int SelectedColour { get; private set; } = 7;
 
@@ -56,9 +67,15 @@ public sealed partial class SpriteEditor
 
     private bool _onionSkinEnabled;
 
-    public SpriteEditor(SpriteAssetStore assets)
+    public SpriteEditor(SpriteAssetStore assets, ImageAssetStore? images = null)
     {
         _assets = assets;
+        _images = images;
+    }
+
+    public void SetImageStore(ImageAssetStore images)
+    {
+        _images = images;
     }
 
     public void Open()
@@ -67,6 +84,7 @@ public sealed partial class SpriteEditor
 
         IsActive = true;
         _showingHelp = false;
+        _selectingArtwork = false;
         _confirm = ConfirmKind.None;
         _message = "";
         ClearUndo();
@@ -213,6 +231,12 @@ public sealed partial class SpriteEditor
             return;
         }
 
+        if (_selectingArtwork)
+        {
+            UpdateArtworkSelection(keyboard, previousKeyboard);
+            return;
+        }
+
         if (Pressed(keyboard, previousKeyboard, Keys.OemQuestion))
         {
             _showingHelp = !_showingHelp;
@@ -294,6 +318,24 @@ public sealed partial class SpriteEditor
             _onionSkinEnabled =
                 !_onionSkinEnabled;
 
+            return;
+        }
+
+        if (Pressed(keyboard, previousKeyboard, Keys.I))
+        {
+            if (!FeatureGate.CanOpenSpriteArtworkEditor())
+            {
+                ShowMessage("SPRITE ARTWORK LOCKED");
+                return;
+            }
+
+            RequestSpriteArtworkEditor?.Invoke();
+            return;
+        }
+
+        if (Pressed(keyboard, previousKeyboard, Keys.B))
+        {
+            BeginArtworkSelection();
             return;
         }
 
@@ -1424,6 +1466,12 @@ public sealed partial class SpriteEditor
             return;
         }
 
+        if (_selectingArtwork)
+        {
+            DrawArtworkSelection(spriteBatch, font, x);
+            return;
+        }
+
         if (_showingHelp)
         {
             DrawHelp(spriteBatch, font, x);
@@ -1446,8 +1494,14 @@ public sealed partial class SpriteEditor
 
             font.Draw(
                 spriteBatch,
-                "ESC EXIT",
+                "I SPRITE ARTWORK",
                 new Vector2(x, 260),
+                Color.White);
+
+            font.Draw(
+                spriteBatch,
+                "ESC EXIT",
+                new Vector2(x, 275),
                 Color.White);
 
             return;
@@ -1471,10 +1525,20 @@ public sealed partial class SpriteEditor
             new Vector2(x, 210),
             Color.White);
 
+        var source = string.IsNullOrEmpty(_animation.SourceImageName)
+            ? "PAINT"
+            : _animation.SourceImageName;
+
+        font.Draw(
+            spriteBatch,
+            $"ART: {source}",
+            new Vector2(x, 225),
+            Color.White);
+
         font.Draw(
             spriteBatch,
             $"ONION: {(_onionSkinEnabled ? "ON" : "OFF")}",
-            new Vector2(x, 225),
+            new Vector2(x, 240),
             _onionSkinEnabled
                 ? Color.Yellow
                 : Color.Gray);
@@ -1484,7 +1548,7 @@ public sealed partial class SpriteEditor
             font.Draw(
                 spriteBatch,
                 _message,
-                new Vector2(x, 245),
+                new Vector2(x, 260),
                 Color.Yellow);
         }
 
@@ -1493,20 +1557,169 @@ public sealed partial class SpriteEditor
             font.Draw(
                 spriteBatch,
                 "SAVE TAPE TO KEEP SPRITES",
-                new Vector2(x, 265),
+                new Vector2(x, 280),
                 Color.Yellow);
         }
 
         font.Draw(
             spriteBatch,
-            "N SPRITE  [ ] FRAME",
+            "B BIND ART  I ARTWORK",
             new Vector2(x, 300),
             Color.White);
 
         font.Draw(
             spriteBatch,
-            "ESC EXIT    ? HELP",
+            "N SPRITE  ? HELP  ESC",
             new Vector2(x, 315),
+            Color.White);
+    }
+
+    private void BeginArtworkSelection()
+    {
+        if (_animation == null)
+        {
+            ShowMessage("CREATE A SPRITE FIRST");
+            return;
+        }
+
+        _eligibleArtwork.Clear();
+        if (_images != null)
+        {
+            foreach (var image in _images.Images)
+            {
+                if (SpriteArtwork.IsEligible(image))
+                    _eligibleArtwork.Add(image);
+            }
+        }
+
+        if (_eligibleArtwork.Count == 0)
+        {
+            ShowMessage("NO 16X16 ART — PRESS I");
+            return;
+        }
+
+        _artworkIndex = 0;
+        if (!string.IsNullOrEmpty(_animation.SourceImageName))
+        {
+            for (var i = 0; i < _eligibleArtwork.Count; i++)
+            {
+                if (_eligibleArtwork[i].Name == _animation.SourceImageName)
+                {
+                    _artworkIndex = i;
+                    break;
+                }
+            }
+        }
+
+        _selectingArtwork = true;
+        _message = "";
+    }
+
+    private void UpdateArtworkSelection(
+        KeyboardState keyboard,
+        KeyboardState previousKeyboard)
+    {
+        if (Pressed(keyboard, previousKeyboard, Keys.Escape))
+        {
+            _selectingArtwork = false;
+            return;
+        }
+
+        if (Pressed(keyboard, previousKeyboard, Keys.Up) ||
+            Pressed(keyboard, previousKeyboard, Keys.Left))
+        {
+            _artworkIndex--;
+            if (_artworkIndex < 0)
+                _artworkIndex = _eligibleArtwork.Count - 1;
+            return;
+        }
+
+        if (Pressed(keyboard, previousKeyboard, Keys.Down) ||
+            Pressed(keyboard, previousKeyboard, Keys.Right))
+        {
+            _artworkIndex++;
+            if (_artworkIndex >= _eligibleArtwork.Count)
+                _artworkIndex = 0;
+            return;
+        }
+
+        if (Pressed(keyboard, previousKeyboard, Keys.Enter))
+        {
+            ApplySelectedArtwork();
+            _selectingArtwork = false;
+        }
+    }
+
+    private void ApplySelectedArtwork()
+    {
+        if (_animation == null ||
+            _artworkIndex < 0 ||
+            _artworkIndex >= _eligibleArtwork.Count)
+        {
+            return;
+        }
+
+        var image = _eligibleArtwork[_artworkIndex];
+
+        try
+        {
+            SpriteArtwork.BakeIntoAnimation(_animation, image);
+        }
+        catch (Exception ex)
+        {
+            ShowMessage(ex.Message.ToUpperInvariant());
+            return;
+        }
+
+        _currentFrameIndex = 0;
+        _frame = _animation.Frames[0];
+        _previewFrameIndex = 0;
+        _previewTimer = 0f;
+        ClearUndo();
+        MarkDirty();
+        ShowMessage($"BOUND {image.Name} ({_animation.Frames.Count} FR)");
+    }
+
+    private void DrawArtworkSelection(
+        SpriteBatch spriteBatch,
+        BitmapFont font,
+        int x)
+    {
+        font.Draw(
+            spriteBatch,
+            "BIND 16X16 ARTWORK",
+            new Vector2(x, 180),
+            Color.Yellow);
+
+        font.Draw(
+            spriteBatch,
+            $"TO ANIM: {_animation?.Name ?? "?"}",
+            new Vector2(x, 195),
+            Color.White);
+
+        var start = Math.Max(0, _artworkIndex - 4);
+        var y = 220;
+        for (var i = start;
+             i < _eligibleArtwork.Count && y < 360;
+             i++)
+        {
+            var image = _eligibleArtwork[i];
+            var selected = i == _artworkIndex;
+            var label =
+                $"{image.Name}  {image.FrameCount}FR";
+
+            font.Draw(
+                spriteBatch,
+                selected ? "> " + label : "  " + label,
+                new Vector2(x, y),
+                selected ? Color.Yellow : Color.White);
+            y += 15;
+        }
+
+        font.Draw(
+            spriteBatch,
+            "UP/DOWN  ENTER BIND  ESC",
+            new Vector2(x, 380),
             Color.White);
     }
 
@@ -1573,6 +1786,8 @@ public sealed partial class SpriteEditor
             "SHIFT+N COPY SPRITE",
             "R RENAME   X DELETE",
             "< > SPRITE",
+            "I SPRITE ARTWORK",
+            "B BIND ARTWORK",
             "M NEW ANIM",
             "SHIFT+M COPY ANIM",
             "UP DOWN ANIM",
@@ -1742,6 +1957,8 @@ public sealed partial class SpriteEditor
 
     public void Close()
     {
+        _selectingArtwork = false;
+
         if (_dirty)
         {
             Notice?.Invoke("SAVE TO KEEP SPRITES");

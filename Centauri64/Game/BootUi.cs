@@ -6,7 +6,7 @@ using Centauri64.Graphics;
 namespace Centauri64.Game;
 
 /// <summary>
-/// Dark system/boot presentation. Distinct from the Bedroom palette.
+/// Dark system/boot presentation (mode select, career name, etc.).
 /// </summary>
 internal static class SystemUi
 {
@@ -18,6 +18,25 @@ internal static class SystemUi
     public static readonly Color Text = new(214, 214, 206);
     public static readonly Color Muted = new(108, 108, 116);
     public static readonly Color Line = new(36, 72, 44);
+}
+
+/// <summary>
+/// Light-theme shop presentation — same pixel UI language, different location.
+/// </summary>
+internal static class ShopUi
+{
+    public static readonly Color Background = new(248, 248, 244);
+    public static readonly Color Panel = new(255, 255, 255);
+    public static readonly Color Highlight = new(255, 248, 210);
+    public static readonly Color Text = new(16, 16, 16);
+    public static readonly Color Muted = new(96, 96, 100);
+    public static readonly Color Green = new(0, 132, 44);
+    public static readonly Color Amber = new(168, 108, 0);
+    public static readonly Color Red = new(176, 28, 28);
+    public static readonly Color Blue = new(28, 56, 148);
+    public static readonly Color Line = new(40, 80, 48);
+    public static readonly Color BinaryLit = new(24, 24, 24);
+    public static readonly Color BinaryDim = new(168, 168, 168);
 }
 
 internal static class BootUi

@@ -23,7 +23,18 @@ public sealed partial class ImageEditor
         Pick
     }
 
+    /// <summary>
+    /// Full = Issue #5 Image Editor.
+    /// SpriteArtwork = Issue #3 restricted 16×16 Sprite-category mode.
+    /// </summary>
+    public enum AccessMode
+    {
+        Full,
+        SpriteArtwork
+    }
+
     private readonly ImageAssetStore _assets;
+    private AccessMode _accessMode = AccessMode.Full;
     private readonly MenuBar _menuBar = new(16, 64);
     private readonly ToolBar _toolBar;
     private readonly StatusBar _statusBar;
@@ -100,6 +111,11 @@ public sealed partial class ImageEditor
 
     public bool IsActive { get; private set; }
 
+    public AccessMode Mode => _accessMode;
+
+    public bool IsSpriteArtworkMode =>
+        _accessMode == AccessMode.SpriteArtwork;
+
     public event Action<string>? Notice;
 
     private sealed class Thumbnail
@@ -122,8 +138,9 @@ public sealed partial class ImageEditor
         _getBasicListing = getBasicListing;
     }
 
-    public void Open()
+    public void Open(AccessMode mode = AccessMode.Full)
     {
+        _accessMode = mode;
         IsActive = true;
         _dirty = false;
         _strokeActive = false;
@@ -131,22 +148,55 @@ public sealed partial class ImageEditor
         _panning = false;
         _dialog.Close();
         _menuBar.Close();
+        CloseWizard();
         ClearHistory();
         _previousScroll = Mouse.GetState().ScrollWheelValue;
 
         if (_settings != null)
             _showGrid = _settings.Grid;
 
-        if (_assets.Count == 0)
+        if (IsSpriteArtworkMode)
+            _browserFilter = BrowserFilter.Sprite;
+
+        var visible = GetFilteredImages();
+        if (visible.Count == 0)
         {
             _image = null;
             _selectedIndex = 0;
             return;
         }
 
-        _selectedIndex = Math.Clamp(_selectedIndex, 0, _assets.Count - 1);
-        _image = _assets.Images[_selectedIndex];
-        FitZoom();
+        SelectFilteredImage(visible[0]);
+    }
+
+    public void OpenSpriteArtwork(string? selectName = null)
+    {
+        Open(AccessMode.SpriteArtwork);
+
+        if (string.IsNullOrWhiteSpace(selectName))
+            return;
+
+        var key = selectName.Trim().ToUpperInvariant();
+        foreach (var image in GetFilteredImages())
+        {
+            if (image.Name == key)
+            {
+                SelectFilteredImage(image);
+                return;
+            }
+        }
+    }
+
+    private void SelectFilteredImage(ImageAsset asset)
+    {
+        for (var i = 0; i < _assets.Count; i++)
+        {
+            if (ReferenceEquals(_assets.Images[i], asset))
+            {
+                SelectIndex(i);
+                return;
+            }
+        }
     }
 
     public void Close()
@@ -504,6 +554,19 @@ public sealed partial class ImageEditor
 
     private void ShowHelp()
     {
+        if (IsSpriteArtworkMode)
+        {
+            _dialog.ShowHelp(
+                "SPRITE ARTWORK",
+                "ISSUE #3 — 16X16 SPRITE IMAGES ONLY\n" +
+                "MOUSE DRAW  WHEEL ZOOM  ALT-DRAG PAN\n" +
+                "FRAME STRIP: SELECT / + ADD FRAMES\n" +
+                "SAVE TAPE TO KEEP ARTWORK\n" +
+                "THEN BIND IN SPRITE EDITOR (B)\n" +
+                "CTRL+Z UNDO  0 FIT  ESC EXIT");
+            return;
+        }
+
         _dialog.ShowHelp(
             "IMAGE EDITOR",
             "DRAW ARTWORK HERE — SPRITES/TILES/BG\n" +
@@ -516,15 +579,17 @@ public sealed partial class ImageEditor
 
     private string BuildStatusText()
     {
+        var title = IsSpriteArtworkMode ? "SPRITE ARTWORK" : "IMAGE EDITOR";
+
         if (_image == null)
-            return "IMAGE EDITOR  —  NEW IMAGE TO BEGIN";
+            return $"{title}  —  NEW IMAGE TO BEGIN";
 
         var colourLabel = _colour < 0 ? "TRANSPARENT" : _colour.ToString();
         var mode = _image.Mode == CentauriDisplayMode.Arcade ? "ARCADE" : "STANDARD";
         var zoom = _fitZoom ? "FIT" : $"{FormatZoom(_zoom)}X";
         var shape = UsesFilledShapes() ? "FILLED" : "OUTLINE";
         var cat = _image.Category.ToString().ToUpperInvariant();
-        return $"IMAGE:{_image.Name}  {cat}  {mode}  {_image.Width}X{_image.Height}  FR:{_image.CurrentFrameIndex + 1}/{_image.FrameCount}  TOOL:{_tool.ToString().ToUpperInvariant()}  {shape}  C:{colourLabel}  Z:{zoom}";
+        return $"{title}:{_image.Name}  {cat}  {mode}  {_image.Width}X{_image.Height}  FR:{_image.CurrentFrameIndex + 1}/{_image.FrameCount}  TOOL:{_tool.ToString().ToUpperInvariant()}  {shape}  C:{colourLabel}  Z:{zoom}";
     }
 
     private static string FormatZoom(float zoom)

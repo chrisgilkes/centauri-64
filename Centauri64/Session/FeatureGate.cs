@@ -59,4 +59,18 @@ public static class FeatureGate
 
         return tool + " NOT YET AVAILABLE\n\nLOOK OUT FOR AN UPCOMING ISSUE OF\nCENTAURI64 MAGAZINE.";
     }
+
+    /// <summary>
+    /// Full Image Editor (Issue #5) — all categories and sizes.
+    /// </summary>
+    public static bool CanOpenFullImageEditor() =>
+        Current.IsAvailable(FeatureId.Images);
+
+    /// <summary>
+    /// Restricted Sprite Artwork mode (Issue #3) or full Images (Issue #5).
+    /// Does not unlock FeatureId.Images globally.
+    /// </summary>
+    public static bool CanOpenSpriteArtworkEditor() =>
+        Current.IsAvailable(FeatureId.Sprites) ||
+        Current.IsAvailable(FeatureId.Images);
 }

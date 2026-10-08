@@ -1,6 +1,8 @@
 using System;
-using System.Linq;
 
+using Centauri64.Graphics;
+using Centauri64.Machine;
+using Centauri64.Progression;
 using Centauri64.Session;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -8,34 +10,98 @@ using Microsoft.Xna.Framework.Input;
 
 namespace Centauri64.Game;
 
+/// <summary>
+/// Light-theme computer package selection (career creation).
+/// Pixel UI matching the shop screens — no print/catalogue presentation.
+/// </summary>
 public sealed class BundleSelectScreen
 {
-    private readonly PrintFonts _print;
+    private enum Phase
+    {
+        Browse,
+        Confirm,
+        Thanks
+    }
+
+    private readonly BitmapFont _font;
     private readonly Texture2D _pixel;
+    private readonly SystemBinaryBorder _binaryBorder = new();
     private KeyboardState _previous;
     private MouseState _previousMouse;
     private int _index;
+    private int _hoverControl = -1; // browse: 0 prev, 1 order, 2 next; confirm: 0 no, 1 yes
+    private int _cashPennies = ComputerPurchase.StartingCashPennies;
+    private Phase _phase = Phase.Browse;
+    private string _thanks = string.Empty;
+    private string _error = string.Empty;
+    private bool _confirmYes = true;
 
     public event Action<string>? BundleChosen;
+    public event Action? PurchaseAcknowledged;
     public event Action? Cancelled;
 
-    public BundleSelectScreen(PrintFonts print, Texture2D pixel)
+    public BundleSelectScreen(BitmapFont font, Texture2D pixel)
     {
-        _print = print;
+        _font = font;
         _pixel = pixel;
     }
 
-    public void Open()
+    public void Open(int cashPennies = ComputerPurchase.StartingCashPennies)
     {
+        _cashPennies = cashPennies;
         _index = 0;
+        _hoverControl = -1;
+        _phase = Phase.Browse;
+        _thanks = string.Empty;
+        _error = string.Empty;
+        _confirmYes = true;
         _previous = Keyboard.GetState();
         _previousMouse = Mouse.GetState();
     }
 
+    public void ShowThanks(string message)
+    {
+        _thanks = message;
+        _error = string.Empty;
+        _phase = Phase.Thanks;
+        _previous = Keyboard.GetState();
+        _previousMouse = Mouse.GetState();
+    }
+
+    public void ShowError(string message)
+    {
+        _error = message;
+        _phase = Phase.Browse;
+    }
+
     public void Update(GameTime gameTime, MouseState mouse)
     {
+        _binaryBorder.Update(gameTime);
         var keyboard = Keyboard.GetState();
         var count = ComputerBundleCatalog.Bundles.Length;
+
+        if (_phase == Phase.Thanks)
+        {
+            if (Pressed(keyboard, Keys.Enter) ||
+                Pressed(keyboard, Keys.Space) ||
+                Pressed(keyboard, Keys.Escape) ||
+                Clicked(mouse))
+            {
+                PurchaseAcknowledged?.Invoke();
+            }
+
+            _previous = keyboard;
+            _previousMouse = mouse;
+            return;
+        }
+
+        if (_phase == Phase.Confirm)
+        {
+            UpdateConfirm(keyboard, mouse);
+            _previous = keyboard;
+            _previousMouse = mouse;
+            return;
+        }
 
         if (Pressed(keyboard, Keys.Escape))
         {
@@ -46,179 +112,371 @@ public sealed class BundleSelectScreen
         }
 
         if (Pressed(keyboard, Keys.Left))
+        {
             _index = (_index + count - 1) % count;
+            _error = string.Empty;
+        }
 
         if (Pressed(keyboard, Keys.Right))
+        {
             _index = (_index + 1) % count;
+            _error = string.Empty;
+        }
 
-        HandleMouse(mouse);
+        HandleBrowseMouse(mouse);
 
         if (Pressed(keyboard, Keys.Enter) || Pressed(keyboard, Keys.Space))
-            BundleChosen?.Invoke(ComputerBundleCatalog.Bundles[_index].Id);
+            BeginConfirm();
 
         _previous = keyboard;
         _previousMouse = mouse;
     }
 
-    public void Draw(SpriteBatch spriteBatch, Matrix transform)
+    public void Draw(SpriteBatch spriteBatch)
     {
-        spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: transform);
-        PrintTheme.FillPaper(spriteBatch, _pixel);
-        PrintTheme.DrawMasthead(
+        spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+        BootUi.DrawBox(
             spriteBatch,
             _pixel,
-            _print,
-            "CENTAURI COMPUTER CENTRE",
-            "1986 CATALOGUE",
-            "EST. 1986");
+            new Rectangle(0, 0, CentauriMachine.DEVELOPMENT_WIDTH, CentauriMachine.DEVELOPMENT_HEIGHT),
+            ShopUi.Background);
 
-        var bundle = ComputerBundleCatalog.Bundles[_index];
-        var page = ContentBounds();
-        PrintTheme.Box(spriteBatch, _pixel, page, Color.White);
-        PrintTheme.Frame(spriteBatch, _pixel, page, PrintTheme.Rule, 2);
+        _binaryBorder.Draw(spriteBatch, _font, ShopUi.BinaryLit, ShopUi.BinaryDim);
 
-        // Left product column + right art placeholder.
-        var left = new Rectangle(page.X + 28, page.Y + 24, 620, page.Height - 48);
-        var art = ArtBounds();
-        PrintTheme.Box(spriteBatch, _pixel, art, PrintTheme.Paper);
-        PrintTheme.Frame(spriteBatch, _pixel, art, PrintTheme.SpotBlue, 2);
+        if (_phase == Phase.Thanks)
+        {
+            DrawThanks(spriteBatch);
+            spriteBatch.End();
+            return;
+        }
 
-        var layout = new PrintLayout(spriteBatch, _pixel, _print, left.X, left.Y, left.Width, left.Bottom - 8);
-        layout.Section("THIS MONTH'S PACK");
-        layout.Heading(bundle.Name);
-        layout.Paragraph(bundle.Tagline, PrintTheme.InkMuted, maxLines: 3);
-        layout.Space(8);
-        layout.Rule();
-        layout.Section("INCLUDED", PrintTheme.SpotBlue);
-        layout.BulletList(bundle.Included, PrintTheme.Ink, "* ");
-        layout.Space(12);
-        layout.Section("WHY CHOOSE THIS PACK?", PrintTheme.Masthead);
-        layout.Paragraph(BuildWhyCopy(bundle), PrintTheme.Ink, maxLines: 5);
+        if (_phase == Phase.Confirm)
+        {
+            DrawConfirm(spriteBatch);
+            spriteBatch.End();
+            return;
+        }
 
-        DrawArtPlaceholder(spriteBatch, art, bundle);
-        DrawPricePlate(spriteBatch, PriceBounds(), bundle.Price);
-
-        DrawTextControl(spriteBatch, PrevBounds(), "<  PREVIOUS PACK", accent: false);
-        DrawTextControl(spriteBatch, NextBounds(), "NEXT PACK  >", accent: false);
-        DrawTextControl(
-            spriteBatch,
-            BuyBounds(),
-            "ORDER THIS PACK - " + bundle.Price,
-            accent: true);
-
-        PrintTheme.Footer(
-            spriteBatch,
-            _pixel,
-            _print,
-            "LEFT / RIGHT CHANGE PACK    ENTER ORDER    ESC BACK");
+        DrawBrowse(spriteBatch);
         spriteBatch.End();
     }
 
-    private void DrawArtPlaceholder(SpriteBatch spriteBatch, Rectangle art, ComputerBundle bundle)
+    private void DrawBrowse(SpriteBatch spriteBatch)
     {
-        _print.Draw(spriteBatch, _print.Caption, "PRODUCT PHOTOGRAPH", art.X + 24, art.Y + 24, PrintTheme.InkMuted);
-        PrintTheme.RuleH(spriteBatch, _pixel, art.X + 24, art.Y + 52, art.Width - 48);
+        var bundle = ComputerBundleCatalog.Bundles[_index];
+        var count = ComputerBundleCatalog.Bundles.Length;
 
-        var titleY = art.Y + art.Height / 2 - 40;
-        var nameSize = _print.Measure(_print.Title, "CENTAURI64");
-        _print.Draw(
+        spriteBatch.Draw(_pixel, new Rectangle(40, 18, 560, 1), ShopUi.Line);
+        BootUi.DrawText(_font, spriteBatch, "CENTAURI COMPUTER CENTRE", 40, 28, ShopUi.Red);
+        BootUi.DrawText(_font, spriteBatch, "1986", 568, 28, ShopUi.Blue);
+        spriteBatch.Draw(_pixel, new Rectangle(40, 48, 560, 1), ShopUi.Line);
+
+        BootUi.DrawText(_font, spriteBatch, "COMPUTER PACKAGES", 40, 58, ShopUi.Blue);
+        BootUi.DrawText(
+            _font,
             spriteBatch,
-            _print.Title,
-            "CENTAURI64",
-            art.X + (art.Width - (int)nameSize.X) / 2,
-            titleY,
-            PrintTheme.Ink);
+            "Choose a pack for your bedroom machine.",
+            40,
+            74,
+            ShopUi.Muted);
 
-        foreach (var line in PrintFonts.Wrap(_print.Body, bundle.Name, art.Width - 48).Take(2))
+        BootUi.DrawText(
+            _font,
+            spriteBatch,
+            $"PACK {_index + 1}/{count}",
+            480,
+            74,
+            ShopUi.Green);
+
+        var panel = new Rectangle(40, 96, 560, 280);
+        BootUi.DrawBox(spriteBatch, _pixel, panel, ShopUi.Panel);
+        BootUi.DrawBorder(spriteBatch, _pixel, panel, ShopUi.Amber);
+
+        BootUi.DrawText(_font, spriteBatch, bundle.Name, panel.X + 16, panel.Y + 14, ShopUi.Text);
+        BootUi.DrawText(_font, spriteBatch, "SELECTED", panel.Right - 84, panel.Y + 14, ShopUi.Amber);
+        BootUi.DrawText(_font, spriteBatch, bundle.Tagline, panel.X + 16, panel.Y + 34, ShopUi.Green);
+
+        spriteBatch.Draw(_pixel, new Rectangle(panel.X + 16, panel.Y + 54, panel.Width - 32, 1), ShopUi.Line);
+
+        BootUi.DrawText(_font, spriteBatch, "INCLUDED:", panel.X + 16, panel.Y + 66, ShopUi.Blue);
+        var y = panel.Y + 86;
+        foreach (var item in bundle.Included)
         {
-            var size = _print.Measure(_print.Body, line);
-            _print.Draw(
-                spriteBatch,
-                _print.Body,
-                line,
-                art.X + (art.Width - (int)size.X) / 2,
-                titleY + 48,
-                PrintTheme.SpotBlue);
-            titleY += 28;
+            BootUi.DrawText(_font, spriteBatch, "* " + Truncate(item, 60), panel.X + 16, y, ShopUi.Text);
+            y += 16;
         }
 
-        _print.Draw(
+        BootUi.DrawText(_font, spriteBatch, "PRICE", panel.X + 16, panel.Y + 220, ShopUi.Muted);
+        BootUi.DrawText(_font, spriteBatch, bundle.Price, panel.X + 72, panel.Y + 220, ShopUi.Amber);
+
+        var remaining = _cashPennies - bundle.PricePennies;
+        BootUi.DrawText(
+            _font,
             spriteBatch,
-            _print.Caption,
-            "Pack artwork coming in a later printing.",
-            art.X + 24,
-            art.Bottom - 40,
-            PrintTheme.InkMuted);
-    }
+            "REMAINING " + PlayerProgress.FormatPounds(remaining),
+            panel.X + 200,
+            panel.Y + 220,
+            ShopUi.Green);
 
-    private void DrawPricePlate(SpriteBatch spriteBatch, Rectangle bounds, string price)
-    {
-        PrintTheme.Box(spriteBatch, _pixel, bounds, PrintTheme.Highlight);
-        PrintTheme.Frame(spriteBatch, _pixel, bounds, PrintTheme.Masthead, 2);
-        _print.Draw(spriteBatch, _print.Caption, "OUR PRICE", bounds.X + 18, bounds.Y + 12, PrintTheme.Masthead);
-        _print.Draw(spriteBatch, _print.Title, price, bounds.X + 18, bounds.Y + 40, PrintTheme.Ink);
-    }
+        BootUi.DrawText(
+            _font,
+            spriteBatch,
+            Truncate(BuildWhyCopy(bundle), 64),
+            panel.X + 16,
+            panel.Y + 244,
+            ShopUi.Muted);
 
-    private void DrawTextControl(SpriteBatch spriteBatch, Rectangle bounds, string label, bool accent)
-    {
-        if (accent)
+        DrawControl(spriteBatch, PrevBounds(), "< PREV", _hoverControl == 0);
+        DrawControl(spriteBatch, OrderBounds(), "ORDER THIS PACK - " + bundle.Price, _hoverControl == 1, accent: true);
+        DrawControl(spriteBatch, NextBounds(), "NEXT >", _hoverControl == 2);
+
+        spriteBatch.Draw(_pixel, new Rectangle(40, 420, 560, 1), ShopUi.Line);
+        if (!string.IsNullOrEmpty(_error))
         {
-            PrintTheme.Box(spriteBatch, _pixel, bounds, PrintTheme.Masthead);
-            PrintTheme.Frame(spriteBatch, _pixel, bounds, PrintTheme.Ink, 2);
+            BootUi.DrawText(_font, spriteBatch, Truncate(_error, 68), 40, 436, ShopUi.Red);
         }
         else
         {
-            PrintTheme.Box(spriteBatch, _pixel, bounds, PrintTheme.Paper);
-            PrintTheme.Frame(spriteBatch, _pixel, bounds, PrintTheme.Rule, 1);
+            BootUi.DrawText(
+                _font,
+                spriteBatch,
+                "LEFT / RIGHT CHANGE PACK    ENTER ORDER    ESC BACK",
+                40,
+                436,
+                ShopUi.Muted);
+        }
+    }
+
+    private void DrawConfirm(SpriteBatch spriteBatch)
+    {
+        var bundle = ComputerBundleCatalog.Bundles[_index];
+        var remaining = _cashPennies - bundle.PricePennies;
+
+        spriteBatch.Draw(_pixel, new Rectangle(40, 18, 560, 1), ShopUi.Line);
+        BootUi.DrawText(_font, spriteBatch, "BYTE WORLD COMPUTERS", 40, 28, ShopUi.Red);
+        BootUi.DrawText(_font, spriteBatch, "CONFIRM", 520, 28, ShopUi.Blue);
+        spriteBatch.Draw(_pixel, new Rectangle(40, 48, 560, 1), ShopUi.Line);
+
+        var panel = new Rectangle(80, 100, 480, 240);
+        BootUi.DrawBox(spriteBatch, _pixel, panel, ShopUi.Panel);
+        BootUi.DrawBorder(spriteBatch, _pixel, panel, ShopUi.Amber);
+
+        BootUi.DrawText(_font, spriteBatch, bundle.Name, panel.X + 24, panel.Y + 24, ShopUi.Text);
+        BootUi.DrawText(
+            _font,
+            spriteBatch,
+            "PACKAGE PRICE: " + PlayerProgress.FormatPounds(bundle.PricePennies),
+            panel.X + 24,
+            panel.Y + 56,
+            ShopUi.Muted);
+        BootUi.DrawText(
+            _font,
+            spriteBatch,
+            "YOUR SAVINGS:  " + PlayerProgress.FormatPounds(_cashPennies),
+            panel.X + 24,
+            panel.Y + 76,
+            ShopUi.Muted);
+        BootUi.DrawText(
+            _font,
+            spriteBatch,
+            "REMAINING:     " + PlayerProgress.FormatPounds(remaining),
+            panel.X + 24,
+            panel.Y + 96,
+            ShopUi.Amber);
+
+        BootUi.DrawText(_font, spriteBatch, "BUY THIS COMPUTER?", panel.X + 24, panel.Y + 136, ShopUi.Green);
+
+        var noSelected = !_confirmYes || _hoverControl == 0;
+        var yesSelected = _confirmYes || _hoverControl == 1;
+        DrawControl(spriteBatch, ConfirmNoBounds(), "[NO]", noSelected);
+        DrawControl(spriteBatch, ConfirmYesBounds(), "[YES]", yesSelected, accent: _confirmYes);
+
+        BootUi.DrawText(
+            _font,
+            spriteBatch,
+            "LEFT / RIGHT    ENTER CONFIRM    ESC CANCEL",
+            40,
+            436,
+            ShopUi.Muted);
+    }
+
+    private void DrawThanks(SpriteBatch spriteBatch)
+    {
+        spriteBatch.Draw(_pixel, new Rectangle(40, 18, 560, 1), ShopUi.Line);
+        BootUi.DrawText(_font, spriteBatch, "BYTE WORLD COMPUTERS", 40, 28, ShopUi.Red);
+        BootUi.DrawText(_font, spriteBatch, "SOLD", 560, 28, ShopUi.Green);
+        spriteBatch.Draw(_pixel, new Rectangle(40, 48, 560, 1), ShopUi.Line);
+
+        var panel = new Rectangle(80, 120, 480, 200);
+        BootUi.DrawBox(spriteBatch, _pixel, panel, ShopUi.Panel);
+        BootUi.DrawBorder(spriteBatch, _pixel, panel, ShopUi.Green);
+
+        BootUi.DrawText(_font, spriteBatch, "MARTIN:", panel.X + 24, panel.Y + 32, ShopUi.Blue);
+        BootUi.DrawText(
+            _font,
+            spriteBatch,
+            Truncate(_thanks, 50),
+            panel.X + 24,
+            panel.Y + 64,
+            ShopUi.Text);
+
+        if (_thanks.Length > 50)
+        {
+            BootUi.DrawText(
+                _font,
+                spriteBatch,
+                Truncate(_thanks[50..].TrimStart(), 50),
+                panel.X + 24,
+                panel.Y + 80,
+                ShopUi.Text);
         }
 
-        var size = _print.Measure(_print.Body, label);
-        var x = bounds.X + (bounds.Width - (int)size.X) / 2;
-        var y = bounds.Y + (bounds.Height - (int)size.Y) / 2;
-        _print.Draw(spriteBatch, _print.Body, label, x, y, accent ? Color.White : PrintTheme.Ink);
+        BootUi.DrawText(
+            _font,
+            spriteBatch,
+            "TIME TO GET THAT MACHINE HOME.",
+            panel.X + 24,
+            panel.Y + 120,
+            ShopUi.Muted);
+
+        BootUi.DrawText(
+            _font,
+            spriteBatch,
+            "ENTER / SPACE CONTINUE",
+            40,
+            436,
+            ShopUi.Muted);
+    }
+
+    private void UpdateConfirm(KeyboardState keyboard, MouseState mouse)
+    {
+        if (Pressed(keyboard, Keys.Escape) || Pressed(keyboard, Keys.N))
+        {
+            _phase = Phase.Browse;
+            return;
+        }
+
+        if (Pressed(keyboard, Keys.Left) || Pressed(keyboard, Keys.Right))
+            _confirmYes = !_confirmYes;
+
+        _hoverControl = -1;
+        if (ConfirmNoBounds().Contains(mouse.X, mouse.Y))
+            _hoverControl = 0;
+        else if (ConfirmYesBounds().Contains(mouse.X, mouse.Y))
+            _hoverControl = 1;
+
+        if (Clicked(mouse))
+        {
+            if (_hoverControl == 0)
+            {
+                _phase = Phase.Browse;
+                return;
+            }
+
+            if (_hoverControl == 1)
+            {
+                ConfirmPurchase();
+                return;
+            }
+        }
+
+        if (Pressed(keyboard, Keys.Enter) || Pressed(keyboard, Keys.Space) || Pressed(keyboard, Keys.Y))
+        {
+            if (_confirmYes)
+                ConfirmPurchase();
+            else
+                _phase = Phase.Browse;
+        }
+    }
+
+    private void BeginConfirm()
+    {
+        _confirmYes = true;
+        _error = string.Empty;
+        _phase = Phase.Confirm;
+    }
+
+    private void ConfirmPurchase() =>
+        BundleChosen?.Invoke(ComputerBundleCatalog.Bundles[_index].Id);
+
+    private void DrawControl(
+        SpriteBatch spriteBatch,
+        Rectangle bounds,
+        string label,
+        bool hovered,
+        bool accent = false)
+    {
+        var fill = accent || hovered ? ShopUi.Highlight : ShopUi.Panel;
+        var border = accent ? ShopUi.Amber : hovered ? ShopUi.Green : ShopUi.Line;
+        BootUi.DrawBox(spriteBatch, _pixel, bounds, fill);
+        BootUi.DrawBorder(spriteBatch, _pixel, bounds, border);
+
+        var textColour = accent ? ShopUi.Amber : ShopUi.Text;
+        var textWidth = label.Length * 8;
+        var x = bounds.X + Math.Max(4, (bounds.Width - textWidth) / 2);
+        var y = bounds.Y + (bounds.Height - 8) / 2;
+        BootUi.DrawText(_font, spriteBatch, Truncate(label, bounds.Width / 8 - 1), x, y, textColour);
     }
 
     private static string BuildWhyCopy(ComputerBundle bundle)
     {
         if (!string.IsNullOrWhiteSpace(bundle.Tagline))
-            return bundle.Tagline + " Everything listed is included in the price shown.";
+            return bundle.Tagline + " Everything listed is included.";
 
         return "A complete Centauri64 pack ready for your bedroom desk.";
     }
 
-    private void HandleMouse(MouseState mouse)
+    private void HandleBrowseMouse(MouseState mouse)
     {
-        var clicked = mouse.LeftButton == ButtonState.Pressed &&
-                      _previousMouse.LeftButton == ButtonState.Released;
-        if (!clicked)
+        _hoverControl = -1;
+        if (PrevBounds().Contains(mouse.X, mouse.Y))
+            _hoverControl = 0;
+        else if (OrderBounds().Contains(mouse.X, mouse.Y))
+            _hoverControl = 1;
+        else if (NextBounds().Contains(mouse.X, mouse.Y))
+            _hoverControl = 2;
+
+        if (!Clicked(mouse))
             return;
 
         var count = ComputerBundleCatalog.Bundles.Length;
-        if (PrevBounds().Contains(mouse.X, mouse.Y))
+        if (_hoverControl == 0)
+        {
             _index = (_index + count - 1) % count;
-        else if (NextBounds().Contains(mouse.X, mouse.Y))
+            _error = string.Empty;
+        }
+        else if (_hoverControl == 2)
+        {
             _index = (_index + 1) % count;
-        else if (BuyBounds().Contains(mouse.X, mouse.Y))
-            BundleChosen?.Invoke(ComputerBundleCatalog.Bundles[_index].Id);
+            _error = string.Empty;
+        }
+        else if (_hoverControl == 1)
+        {
+            BeginConfirm();
+        }
     }
 
-    private static Rectangle ContentBounds() =>
-        new(56, 120, 1168, 580);
+    private bool Clicked(MouseState mouse) =>
+        mouse.LeftButton == ButtonState.Pressed &&
+        _previousMouse.LeftButton == ButtonState.Released;
 
-    private static Rectangle ArtBounds() =>
-        new(740, 150, 450, 420);
+    private static Rectangle PrevBounds() => new(40, 388, 96, 24);
 
-    private static Rectangle PriceBounds() =>
-        new(740, 588, 450, 88);
+    private static Rectangle OrderBounds() => new(152, 388, 336, 24);
 
-    private static Rectangle PrevBounds() =>
-        new(56, 720, 280, 48);
+    private static Rectangle NextBounds() => new(504, 388, 96, 24);
 
-    private static Rectangle NextBounds() =>
-        new(944, 720, 280, 48);
+    private static Rectangle ConfirmNoBounds() => new(160, 280, 120, 28);
 
-    private static Rectangle BuyBounds() =>
-        new(360, 720, 560, 48);
+    private static Rectangle ConfirmYesBounds() => new(360, 280, 120, 28);
+
+    private static string Truncate(string text, int maxChars)
+    {
+        if (string.IsNullOrEmpty(text) || text.Length <= maxChars)
+            return text;
+
+        return maxChars <= 1 ? text[..1] : text[..(maxChars - 1)] + ".";
+    }
 
     private bool Pressed(KeyboardState keyboard, Keys key) =>
         keyboard.IsKeyDown(key) && !_previous.IsKeyDown(key);

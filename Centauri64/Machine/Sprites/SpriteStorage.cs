@@ -39,6 +39,12 @@ public sealed class SpriteStorage
                 writer.WriteLine(
                     $"ANIMATION {animation.Name}");
 
+                if (!string.IsNullOrWhiteSpace(animation.SourceImageName))
+                {
+                    writer.WriteLine(
+                        $"IMAGE {animation.SourceImageName}");
+                }
+
                 foreach (var frame in animation.Frames)
                 {
                     writer.WriteLine("FRAME");
@@ -166,6 +172,15 @@ public sealed class SpriteStorage
                     currentAsset.AddAnimation(
                         animationName);
 
+                lineIndex++;
+                continue;
+            }
+
+            // Optional authoring metadata — pixels remain source of truth.
+            if (line.StartsWith("IMAGE ") && currentAnimation != null)
+            {
+                currentAnimation.SourceImageName =
+                    line["IMAGE ".Length..].Trim().ToUpperInvariant();
                 lineIndex++;
                 continue;
             }

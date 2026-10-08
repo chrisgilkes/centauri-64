@@ -134,26 +134,30 @@ public sealed partial class ImageEditor
             _previousMouse.LeftButton != ButtonState.Released)
             return true;
 
-        // Filter chips
-        var filterY = top + 18;
-        if (mouse.Y >= filterY && mouse.Y < filterY + 14)
+        // Filter chips (full editor only)
+        if (!IsSpriteArtworkMode)
         {
-            var filters = new[]
+            var filterY = top + 18;
+            if (mouse.Y >= filterY && mouse.Y < filterY + 14)
             {
-                BrowserFilter.All,
-                BrowserFilter.General,
-                BrowserFilter.Sprite,
-                BrowserFilter.Tileset,
-                BrowserFilter.Background
-            };
-            var chip = (mouse.X - 4) / 22;
-            if (chip >= 0 && chip < filters.Length)
-                _browserFilter = filters[chip];
-            return true;
+                var filters = new[]
+                {
+                    BrowserFilter.All,
+                    BrowserFilter.General,
+                    BrowserFilter.Sprite,
+                    BrowserFilter.Tileset,
+                    BrowserFilter.Background
+                };
+                var chip = (mouse.X - 4) / 22;
+                if (chip >= 0 && chip < filters.Length)
+                    _browserFilter = filters[chip];
+                return true;
+            }
         }
 
         var visible = GetFilteredImages();
-        var index = (mouse.Y - top - 36) / 56;
+        var listTop = IsSpriteArtworkMode ? top + 20 : top + 36;
+        var index = (mouse.Y - listTop) / 56;
         if (index >= 0 && index < visible.Count)
         {
             var asset = visible[index];
@@ -214,6 +218,19 @@ public sealed partial class ImageEditor
         var list = new List<ImageAsset>();
         foreach (var image in _assets.Images)
         {
+            if (IsSpriteArtworkMode)
+            {
+                // Issue #3: only 16×16 Sprite-category artwork.
+                if (image.Category == ImageCategory.Sprite &&
+                    image.Width == CentauriSprite.WIDTH &&
+                    image.Height == CentauriSprite.HEIGHT)
+                {
+                    list.Add(image);
+                }
+
+                continue;
+            }
+
             var match = _browserFilter switch
             {
                 BrowserFilter.All => true,
@@ -459,30 +476,40 @@ public sealed partial class ImageEditor
         var top = _toolBar.Bottom;
         var height = ScreenH - 16 - FrameStripHeight - top;
         spriteBatch.Draw(pixel, new Rectangle(0, top, BrowserWidth, height), CreativeUiTheme.Panel);
-        font.Draw(spriteBatch, "IMAGES", new Vector2(8, top + 4), CreativeUiTheme.Accent);
+        font.Draw(
+            spriteBatch,
+            IsSpriteArtworkMode ? "ARTWORK" : "IMAGES",
+            new Vector2(8, top + 4),
+            CreativeUiTheme.Accent);
 
-        var filters = new[] { "A", "G", "S", "T", "B" };
-        var filterEnums = new[]
+        var listTop = top + 20;
+        if (!IsSpriteArtworkMode)
         {
-            BrowserFilter.All,
-            BrowserFilter.General,
-            BrowserFilter.Sprite,
-            BrowserFilter.Tileset,
-            BrowserFilter.Background
-        };
-        for (var i = 0; i < filters.Length; i++)
-        {
-            var x = 4 + i * 22;
-            var selected = _browserFilter == filterEnums[i];
-            spriteBatch.Draw(
-                pixel,
-                new Rectangle(x, top + 18, 20, 12),
-                selected ? CreativeUiTheme.MenuHot : CreativeUiTheme.PanelLight);
-            font.Draw(
-                spriteBatch,
-                filters[i],
-                new Vector2(x + 6, top + 18),
-                selected ? CreativeUiTheme.Highlight : CreativeUiTheme.Text);
+            var filters = new[] { "A", "G", "S", "T", "B" };
+            var filterEnums = new[]
+            {
+                BrowserFilter.All,
+                BrowserFilter.General,
+                BrowserFilter.Sprite,
+                BrowserFilter.Tileset,
+                BrowserFilter.Background
+            };
+            for (var i = 0; i < filters.Length; i++)
+            {
+                var x = 4 + i * 22;
+                var selected = _browserFilter == filterEnums[i];
+                spriteBatch.Draw(
+                    pixel,
+                    new Rectangle(x, top + 18, 20, 12),
+                    selected ? CreativeUiTheme.MenuHot : CreativeUiTheme.PanelLight);
+                font.Draw(
+                    spriteBatch,
+                    filters[i],
+                    new Vector2(x + 6, top + 18),
+                    selected ? CreativeUiTheme.Highlight : CreativeUiTheme.Text);
+            }
+
+            listTop = top + 36;
         }
 
         var device = pixel.GraphicsDevice;
@@ -490,7 +517,7 @@ public sealed partial class ImageEditor
         for (var i = 0; i < visible.Count; i++)
         {
             var image = visible[i];
-            var y = top + 36 + i * 56;
+            var y = listTop + i * 56;
             if (y + 52 > ScreenH - 16 - FrameStripHeight)
                 break;
 

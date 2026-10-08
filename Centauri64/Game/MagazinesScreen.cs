@@ -669,6 +669,12 @@ public sealed partial class MagazinesScreen
             "");
 
         var layout = new PrintLayout(spriteBatch, _whitePixel, _print, 120, 160, 1000, 860);
+        layout.Section("SAVING PROGRAM TO CASSETTE...", PrintTheme.Ink);
+        layout.Section("PACKAGING SOFTWARE...", PrintTheme.Ink);
+        layout.Section("POSTING TO SOFTWARE HOUSE...", PrintTheme.Ink);
+        layout.Space(12);
+        layout.Section("SUBMISSION COMPLETE.", PrintTheme.Stamp);
+        layout.Space(16);
         layout.Paragraph(_sentMessage);
         layout.Space(24);
         layout.Section("WATCH THE NOTICE BOARD FOR A REPLY.", PrintTheme.Masthead);

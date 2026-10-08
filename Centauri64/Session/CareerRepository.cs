@@ -14,6 +14,15 @@ public sealed class CareerSlotSummary
     public string Name { get; init; } = string.Empty;
     public string Rank { get; init; } = string.Empty;
     public int CashPennies { get; init; }
+
+    /// <summary>Owned Year One magazine issues present in the catalogue.</summary>
+    public int MagazinesOwned { get; init; }
+
+    /// <summary>Catalogue issue count (Year One denominator).</summary>
+    public int MagazinesTotal { get; init; }
+
+    /// <summary>Null when the save predates last-played tracking.</summary>
+    public DateTime? LastPlayedUtc { get; init; }
 }
 
 public sealed class CareerRepository
@@ -59,11 +68,29 @@ public sealed class CareerRepository
                 Occupied = true,
                 Name = state.Name,
                 Rank = state.Rank,
-                CashPennies = state.Progress.CashPennies
+                CashPennies = state.Progress.CashPennies,
+                MagazinesOwned = CountOwnedMagazines(state),
+                MagazinesTotal = MagazineCatalog.Issues.Length,
+                LastPlayedUtc = state.LastPlayedUtc
             });
         }
 
         return list;
+    }
+
+    /// <summary>
+    /// Magazine progress = owned catalogue issues / Year One catalogue size.
+    /// </summary>
+    public static int CountOwnedMagazines(CareerState state)
+    {
+        var count = 0;
+        foreach (var id in state.OwnedMagazineIds)
+        {
+            if (MagazineCatalog.Find(id) != null)
+                count++;
+        }
+
+        return count;
     }
 
     public CareerState? TryLoad(int slot)
@@ -101,6 +128,12 @@ public sealed class CareerRepository
         File.WriteAllText(temp, json);
         File.Copy(temp, path, overwrite: true);
         File.Delete(temp);
+    }
+
+    public void TouchLastPlayed(int slot, CareerState state)
+    {
+        state.LastPlayedUtc = DateTime.UtcNow;
+        Save(slot, state);
     }
 
     public void Delete(int slot)

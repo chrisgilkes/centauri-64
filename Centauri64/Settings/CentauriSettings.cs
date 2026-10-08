@@ -68,6 +68,11 @@ public sealed class CentauriSettings
     /// </summary>
     public bool HasSeenIntroduction { get; set; }
 
+    /// <summary>
+    /// Mode-select remembered option: 0–2 = career slots, 3 = Hardcore.
+    /// </summary>
+    public int LastModeSelectOption { get; set; }
+
     public static CentauriSettings CreateDefaults() => new();
 
     public float EffectiveSfxGain()

@@ -11,7 +11,7 @@ namespace Centauri64.Game;
 
 public sealed class CareerNameScreen
 {
-    private const int MaxLength = 12;
+    private const int MaxLength = 20;
 
     private readonly BitmapFont _font;
     private readonly Texture2D _pixel;
@@ -30,7 +30,18 @@ public sealed class CareerNameScreen
 
     public void Open()
     {
+        Open(string.Empty);
+    }
+
+    public void Open(string initialName)
+    {
         _buffer.Clear();
+        if (!string.IsNullOrWhiteSpace(initialName))
+            _buffer.Append(initialName.Trim().ToUpperInvariant());
+
+        if (_buffer.Length > MaxLength)
+            _buffer.Length = MaxLength;
+
         _previous = Keyboard.GetState();
         _status = "LETTERS AND NUMBERS. ENTER TO CONTINUE.";
     }

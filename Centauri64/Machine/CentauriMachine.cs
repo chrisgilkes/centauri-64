@@ -85,9 +85,10 @@ public sealed partial class CentauriMachine
             _sprites[i] = new CentauriSprite();
         }
 
-        _spriteEditor = new SpriteEditor(_spriteAssets);
+        _spriteEditor = new SpriteEditor(_spriteAssets, _imageAssets);
         _mapEditor = new MapEditor(_mapAssets, _spriteAssets);
         CreateImageEditor();
+        WireSpriteArtworkBridge();
 
         CreateBuiltInSpriteAssets();
     }

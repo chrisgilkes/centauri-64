@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
 using Centauri64.Machine.Images;
+using Centauri64.Session;
 using Centauri64.Settings;
 
 namespace Centauri64.Machine;
@@ -42,6 +43,40 @@ public sealed partial class CentauriMachine
     private void CreateImageEditor()
     {
         _imageEditor = new ImageEditor(_imageAssets);
+    }
+
+    private void WireSpriteArtworkBridge()
+    {
+        _spriteEditor.RequestSpriteArtworkEditor = () =>
+        {
+            if (!FeatureGate.CanOpenSpriteArtworkEditor())
+                return;
+
+            _spriteEditor.Close();
+            _imageEditor.OpenSpriteArtwork();
+        };
+    }
+
+    public void OpenSpriteArtworkEditor()
+    {
+        if (!FeatureGate.CanOpenSpriteArtworkEditor())
+            return;
+
+        if (_spriteEditor.IsActive)
+            _spriteEditor.Close();
+
+        _imageEditor.OpenSpriteArtwork();
+    }
+
+    public void OpenFullImageEditor()
+    {
+        if (!FeatureGate.CanOpenFullImageEditor())
+            return;
+
+        if (_spriteEditor.IsActive)
+            _spriteEditor.Close();
+
+        _imageEditor.Open(ImageEditor.AccessMode.Full);
     }
 
     public void UpdateImageEditor(

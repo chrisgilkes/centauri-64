@@ -12,6 +12,7 @@ public enum GameMode
     HistoricalIntro,
     ModeSelect,
     CareerName,
+    ComputerShop,
     BundleSelect,
     SystemMenu,
     ConfirmType

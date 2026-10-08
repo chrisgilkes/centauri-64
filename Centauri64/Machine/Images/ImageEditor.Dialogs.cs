@@ -43,7 +43,29 @@ public sealed partial class ImageEditor
         _wizardWidth = "16";
         _wizardHeight = "16";
         _wizardField = 0;
+
+        if (IsSpriteArtworkMode)
+        {
+            // Issue #3: only 16×16 Sprite artwork may be created.
+            _wizardTemplateIndex = FindTemplateIndex("16x16 SPRITE");
+            _wizardCategoryIndex = (int)ImageCategory.Sprite;
+            _wizardWidth = "16";
+            _wizardHeight = "16";
+        }
+
         SyncTemplateDefaults();
+    }
+
+    private int FindTemplateIndex(string label)
+    {
+        var templates = CurrentTemplates();
+        for (var i = 0; i < templates.Count; i++)
+        {
+            if (templates[i].Label == label)
+                return i;
+        }
+
+        return 1;
     }
 
     private void BeginProperties()
@@ -118,7 +140,11 @@ public sealed partial class ImageEditor
             var dir = WasPressed(keyboard, previous, Keys.Right) ? 1 : -1;
             if (_wizard == WizardKind.NewImage)
             {
-                if (_wizardField == 1)
+                if (IsSpriteArtworkMode)
+                {
+                    // Template / category / size locked in Sprite Artwork mode.
+                }
+                else if (_wizardField == 1)
                 {
                     _wizardTemplateIndex =
                         (_wizardTemplateIndex + dir + templates.Count) % templates.Count;
@@ -135,7 +161,7 @@ public sealed partial class ImageEditor
                     SyncTemplateDefaults();
                 }
             }
-            else if (_wizardField == 1)
+            else if (_wizardField == 1 && !IsSpriteArtworkMode)
             {
                 _wizardCategoryIndex =
                     (_wizardCategoryIndex + dir + CategoryLabels.Length) % CategoryLabels.Length;
@@ -283,7 +309,14 @@ public sealed partial class ImageEditor
         int height;
         int fill;
 
-        if (template.IsCustom)
+        if (IsSpriteArtworkMode)
+        {
+            width = CentauriSprite.WIDTH;
+            height = CentauriSprite.HEIGHT;
+            category = ImageCategory.Sprite;
+            fill = ImageAsset.Transparent;
+        }
+        else if (template.IsCustom)
         {
             if (!int.TryParse(_wizardWidth, out width) ||
                 !int.TryParse(_wizardHeight, out height))
@@ -341,7 +374,8 @@ public sealed partial class ImageEditor
         }
 
         _image.Name = valid;
-        _image.Category = (ImageCategory)_wizardCategoryIndex;
+        if (!IsSpriteArtworkMode)
+            _image.Category = (ImageCategory)_wizardCategoryIndex;
         _dirty = true;
         CloseWizard();
         _statusTip = "PROPERTIES UPDATED";
@@ -370,7 +404,9 @@ public sealed partial class ImageEditor
         spriteBatch.Draw(pixel, new Rectangle(box.X, box.Y, 1, box.Height), CreativeUiTheme.Border);
         spriteBatch.Draw(pixel, new Rectangle(box.Right - 1, box.Y, 1, box.Height), CreativeUiTheme.Border);
 
-        var title = _wizard == WizardKind.NewImage ? "NEW IMAGE" : "IMAGE PROPERTIES";
+        var title = _wizard == WizardKind.NewImage
+            ? (IsSpriteArtworkMode ? "NEW SPRITE ARTWORK" : "NEW IMAGE")
+            : (IsSpriteArtworkMode ? "ARTWORK PROPERTIES" : "IMAGE PROPERTIES");
         font.Draw(spriteBatch, title, new Vector2(box.X + 12, box.Y + 10), CreativeUiTheme.Highlight);
 
         font.Draw(spriteBatch, "NAME", new Vector2(box.X + 12, box.Y + 36), CreativeUiTheme.Muted);

@@ -70,6 +70,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
     private HistoricalIntroScreen _historicalIntro = null!;
     private ModeSelectScreen _modeSelect = null!;
     private CareerNameScreen _careerName = null!;
+    private ComputerShopScreen _computerShop = null!;
     private BundleSelectScreen _bundleSelect = null!;
     private SystemMenuScreen _systemMenu = null!;
     private ConfirmTypeScreen _confirmType = null!;
@@ -79,6 +80,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     private int _pendingSlot;
     private string _pendingName = string.Empty;
+    private CareerState? _pendingCareer;
     private GameMode _settingsReturn = GameMode.ComputerRoom;
     private GameMode _manualReturn = GameMode.ComputerRoom;
     private int _deleteSlot;
@@ -215,7 +217,8 @@ public class Game1 : Microsoft.Xna.Framework.Game
         _historicalIntro = new HistoricalIntroScreen(_font, _pixel);
         _modeSelect = new ModeSelectScreen(_font, _pixel);
         _careerName = new CareerNameScreen(_font, _pixel);
-        _bundleSelect = new BundleSelectScreen(_printFonts, _pixel);
+        _computerShop = new ComputerShopScreen(_font, _pixel);
+        _bundleSelect = new BundleSelectScreen(_font, _pixel);
         _systemMenu = new SystemMenuScreen(_font, _pixel);
         _confirmType = new ConfirmTypeScreen(_font, _pixel);
 
@@ -319,33 +322,49 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
         _modeSelect.DeleteSlotRequested += slot =>
         {
-            var summary = _careers.LoadSummaries()[slot - 1];
-            _deleteSlot = slot;
-            _confirmType.Open(
-                "DELETE CAREER?",
-                "THIS WILL DELETE CAREER PROGRESS FOR:\n\n" +
-                summary.Name + " — " + summary.Rank +
-                "\n\nYOUR PROGRAMS WILL NOT BE DELETED.",
-                "DELETE");
-            _gameMode = GameMode.ConfirmType;
+            _careers.Delete(slot);
+            _modeSelect.Open(_careers.LoadSummaries(), _settings.LastModeSelectOption);
+        };
+
+        _modeSelect.SelectionRemembered += option =>
+        {
+            if (_settings.LastModeSelectOption == option)
+                return;
+
+            _settings.LastModeSelectOption = option;
+            _settingsService.ReplaceCurrent(_settings);
+            _settingsService.Save();
         };
 
         _careerName.Cancelled += ShowModeSelect;
         _careerName.NameAccepted += name =>
         {
             _pendingName = name;
-            _bundleSelect.Open();
+            _pendingCareer = null;
+            _computerShop.Open(ComputerPurchase.StartingCashPennies);
+            _gameMode = GameMode.ComputerShop;
+        };
+
+        _computerShop.Cancelled += () =>
+        {
+            _careerName.Open(_pendingName);
+            _gameMode = GameMode.CareerName;
+        };
+
+        _computerShop.ComputersSelected += () =>
+        {
+            _bundleSelect.Open(ComputerPurchase.StartingCashPennies);
             _gameMode = GameMode.BundleSelect;
         };
 
         _bundleSelect.Cancelled += () =>
         {
-            _pendingName = string.Empty;
-            _careerName.Open();
-            _gameMode = GameMode.CareerName;
+            _computerShop.Open(ComputerPurchase.StartingCashPennies);
+            _gameMode = GameMode.ComputerShop;
         };
 
-        _bundleSelect.BundleChosen += CommitNewCareer;
+        _bundleSelect.BundleChosen += TryPurchaseNewCareer;
+        _bundleSelect.PurchaseAcknowledged += FinishNewCareer;
 
         _systemMenu.ResumeSelected += () => _gameMode = GameMode.Computer;
         _systemMenu.ManualSelected += () => OpenManual(GameMode.SystemMenu);
@@ -365,13 +384,14 @@ public class Game1 : Microsoft.Xna.Framework.Game
     private void ShowModeSelect()
     {
         GameSession.Clear();
-        _modeSelect.Open(_careers.LoadSummaries());
+        _modeSelect.Open(_careers.LoadSummaries(), _settings.LastModeSelectOption);
         _gameMode = GameMode.ModeSelect;
         _waitForInputRelease = true;
     }
 
     private void EnterBedroom(int slot, CareerState career)
     {
+        _careers.TouchLastPlayed(slot, career);
         GameSession.EnterBedroom(slot, career);
         RefreshBedroomCareerStatus();
         _computerRoom.ResetPowerState();
@@ -392,17 +412,43 @@ public class Game1 : Microsoft.Xna.Framework.Game
         _machine.Beep(440, 100);
     }
 
-    private void CommitNewCareer(string bundleId)
+    private void TryPurchaseNewCareer(string bundleId)
     {
         var bundle = ComputerBundleCatalog.Find(bundleId);
-        var career = CareerState.CreateNew(_pendingName, bundleId);
-        if (bundle != null)
-            SoftwareGrant.GrantTapes(bundle.SoftwareTapes);
+        if (bundle == null)
+        {
+            _bundleSelect.ShowError("INVALID PACKAGE.");
+            return;
+        }
 
-        career.BundleSoftwareGranted = true;
+        // Idempotent: reuse in-progress purchase if confirm was pressed twice.
+        if (_pendingCareer != null && _pendingCareer.HasComputer)
+        {
+            _bundleSelect.ShowThanks(ComputerPurchase.MartinThanks(bundle));
+            return;
+        }
+
+        var career = CareerState.CreateNew(_pendingName);
+        if (!ComputerPurchase.TryPurchase(career, bundle, out var error))
+        {
+            _bundleSelect.ShowError(error);
+            return;
+        }
+
+        _pendingCareer = career;
+        _bundleSelect.ShowThanks(ComputerPurchase.MartinThanks(bundle));
+    }
+
+    private void FinishNewCareer()
+    {
+        if (_pendingCareer == null)
+            return;
+
+        var career = _pendingCareer;
         _careers.Save(_pendingSlot, career);
         var slot = _pendingSlot;
         _pendingName = string.Empty;
+        _pendingCareer = null;
         BeginFade("WELCOME HOME", () => EnterBedroom(slot, career));
     }
 
@@ -422,7 +468,9 @@ public class Game1 : Microsoft.Xna.Framework.Game
         if (GameSession.Career == null || GameSession.ActiveSlot == null)
             return;
 
-        _careers.Save(GameSession.ActiveSlot.Value, GameSession.Career);
+        _careers.TouchLastPlayed(
+            GameSession.ActiveSlot.Value,
+            GameSession.Career);
     }
 
     private void CloseEditors()
@@ -757,7 +805,20 @@ public class Game1 : Microsoft.Xna.Framework.Game
             !_machine.MapEditor.IsActive &&
             !_machine.ImageEditor.IsActive)
         {
-            TryOpenAuthoringTool(FeatureId.Images, () => _machine.ImageEditor.Open());
+            // Full Image Editor = Issue #5. With Sprites only, F7 opens
+            // restricted Sprite Artwork mode (does not grant FeatureId.Images).
+            if (FeatureGate.CanOpenFullImageEditor())
+            {
+                _machine.OpenFullImageEditor();
+            }
+            else if (FeatureGate.CanOpenSpriteArtworkEditor())
+            {
+                _machine.OpenSpriteArtworkEditor();
+            }
+            else
+            {
+                TryOpenAuthoringTool(FeatureId.Images, () => { });
+            }
         }
         
         if (KeyPressed(keyboardState, Keys.F11))
@@ -825,9 +886,21 @@ public class Game1 : Microsoft.Xna.Framework.Game
             return;
         }
 
+        if (_gameMode == GameMode.ComputerShop)
+        {
+            _computerShop.Update(
+                gameTime,
+                GetVirtualMouse(CentauriMachine.DEVELOPMENT_WIDTH, CentauriMachine.DEVELOPMENT_HEIGHT));
+            _previousKeyboardState = keyboardState;
+            base.Update(gameTime);
+            return;
+        }
+
         if (_gameMode == GameMode.BundleSelect)
         {
-            _bundleSelect.Update(gameTime, GetMetaMouse());
+            _bundleSelect.Update(
+                gameTime,
+                GetVirtualMouse(CentauriMachine.DEVELOPMENT_WIDTH, CentauriMachine.DEVELOPMENT_HEIGHT));
             _previousKeyboardState = keyboardState;
             base.Update(gameTime);
             return;
@@ -1188,9 +1261,16 @@ public class Game1 : Microsoft.Xna.Framework.Game
             return;
         }
 
+        if (_gameMode == GameMode.ComputerShop)
+        {
+            DrawBootScreen(sb => _computerShop.Draw(sb));
+            base.Draw(gameTime);
+            return;
+        }
+
         if (_gameMode == GameMode.BundleSelect)
         {
-            DrawMetaScreen((sb, transform) => _bundleSelect.Draw(sb, transform));
+            DrawBootScreen(sb => _bundleSelect.Draw(sb));
             base.Draw(gameTime);
             return;
         }
@@ -1700,8 +1780,10 @@ public class Game1 : Microsoft.Xna.Framework.Game
             parts.Add("F5 SPRITES");
         if (FeatureGate.Current.IsAvailable(FeatureId.Maps))
             parts.Add("F6 MAPS");
-        if (FeatureGate.Current.IsAvailable(FeatureId.Images))
+        if (FeatureGate.CanOpenFullImageEditor())
             parts.Add("F7 IMAGES");
+        else if (FeatureGate.CanOpenSpriteArtworkEditor())
+            parts.Add("F7 ARTWORK");
         return string.Join("  ", parts);
     }
 

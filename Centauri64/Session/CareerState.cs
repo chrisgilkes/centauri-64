@@ -14,7 +14,18 @@ public sealed class CareerState
 
     public string Rank { get; set; } = CareerRanks.Hobbyist;
 
+    /// <summary>
+    /// UTC time of last Bedroom session start/save. Null on older saves.
+    /// </summary>
+    public DateTime? LastPlayedUtc { get; set; }
+
     public string SelectedBundleId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// True after the starter Centauri64 bundle has been purchased.
+    /// Older saves with BundleSoftwareGranted are treated as owning a computer.
+    /// </summary>
+    public bool HasComputer { get; set; }
 
     public bool BundleSoftwareGranted { get; set; }
 
@@ -36,19 +47,37 @@ public sealed class CareerState
 
     public PlayerProgress Progress { get; set; } = new();
 
-    public static CareerState CreateNew(string name, string bundleId)
+    /// <summary>
+    /// New Bedroom career before the first computer purchase (£300 saved).
+    /// Magazines and bundle software are granted when the pack is bought.
+    /// </summary>
+    public static CareerState CreateNew(string name)
     {
-        var career = new CareerState
+        return new CareerState
         {
             Name = name.Trim().ToUpperInvariant(),
             Rank = CareerRanks.Hobbyist,
-            SelectedBundleId = bundleId,
+            SelectedBundleId = string.Empty,
+            HasComputer = false,
             BundleSoftwareGranted = false,
             UnlockedFeatures = new List<string> { nameof(FeatureId.CoreBasic) },
-            Progress = new PlayerProgress()
+            Progress = new PlayerProgress
+            {
+                CashPennies = ComputerPurchase.StartingCashPennies
+            }
         };
+    }
 
-        MagazineProgression.EnsureStartingIssue(career);
+    /// <summary>
+    /// Test/helper: create a career already bound to a bundle id without purchasing.
+    /// Prefer <see cref="CreateNew(string)"/> + <see cref="ComputerPurchase.TryPurchase"/> in game flow.
+    /// </summary>
+    public static CareerState CreateNew(string name, string bundleId)
+    {
+        var career = CreateNew(name);
+        if (!string.IsNullOrWhiteSpace(bundleId))
+            career.SelectedBundleId = bundleId;
+
         return career;
     }
 
@@ -59,6 +88,7 @@ public sealed class CareerState
             Name = "CODER",
             Rank = CareerRanks.Hobbyist,
             SelectedBundleId = ComputerBundleCatalog.LegacyId,
+            HasComputer = true,
             BundleSoftwareGranted = true,
             UnlockedFeatures = new List<string>
             {
@@ -91,10 +121,20 @@ public sealed class CareerState
                 OwnedMagazineIds.Add(id);
         }
 
-        if (OwnedMagazineIds.Count == 0)
+        if (OwnedMagazineIds.Count == 0 && HasComputer)
             MagazineProgression.EnsureStartingIssue(this);
-        else
+        else if (OwnedMagazineIds.Count > 0)
             MagazineProgression.OwnThrough(this, MagazineProgression.HighestOwnedNumber(this));
+
+        // Older careers that already received bundle software own a computer.
+        if (!HasComputer && BundleSoftwareGranted)
+            HasComputer = true;
+        else if (!HasComputer &&
+                 !string.IsNullOrWhiteSpace(SelectedBundleId) &&
+                 OwnedMagazineIds.Count > 0)
+        {
+            HasComputer = true;
+        }
     }
 
     public IEnumerable<FeatureId> GetUnlockedFeatures()
@@ -133,6 +173,7 @@ public sealed class CareerState
         UnlockedPublisherIds = new List<string>();
         UnlockedContractIds = new List<string>();
         Progress = new PlayerProgress();
+        HasComputer = true;
         BundleSoftwareGranted = true;
         MagazineProgression.EnsureStartingIssue(this);
     }

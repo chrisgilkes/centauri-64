@@ -31,5 +31,17 @@ if (args.Contains("--verify-presentation"))
     return;
 }
 
+if (args.Contains("--verify-sprite-pipeline"))
+{
+    Environment.ExitCode = Centauri64.Analysis.SpritePipelineVerification.Run();
+    return;
+}
+
+if (args.Contains("--verify-mode-select"))
+{
+    Environment.ExitCode = Centauri64.Analysis.ModeSelectVerification.Run();
+    return;
+}
+
 using var game = new Centauri64.Game1();
 game.Run();
