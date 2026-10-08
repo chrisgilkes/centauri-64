@@ -12,7 +12,17 @@ public static class GameSession
 
     public static int? ActiveSlot { get; private set; }
 
+    /// <summary>Saved career for the active bedroom slot. Never replaced by override.</summary>
     public static CareerState? Career { get; private set; }
+
+    /// <summary>
+    /// Career used for unlock / availability queries.
+    /// When developer override is active, this is a simulated in-memory career.
+    /// </summary>
+    public static CareerState? EffectiveCareer =>
+        CareerProgressOverride.IsActive
+            ? CareerProgressOverride.Simulated
+            : Career;
 
     public static bool IsBedroom =>
         Experience == PlayExperience.BedroomCoder && Career != null;
@@ -25,6 +35,7 @@ public static class GameSession
         Experience = PlayExperience.None;
         ActiveSlot = null;
         Career = null;
+        CareerProgressOverride.Disable();
         FeatureGate.Current = FeatureAvailability.AllReleased();
     }
 
@@ -33,6 +44,7 @@ public static class GameSession
         Experience = PlayExperience.HardcoreCoder;
         ActiveSlot = null;
         Career = null;
+        CareerProgressOverride.Disable();
         FeatureGate.Current = FeatureAvailability.AllReleased();
     }
 
@@ -41,20 +53,45 @@ public static class GameSession
         Experience = PlayExperience.BedroomCoder;
         ActiveSlot = slot;
         Career = career;
-        FeatureGate.Current = FeatureAvailability.FromUnlocks(career.GetUnlockedFeatures());
+        CareerProgressOverride.Disable();
+        RefreshFeatures();
     }
 
     public static void RefreshFeatures()
     {
-        if (Career == null || Experience != PlayExperience.BedroomCoder)
+        if (Experience != PlayExperience.BedroomCoder)
         {
             FeatureGate.Current = FeatureAvailability.AllReleased();
             return;
         }
 
-        FeatureGate.Current = FeatureAvailability.FromUnlocks(Career.GetUnlockedFeatures());
+        var career = EffectiveCareer;
+        if (career == null)
+        {
+            FeatureGate.Current = FeatureAvailability.AllReleased();
+            return;
+        }
+
+        FeatureGate.Current = FeatureAvailability.FromUnlocks(career.GetUnlockedFeatures());
+    }
+
+    /// <summary>
+    /// Apply developer progression override and refresh feature gates.
+    /// Does not touch the saved career.
+    /// </summary>
+    public static void ApplyProgressOverride(bool enabled, int issueNumber, ProgressionStage stage)
+    {
+        if (Experience != PlayExperience.BedroomCoder || Career == null)
+        {
+            CareerProgressOverride.Disable();
+            RefreshFeatures();
+            return;
+        }
+
+        CareerProgressOverride.Set(enabled, issueNumber, stage);
+        RefreshFeatures();
     }
 
     public static PlayerProgress ActiveProgress() =>
-        Career?.Progress ?? new PlayerProgress();
+        EffectiveCareer?.Progress ?? Career?.Progress ?? new PlayerProgress();
 }

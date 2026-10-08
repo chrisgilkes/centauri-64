@@ -83,7 +83,9 @@ public sealed partial class MagazinesScreen
         _issue = null;
         _purchaseNotice = string.Empty;
 
-        if (!_referenceLibrary && GameSession.Career != null)
+        if (!_referenceLibrary &&
+            GameSession.Career != null &&
+            !CareerProgressOverride.IsActive)
         {
             MagazineProgression.EnsureStartingIssue(GameSession.Career);
             PersistCareer();
@@ -161,7 +163,9 @@ public sealed partial class MagazinesScreen
 
     private void RefreshList()
     {
-        var progress = _career.LoadProgress();
+        var progress = CareerProgressOverride.IsActive && GameSession.EffectiveCareer != null
+            ? GameSession.EffectiveCareer.Progress
+            : _career.LoadProgress();
         var visible = _career.GetVisibleContracts(progress);
         var challenges = visible.Where(IsReaderChallenge).ToList();
         var wanted = visible.Where(c => !IsReaderChallenge(c)).ToList();
@@ -279,6 +283,15 @@ public sealed partial class MagazinesScreen
             var tape = _tapes[_tapeSelected];
             var label = _machine.GetTapeLabel(tape);
 
+            if (CareerProgressOverride.IsActive)
+            {
+                _sentMessage =
+                    "DEV OVERRIDE ACTIVE — SUBMISSION NOT SAVED.\n" +
+                    "DISABLE OVERRIDE TO SUBMIT FOR REAL.";
+                _view = View.Sent;
+                return;
+            }
+
             if (_career.TrySubmit(_contract, tape, label, _analysis, out _))
             {
                 var org = PublisherCatalog.GetOrganisation(_contract.OrganisationId);
@@ -301,9 +314,12 @@ public sealed partial class MagazinesScreen
 
     private void DrawList(SpriteBatch spriteBatch)
     {
-        var era = MagazineProgression.EraLabel(GameSession.Career, _referenceLibrary);
-        var progress = _career.LoadProgress();
-        var cash = PlayerProgress.FormatPounds(progress.CashPennies);
+        var era = MagazineProgression.EraLabel(GameSession.EffectiveCareer, _referenceLibrary);
+        var progress = CareerProgressOverride.IsActive
+            ? GameSession.EffectiveCareer!.Progress
+            : _career.LoadProgress();
+        var cash = PlayerProgress.FormatPounds(
+            GameSession.Career?.Progress.CashPennies ?? progress.CashPennies);
         PrintTheme.DrawMasthead(
             spriteBatch,
             _whitePixel,
@@ -446,12 +462,16 @@ public sealed partial class MagazinesScreen
             return;
 
         var org = PublisherCatalog.GetOrganisation(_contract.OrganisationId);
-        var progress = _career.LoadProgress();
+        var progress = CareerProgressOverride.IsActive && GameSession.EffectiveCareer != null
+            ? GameSession.EffectiveCareer.Progress
+            : _career.LoadProgress();
         var availability = _career.GetAvailability(_contract, progress);
-        var submission = _career.GetLatestSubmission(_contract.Id, progress);
+        var submission = CareerProgressOverride.IsActive
+            ? null
+            : _career.GetLatestSubmission(_contract.Id, progress);
         var challenge = IsReaderChallenge(_contract);
         var kicker = challenge ? "READER CHALLENGE" : "CLASSIFIED ADVERT";
-        var era = MagazineProgression.EraLabel(GameSession.Career, _referenceLibrary);
+        var era = MagazineProgression.EraLabel(GameSession.EffectiveCareer, _referenceLibrary);
 
         PrintTheme.DrawMasthead(
             spriteBatch,

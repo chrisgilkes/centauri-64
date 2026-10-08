@@ -120,6 +120,12 @@ public sealed partial class MagazinesScreen
         if (_issue == null)
             return;
 
+        if (CareerProgressOverride.IsActive)
+        {
+            _purchaseNotice = "DEV OVERRIDE ACTIVE — PURCHASE BLOCKED";
+            return;
+        }
+
         var result = _career.TryPurchaseIssue(_issue.Id);
         _purchaseNotice = result switch
         {
@@ -134,7 +140,7 @@ public sealed partial class MagazinesScreen
     }
 
     private MagazineIssueState CurrentState(MagazineIssue issue) =>
-        MagazineProgression.StateOf(GameSession.Career, issue, _referenceLibrary);
+        MagazineProgression.StateOf(GameSession.EffectiveCareer, issue, _referenceLibrary);
 
     private void DrawShelf(SpriteBatch spriteBatch)
     {
@@ -147,7 +153,7 @@ public sealed partial class MagazinesScreen
             _print,
             kicker,
             "YEAR ONE",
-            MagazineProgression.EraLabel(GameSession.Career, _referenceLibrary));
+            MagazineProgression.EraLabel(GameSession.EffectiveCareer, _referenceLibrary));
 
         var issues = MagazineCatalog.Issues;
         DrawSelectedIssueStrip(spriteBatch, issues[_issueSelected]);
@@ -238,7 +244,7 @@ public sealed partial class MagazinesScreen
             return "ON THE SHELF";
 
         // CURRENT ISSUE = fictional career month, not the selected cover.
-        var currentMonth = MagazineProgression.CalendarIssueNumber(GameSession.Career, false);
+        var currentMonth = MagazineProgression.CalendarIssueNumber(GameSession.EffectiveCareer, false);
         return issue.IssueNumber == currentMonth ? "CURRENT ISSUE" : "ON YOUR SHELF";
     }
 

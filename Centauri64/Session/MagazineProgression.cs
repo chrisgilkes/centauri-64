@@ -127,7 +127,10 @@ public static class MagazineProgression
         return MagazinePurchaseResult.Purchased;
     }
 
-    public static MagazineGrantResult OwnIssue(CareerState career, string issueId)
+    public static MagazineGrantResult OwnIssue(
+        CareerState career,
+        string issueId,
+        bool grantCoverSoftware = true)
     {
         var issue = MagazineCatalog.Find(issueId);
         if (issue == null)
@@ -156,8 +159,12 @@ public static class MagazineProgression
         var publishers = AddUnique(career.UnlockedPublisherIds, issue.PublisherUnlockIds);
         var contracts = AddUnique(career.UnlockedContractIds, issue.ContractUnlockIds);
 
-        if (issue.CoverTapeReady && !string.IsNullOrWhiteSpace(issue.CoverGameId))
+        if (grantCoverSoftware &&
+            issue.CoverTapeReady &&
+            !string.IsNullOrWhiteSpace(issue.CoverGameId))
+        {
             SoftwareGrant.GrantTapes(new[] { issue.CoverGameId });
+        }
 
         return new MagazineGrantResult
         {
@@ -171,7 +178,10 @@ public static class MagazineProgression
     /// <summary>
     /// Owns issues 1..N. Idempotent. Used by debug progression and onboarding.
     /// </summary>
-    public static MagazineGrantResult OwnThrough(CareerState career, int issueNumber)
+    public static MagazineGrantResult OwnThrough(
+        CareerState career,
+        int issueNumber,
+        bool grantCoverSoftware = true)
     {
         var combined = new MagazineGrantResult
         {
@@ -185,7 +195,7 @@ public static class MagazineProgression
             if (issue.IssueNumber > issueNumber)
                 break;
 
-            var step = OwnIssue(career, issue.Id);
+            var step = OwnIssue(career, issue.Id, grantCoverSoftware);
             combined = Merge(combined, step);
         }
 

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 using Centauri64.Graphics;
 using Centauri64.Machine;
@@ -70,8 +69,7 @@ public sealed class SettingsScreen
     public event Action? CareerReset;
     public event Action? CareerDeleted;
     public event Action? ReplayIntroduction;
-    public event Action<FeatureId>? DebugGrantFeature;
-    public event Action<int>? DebugOwnMagazineThrough;
+    public event Action? ProgressOverrideChanged;
 
     public SettingsScreen(
         BitmapFont font,
@@ -216,51 +214,69 @@ public sealed class SettingsScreen
             Help = "NOT AVAILABLE IN THIS VERSION."
         });
 
-        if (Debugger.IsAttached)
+        if (DeveloperTools.Available)
+            AppendDeveloperTestingRows();
+    }
+
+    private void AppendDeveloperTestingRows()
+    {
+        _rows.Add(new Row { Kind = RowKind.Header, Label = "DEVELOPER TESTING" });
+
+        if (!_careerActions)
         {
             _rows.Add(new Row
             {
-                Kind = _careerActions ? RowKind.Action : RowKind.Disabled,
-                Id = "mag_next",
-                Label = "ADVANCE MAGAZINE (DEV)",
-                Help = "DEBUG: OWN THE NEXT CENTAURI64 MAGAZINE ISSUE."
+                Kind = RowKind.Disabled,
+                Id = "dev_need_career",
+                Label = "OPEN A BEDROOM CAREER TO TEST",
+                Help = "PROGRESSION OVERRIDE REQUIRES AN ACTIVE BEDROOM CAREER."
             });
-            _rows.Add(new Row
-            {
-                Kind = _careerActions ? RowKind.Action : RowKind.Disabled,
-                Id = "mag_sprites",
-                Label = "OWN THROUGH ISSUE 3 (DEV)",
-                Help = "DEBUG: OWN ISSUES 1-3 (SPRITES / GHOST CATCHER)."
-            });
-            _rows.Add(new Row
-            {
-                Kind = _careerActions ? RowKind.Action : RowKind.Disabled,
-                Id = "mag_year_one",
-                Label = "OWN YEAR ONE (DEV)",
-                Help = "DEBUG: OWN ALL TEN YEAR-ONE MAGAZINE ISSUES."
-            });
-            _rows.Add(new Row
-            {
-                Kind = _careerActions ? RowKind.Action : RowKind.Disabled,
-                Id = "grant_sprites",
-                Label = "GRANT SPRITES (DEV)",
-                Help = "DEBUG: UNLOCK SPRITE AUTHORING ON THIS CAREER SLOT."
-            });
-            _rows.Add(new Row
-            {
-                Kind = _careerActions ? RowKind.Action : RowKind.Disabled,
-                Id = "grant_maps",
-                Label = "GRANT MAPS (DEV)",
-                Help = "DEBUG: UNLOCK MAP AUTHORING ON THIS CAREER SLOT."
-            });
-            _rows.Add(new Row
-            {
-                Kind = _careerActions ? RowKind.Action : RowKind.Disabled,
-                Id = "grant_images",
-                Label = "GRANT IMAGES (DEV)",
-                Help = "DEBUG: UNLOCK IMAGE AUTHORING ON THIS CAREER SLOT."
-            });
+            return;
         }
+
+        _rows.Add(Setting(
+            "dev_override",
+            "CAREER PROGRESSION OVERRIDE",
+            "ON = SIMULATE PROGRESSION. DOES NOT CHANGE YOUR SAVE."));
+        _rows.Add(Setting(
+            "dev_issue",
+            "SIMULATED MAGAZINE ISSUE",
+            "0 = BEFORE FIRST COMPUTER. 1-" + DevMaxIssue() + " = MAGAZINE STAGES."));
+        _rows.Add(Setting(
+            "dev_stage",
+            "PROGRESSION STAGE",
+            "START = AT ISSUE. COMPLETE = ISSUE CHALLENGES DONE."));
+        _rows.Add(new Row
+        {
+            Kind = RowKind.Action,
+            Id = "dev_disable",
+            Label = "DISABLE OVERRIDE / RETURN TO SAVED",
+            Help = "TURN OFF SIMULATION AND USE THE REAL CAREER SAVE."
+        });
+
+        if (CareerProgressOverride.IsActive)
+        {
+            _rows.Add(new Row { Kind = RowKind.Header, Label = "UNLOCK DIAGNOSTICS" });
+            foreach (var row in CareerProgressOverride.Diagnostics())
+            {
+                _rows.Add(new Row
+                {
+                    Kind = RowKind.Disabled,
+                    Id = "diag_" + row.Label,
+                    Label = PadDiag(row.Label, row.Status),
+                    Help = "READ-ONLY STATUS FROM THE EFFECTIVE PROGRESSION RULES."
+                });
+            }
+        }
+    }
+
+    private static int DevMaxIssue() =>
+        Math.Min(8, CareerProgressOverride.MaxIssueNumber);
+
+    private static string PadDiag(string label, string status)
+    {
+        var left = label.Length > 28 ? label[..28] : label.PadRight(28);
+        return left + " " + status;
     }
 
     private static Row Setting(string id, string label, string help) =>
@@ -310,29 +326,9 @@ public sealed class SettingsScreen
                     case "replay_intro":
                         ReplayIntroduction?.Invoke();
                         break;
-                    case "grant_sprites":
-                        DebugGrantFeature?.Invoke(FeatureId.Sprites);
-                        _status = "SPRITE GRAPHICS UNLOCKED.";
-                        break;
-                    case "grant_maps":
-                        DebugGrantFeature?.Invoke(FeatureId.Maps);
-                        _status = "MAP GRAPHICS UNLOCKED.";
-                        break;
-                    case "grant_images":
-                        DebugGrantFeature?.Invoke(FeatureId.Images);
-                        _status = "IMAGE GRAPHICS UNLOCKED.";
-                        break;
-                    case "mag_next":
-                        DebugOwnMagazineThrough?.Invoke(0);
-                        _status = "NEXT MAGAZINE ISSUE OWNED.";
-                        break;
-                    case "mag_sprites":
-                        DebugOwnMagazineThrough?.Invoke(3);
-                        _status = "OWNED THROUGH ISSUE 3.";
-                        break;
-                    case "mag_year_one":
-                        DebugOwnMagazineThrough?.Invoke(10);
-                        _status = "YEAR ONE MAGAZINES OWNED.";
+                    case "dev_disable":
+                        ApplyDevOverride(false, CareerProgressOverride.IssueNumber, CareerProgressOverride.Stage);
+                        _status = "OVERRIDE DISABLED. SAVED PROGRESSION RESTORED.";
                         break;
                 }
             }
@@ -559,10 +555,66 @@ public sealed class SettingsScreen
                 s.SfxVolume = CentauriSettings.ClampPercent(
                     s.SfxVolume + (direction * 10));
                 break;
+
+            case "dev_override":
+                ApplyDevOverride(
+                    !CareerProgressOverride.Enabled,
+                    CareerProgressOverride.IssueNumber,
+                    CareerProgressOverride.Stage);
+                return;
+
+            case "dev_issue":
+            {
+                var next = Math.Clamp(
+                    CareerProgressOverride.IssueNumber + direction,
+                    0,
+                    DevMaxIssue());
+                ApplyDevOverride(true, next, CareerProgressOverride.Stage);
+                return;
+            }
+
+            case "dev_stage":
+                ApplyDevOverride(
+                    true,
+                    Math.Max(1, CareerProgressOverride.IssueNumber),
+                    CareerProgressOverride.Stage == ProgressionStage.StartOfIssue
+                        ? ProgressionStage.IssueCompleted
+                        : ProgressionStage.StartOfIssue);
+                return;
         }
 
         _apply(s);
         _settings.Save();
+    }
+
+    private void ApplyDevOverride(bool enabled, int issueNumber, ProgressionStage stage)
+    {
+        if (issueNumber <= 0)
+            stage = ProgressionStage.StartOfIssue;
+
+        GameSession.ApplyProgressOverride(enabled, issueNumber, stage);
+        ProgressOverrideChanged?.Invoke();
+
+        var keepId = _rows[_selected].Id;
+        BuildRows();
+        var restored = IndexOfRow(keepId);
+        _selected = restored >= 0 ? restored : FirstSelectableIndex();
+        EnsureVisible();
+
+        _status = CareerProgressOverride.IsActive
+            ? CareerProgressOverride.StatusLabel() + " — SAVE UNCHANGED."
+            : "USING SAVED CAREER PROGRESSION.";
+    }
+
+    private int IndexOfRow(string id)
+    {
+        for (var i = 0; i < _rows.Count; i++)
+        {
+            if (_rows[i].Id == id)
+                return i;
+        }
+
+        return -1;
     }
 
     private static T CycleEnum<T>(T value, int direction) where T : struct, Enum
@@ -623,6 +675,15 @@ public sealed class SettingsScreen
             "master_vol" => s.MasterVolume + "%",
             "music_vol" => s.MusicVolume + "%",
             "sfx_vol" => s.SfxVolume + "%",
+            "dev_override" => OnOff(CareerProgressOverride.Enabled),
+            "dev_issue" => CareerProgressOverride.IssueNumber <= 0
+                ? "0 PRE-PC"
+                : CareerProgressOverride.IssueNumber.ToString(),
+            "dev_stage" => CareerProgressOverride.IssueNumber <= 0
+                ? "N/A"
+                : CareerProgressOverride.Stage == ProgressionStage.IssueCompleted
+                    ? "COMPLETED"
+                    : "START",
             _ => ""
         };
     }

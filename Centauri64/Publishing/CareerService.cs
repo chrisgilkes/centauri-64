@@ -65,7 +65,9 @@ public sealed class CareerService
             analysis,
             label);
 
-        var progress = LoadProgress();
+        var progress = CareerProgressOverride.IsActive && GameSession.EffectiveCareer != null
+            ? GameSession.EffectiveCareer.Progress
+            : LoadProgress();
 
         if (!contract.Repeatable && progress.HasCompleted(contract.Id))
         {
@@ -97,7 +99,16 @@ public sealed class CareerService
         SubmissionContract contract,
         PlayerProgress? progress = null)
     {
-        progress ??= LoadProgress();
+        if (progress == null &&
+            CareerProgressOverride.IsActive &&
+            GameSession.EffectiveCareer != null)
+        {
+            progress = GameSession.EffectiveCareer.Progress;
+        }
+        else
+        {
+            progress ??= LoadProgress();
+        }
 
         if (progress.HasCompleted(contract.Id))
             return ContractAvailability.Completed;
@@ -125,6 +136,9 @@ public sealed class CareerService
 
     public MagazinePurchaseResult TryPurchaseIssue(string issueId)
     {
+        if (CareerProgressOverride.IsActive)
+            return MagazinePurchaseResult.NotOnSale;
+
         var career = GameSession.Career;
         if (career == null)
             return MagazinePurchaseResult.NoCareer;
@@ -143,8 +157,12 @@ public sealed class CareerService
     public IReadOnlyList<SubmissionContract> GetVisibleContracts(
         PlayerProgress? progress = null)
     {
-        progress ??= LoadProgress();
-        var career = GameSession.Career;
+        var career = GameSession.EffectiveCareer;
+        if (CareerProgressOverride.IsActive && career != null)
+            progress = career.Progress;
+        else
+            progress ??= LoadProgress();
+
         var highest = career == null
             ? 0
             : MagazineProgression.HighestOwnedNumber(career);
@@ -223,6 +241,12 @@ public sealed class CareerService
         SoftwareAnalysis analysis,
         out SubmissionResult result)
     {
+        if (CareerProgressOverride.IsActive)
+        {
+            result = Evaluate(contract, analysis, label);
+            return false;
+        }
+
         result = Evaluate(contract, analysis, label);
 
         if (!result.Accepted || result.AlreadyCompleted)

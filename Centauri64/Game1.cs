@@ -256,8 +256,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
         _settingsScreen.CareerReset += OnCareerReset;
         _settingsScreen.CareerDeleted += OnCareerDeletedFromSettings;
         _settingsScreen.ReplayIntroduction += ReplayHistoricalIntro;
-        _settingsScreen.DebugGrantFeature += OnDebugGrantFeature;
-        _settingsScreen.DebugOwnMagazineThrough += OnDebugOwnMagazineThrough;
+        _settingsScreen.ProgressOverrideChanged += OnProgressOverrideChanged;
 
         ApplySettings(_settings);
 
@@ -519,9 +518,16 @@ public class Game1 : Microsoft.Xna.Framework.Game
         if (GameSession.Career == null || GameSession.ActiveSlot == null)
             return;
 
+        CareerProgressOverride.Disable();
         GameSession.Career.ResetProgressKeepIdentity();
         _careers.Save(GameSession.ActiveSlot.Value, GameSession.Career);
         GameSession.RefreshFeatures();
+        RefreshBedroomCareerStatus();
+    }
+
+    private void OnProgressOverrideChanged()
+    {
+        // Features already refreshed by GameSession.ApplyProgressOverride.
         RefreshBedroomCareerStatus();
     }
 
@@ -547,37 +553,6 @@ public class Game1 : Microsoft.Xna.Framework.Game
     {
         PersistActiveCareer();
         GameSession.RefreshFeatures();
-    }
-
-    private void OnDebugOwnMagazineThrough(int issueNumber)
-    {
-        if (GameSession.Career == null || GameSession.ActiveSlot == null)
-            return;
-
-        if (issueNumber <= 0)
-            issueNumber = MagazineProgression.HighestOwnedNumber(GameSession.Career) + 1;
-
-        if (issueNumber > 10)
-            return;
-
-        var result = MagazineProgression.OwnThrough(GameSession.Career, issueNumber);
-        PersistActiveCareerAndFeatures();
-
-        if (result.NewFeatures.Count > 0)
-            ShowUnlock(result.NewFeatures[result.NewFeatures.Count - 1]);
-    }
-
-    private void OnDebugGrantFeature(FeatureId feature)
-    {
-        if (GameSession.Career == null || GameSession.ActiveSlot == null)
-            return;
-
-        if (!GameSession.Career.Unlock(feature))
-            return;
-
-        _careers.Save(GameSession.ActiveSlot.Value, GameSession.Career);
-        GameSession.RefreshFeatures();
-        ShowUnlock(feature);
     }
 
     private void ShowUnlock(FeatureId feature)
@@ -1218,6 +1193,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
         GraphicsDevice.SetRenderTarget(_codeEditorRenderTarget);
         GraphicsDevice.Clear(Color.Black);
         _mailScreen.Draw(_spriteBatch);
+        DrawSessionOverlaysOnTarget();
         GraphicsDevice.SetRenderTarget(null);
         DrawRenderTargetToWindow(_codeEditorRenderTarget);
     }
@@ -1227,6 +1203,7 @@ public class Game1 : Microsoft.Xna.Framework.Game
         GraphicsDevice.SetRenderTarget(_codeEditorRenderTarget);
         GraphicsDevice.Clear(Color.Black);
         _settingsScreen.Draw(_spriteBatch);
+        DrawSessionOverlaysOnTarget();
         GraphicsDevice.SetRenderTarget(null);
         DrawRenderTargetToWindow(_codeEditorRenderTarget);
     }
@@ -1538,22 +1515,36 @@ public class Game1 : Microsoft.Xna.Framework.Game
         var destination = MetaUi.Destination(viewport.Width, viewport.Height);
         draw(_spriteBatch, MetaUi.Transform(destination));
 
-        if (_fade <= 0f)
-            return;
-
-        _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-        _spriteBatch.Draw(
-            _pixel,
-            new Rectangle(0, 0, viewport.Width, viewport.Height),
-            Color.Black * _fade);
-        if (_fade >= 0.55f && !string.IsNullOrEmpty(_fadeCaption))
+        if (CareerProgressOverride.IsActive || _fade > 0f)
         {
-            var x = (viewport.Width - _fadeCaption.Length * 8) / 2;
-            var y = viewport.Height / 2 - 8;
-            _font.Draw(_spriteBatch, _fadeCaption, new Vector2(x, y), Color.White);
-        }
+            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
-        _spriteBatch.End();
+            if (CareerProgressOverride.IsActive)
+            {
+                var label = CareerProgressOverride.StatusLabel();
+                _font.Draw(
+                    _spriteBatch,
+                    label,
+                    new Vector2(8, viewport.Height - 16),
+                    new Color(232, 205, 92, 200));
+            }
+
+            if (_fade > 0f)
+            {
+                _spriteBatch.Draw(
+                    _pixel,
+                    new Rectangle(0, 0, viewport.Width, viewport.Height),
+                    Color.Black * _fade);
+                if (_fade >= 0.55f && !string.IsNullOrEmpty(_fadeCaption))
+                {
+                    var x = (viewport.Width - _fadeCaption.Length * 8) / 2;
+                    var y = viewport.Height / 2 - 8;
+                    _font.Draw(_spriteBatch, _fadeCaption, new Vector2(x, y), Color.White);
+                }
+            }
+
+            _spriteBatch.End();
+        }
     }
 
     private MouseState GetVirtualMouse(int virtualWidth, int virtualHeight)
@@ -1789,12 +1780,17 @@ public class Game1 : Microsoft.Xna.Framework.Game
 
     private void DrawSessionOverlaysOnTarget()
     {
+        var showDev = CareerProgressOverride.IsActive;
         if (_fade <= 0f &&
             _lockNoticeTimer <= 0 &&
-            _unlockNoticeTimer <= 0)
+            _unlockNoticeTimer <= 0 &&
+            !showDev)
             return;
 
         _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+
+        if (showDev)
+            DrawDevOverrideBadge();
 
         if (_unlockNoticeTimer > 0)
             DrawNoticePanel(_unlockNotice);
@@ -1821,6 +1817,17 @@ public class Game1 : Microsoft.Xna.Framework.Game
         }
 
         _spriteBatch.End();
+    }
+
+    private void DrawDevOverrideBadge()
+    {
+        var label = CareerProgressOverride.StatusLabel();
+        if (string.IsNullOrEmpty(label))
+            return;
+
+        // Bottom-left — clear of binary borders and bedroom chrome.
+        var y = CentauriMachine.DEVELOPMENT_HEIGHT - 14;
+        _font.Draw(_spriteBatch, label, new Vector2(8, y), new Color(232, 205, 92, 200));
     }
 
     private void DrawNoticePanel(string text)

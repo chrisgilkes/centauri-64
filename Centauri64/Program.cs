@@ -43,5 +43,11 @@ if (args.Contains("--verify-mode-select"))
     return;
 }
 
+if (args.Contains("--verify-progress-override"))
+{
+    Environment.ExitCode = Centauri64.Analysis.ProgressOverrideVerification.Run();
+    return;
+}
+
 using var game = new Centauri64.Game1();
 game.Run();
