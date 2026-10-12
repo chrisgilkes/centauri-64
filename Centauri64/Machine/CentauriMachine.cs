@@ -85,7 +85,7 @@ public sealed partial class CentauriMachine
             _sprites[i] = new CentauriSprite();
         }
 
-        _spriteEditor = new SpriteEditor(_spriteAssets, _imageAssets);
+        _spriteEditor = new SpriteEditor(_spriteAssets, _artworkLibrary);
         _mapEditor = new MapEditor(_mapAssets, _spriteAssets);
         CreateImageEditor();
         WireSpriteArtworkBridge();
@@ -95,6 +95,7 @@ public sealed partial class CentauriMachine
 
     public void ResetEditorAssets()
     {
+        // Clear tape/session runtime assets only — local artwork library persists.
         _spriteAssets.Clear();
         _mapAssets.Clear();
         _imageAssets.Clear();

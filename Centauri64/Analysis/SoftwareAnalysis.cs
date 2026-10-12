@@ -46,10 +46,8 @@ public sealed class SoftwareAnalysis
     public int MapCount { get; init; }
     public int ImageCount { get; init; }
     public int ImageFrameCount { get; init; }
-    public int GeneralImageCount { get; init; }
-    public int SpriteImageCount { get; init; }
-    public int TilesetImageCount { get; init; }
-    public int BackgroundImageCount { get; init; }
+    /// <summary>Images that are 16×16 (eligible hardware-sprite artwork).</summary>
+    public int SpriteSizedImageCount { get; init; }
 
     /// <summary>
     /// True when a cover asset file exists for the tape.

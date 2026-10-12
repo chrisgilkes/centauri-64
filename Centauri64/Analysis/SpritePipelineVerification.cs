@@ -32,6 +32,11 @@ public static class SpritePipelineVerification
         failed += LegacySpritesFileLoads();
         failed += NewSpriteSaveLoadRoundTrip();
         failed += BasicSpriteAndAnimCommands();
+        failed += ArtworkLibraryPersistsWithoutTape();
+        failed += TapeIncludeAndPackIndependence();
+        failed += ListingScanPacksLiteralAssets();
+        failed += LibraryEditDoesNotAlterTapeCopy();
+        failed += MissingAssetPackReports();
 
         FeatureGate.Current = FeatureAvailability.AllReleased();
 
@@ -96,8 +101,7 @@ public static class SpritePipelineVerification
             "GHOST",
             CentauriDisplayMode.HighResolution,
             16,
-            16,
-            ImageCategory.Sprite);
+            16);
         ghost.SetPixel(8, 8, 7);
         ghost.AddFrame();
         ghost.GetFrame(1).Pixels[8, 8] = 15;
@@ -107,29 +111,19 @@ public static class SpritePipelineVerification
                       images.Count == 1 &&
                       editor.IsSpriteArtworkMode;
 
-        // Non-eligible assets must not appear in restricted browsing via store filter rules.
+        // Non-16×16 assets are not eligible for hardware sprites.
         var big = new ImageAsset(
             "BIG",
             CentauriDisplayMode.HighResolution,
             32,
-            32,
-            ImageCategory.Sprite);
+            32);
         images.Add(big);
-
-        var general = new ImageAsset(
-            "PIC",
-            CentauriDisplayMode.HighResolution,
-            16,
-            16,
-            ImageCategory.General);
-        images.Add(general);
 
         return Expect(
             "create eligible 16x16 Sprite artwork",
             visible &&
             SpriteArtwork.IsEligible(ghost) &&
-            !SpriteArtwork.IsEligible(big) &&
-            !SpriteArtwork.IsEligible(general));
+            !SpriteArtwork.IsEligible(big));
     }
 
     private static int RejectNonSixteenArtwork()
@@ -141,8 +135,7 @@ public static class SpritePipelineVerification
             "WIDE",
             CentauriDisplayMode.HighResolution,
             32,
-            32,
-            ImageCategory.Sprite);
+            32);
 
         try
         {
@@ -163,12 +156,13 @@ public static class SpritePipelineVerification
             "GHOST",
             CentauriDisplayMode.HighResolution,
             16,
-            16,
-            ImageCategory.Sprite);
+            16);
         image.SetPixel(1, 1, 7);
+        image.GetFrame(0).DurationSeconds = 0.05f;
         image.AddFrame();
         image.SelectFrame(1);
         image.SetPixel(2, 2, 15);
+        image.GetFrame(1).DurationSeconds = 0.2f;
 
         var asset = new SpriteAsset("GHOST");
         var anim = asset.AddAnimation("DEFAULT");
@@ -184,10 +178,12 @@ public static class SpritePipelineVerification
             anim.SourceImageName == "GHOST" &&
             f0.Pixels[1, 1] == 7 &&
             f0.Pixels[0, 0] == CentauriSprite.TRANSPARENT &&
+            f0.DurationSeconds == 0.05f &&
             f1.Pixels[2, 2] == 15 &&
-            f1.Pixels[0, 0] == CentauriSprite.TRANSPARENT;
+            f1.Pixels[0, 0] == CentauriSprite.TRANSPARENT &&
+            f1.DurationSeconds == 0.2f;
 
-        return Expect("bind multiple image frames + transparency", ok);
+        return Expect("bind multiple image frames + transparency + duration", ok);
     }
 
     private static int LegacySpritesFileLoads()
@@ -248,11 +244,12 @@ public static class SpritePipelineVerification
                 "GHOST",
                 CentauriDisplayMode.HighResolution,
                 16,
-                16,
-                ImageCategory.Sprite);
+                16);
             image.SetPixel(4, 4, 5);
+            image.GetFrame(0).DurationSeconds = 0.08f;
             image.AddFrame();
             image.GetFrame(1).Pixels[5, 5] = 9;
+            image.GetFrame(1).DurationSeconds = 0.16f;
             images.Add(image);
 
             var sprites = new SpriteAssetStore();
@@ -278,7 +275,9 @@ public static class SpritePipelineVerification
                      loadedAnim.SourceImageName == "GHOST" &&
                      loadedAnim.Frames[0].Pixels[4, 4] == 5 &&
                      loadedAnim.Frames[1].Pixels[5, 5] == 9 &&
-                     loadedAnim.Frames[0].Pixels[0, 0] == CentauriSprite.TRANSPARENT;
+                     loadedAnim.Frames[0].Pixels[0, 0] == CentauriSprite.TRANSPARENT &&
+                     Math.Abs(loadedAnim.Frames[0].DurationSeconds - 0.08f) < 0.001f &&
+                     Math.Abs(loadedAnim.Frames[1].DurationSeconds - 0.16f) < 0.001f;
             }
 
             return Expect("new sprite SAVE/LOAD round-trip (baked pixels)", ok);
@@ -309,8 +308,7 @@ public static class SpritePipelineVerification
             "GHOST",
             CentauriDisplayMode.HighResolution,
             16,
-            16,
-            ImageCategory.Sprite);
+            16);
         image.SetPixel(3, 3, 7);
         image.AddFrame();
         image.GetFrame(1).Pixels[3, 3] = 8;
@@ -355,6 +353,191 @@ public static class SpritePipelineVerification
             sprite.Pixels[3, 3] == 7;
 
         return Expect("BASIC SPRITE + SPRITEANIM behaviour", ok);
+    }
+
+    private static int ArtworkLibraryPersistsWithoutTape()
+    {
+        FeatureGate.Current = FeatureAvailability.AllReleased();
+        var tempDir = Path.Combine(Path.GetTempPath(), "centauri64-verify-artwork");
+        Directory.CreateDirectory(tempDir);
+        var path = Path.Combine(tempDir, "library.images");
+
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+
+            var storage = new ImageStorage(tempDir);
+            var store = new ImageAssetStore();
+            var image = new ImageAsset(
+                "LIBTEST",
+                CentauriDisplayMode.HighResolution,
+                16,
+                16);
+            image.SetPixel(1, 1, 4);
+            image.GetFrame(0).DurationSeconds = 0.11f;
+            store.Add(image);
+            storage.Save(ArtworkLibrary.LibraryFileName, store);
+
+            var loaded = new ImageAssetStore();
+            storage.Load(ArtworkLibrary.LibraryFileName, loaded);
+            var ok = loaded.Contains("LIBTEST") && File.Exists(path);
+            if (ok)
+            {
+                var frame = loaded.Find("LIBTEST")!.GetFrame(0);
+                ok = frame.Pixels[1, 1] == 4 &&
+                     Math.Abs(frame.DurationSeconds - 0.11f) < 0.001f;
+            }
+
+            return Expect("artwork library persists without tape", ok);
+        }
+        finally
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+    }
+
+    private static int TapeIncludeAndPackIndependence()
+    {
+        FeatureGate.Current = FeatureAvailability.AllReleased();
+        TapeFolder.EnsureExists();
+        var tapeA = "_VERIFY_INCA";
+        var tapeB = "_VERIFY_INCB";
+        CleanupTape(tapeA);
+        CleanupTape(tapeB);
+
+        try
+        {
+            var includesA = new TapeAssetIncludes();
+            includesA.Add("PLAYER_IDLE");
+            includesA.Save(tapeA);
+
+            var includesB = TapeAssetIncludes.Load(tapeB);
+            var loadedA = TapeAssetIncludes.Load(tapeA);
+
+            var ok = loadedA.Contains("PLAYER_IDLE") &&
+                     !includesB.Contains("PLAYER_IDLE");
+
+            includesB.Add("BACKGROUND");
+            includesB.Save(tapeB);
+            loadedA = TapeAssetIncludes.Load(tapeA);
+            var loadedB = TapeAssetIncludes.Load(tapeB);
+
+            ok = ok &&
+                 loadedA.Contains("PLAYER_IDLE") &&
+                 !loadedA.Contains("BACKGROUND") &&
+                 loadedB.Contains("BACKGROUND") &&
+                 !loadedB.Contains("PLAYER_IDLE");
+
+            return Expect("per-tape INCLUDE does not leak", ok);
+        }
+        finally
+        {
+            CleanupTape(tapeA);
+            CleanupTape(tapeB);
+        }
+    }
+
+    private static int ListingScanPacksLiteralAssets()
+    {
+        FeatureGate.Current = FeatureAvailability.AllReleased();
+        var library = new ImageAssetStore();
+        var hero = new ImageAsset("HERO", CentauriDisplayMode.HighResolution, 16, 16);
+        hero.SetPixel(0, 0, 7);
+        library.Add(hero);
+        var bg = new ImageAsset(
+            "BG",
+            CentauriDisplayMode.HighResolution,
+            ImageAsset.ModeWidth(CentauriDisplayMode.HighResolution),
+            ImageAsset.ModeHeight(CentauriDisplayMode.HighResolution));
+        library.Add(bg);
+        library.Add(new ImageAsset("UNUSED", CentauriDisplayMode.HighResolution, 16, 16));
+
+        var sprites = new SpriteAssetStore();
+        var ghost = new SpriteAsset("GHOST");
+        var anim = ghost.AddAnimation("DEFAULT");
+        SpriteArtwork.BakeIntoAnimation(anim, hero);
+        sprites.Add(ghost);
+
+        var includes = new TapeAssetIncludes();
+        includes.Add("BG");
+
+        var listing =
+            "10 MODE 1\n" +
+            "20 SPRITE 0,\"GHOST\"\n" +
+            "30 IMAGE \"HERO\",10,10\n" +
+            "40 END\n";
+
+        var pack = TapeAssetPacker.Pack(listing, library, sprites, includes);
+        var ok =
+            pack.MissingImages.Count == 0 &&
+            pack.MissingSprites.Count == 0 &&
+            pack.Images.Contains("HERO") &&
+            pack.Images.Contains("BG") &&
+            !pack.Images.Contains("UNUSED") &&
+            pack.Sprites.Contains("GHOST");
+
+        return Expect("SAVE pack = listing + INCLUDE", ok);
+    }
+
+    private static int LibraryEditDoesNotAlterTapeCopy()
+    {
+        FeatureGate.Current = FeatureAvailability.AllReleased();
+        TapeFolder.EnsureExists();
+        var tapeName = "_VERIFY_ISOLATE";
+        CleanupTape(tapeName);
+
+        try
+        {
+            var library = new ImageAssetStore();
+            var image = new ImageAsset("SHIP", CentauriDisplayMode.HighResolution, 16, 16);
+            image.SetPixel(2, 2, 5);
+            library.Add(image);
+
+            var includes = new TapeAssetIncludes();
+            includes.Add("SHIP");
+            var pack = TapeAssetPacker.Pack("", library, new SpriteAssetStore(), includes);
+            new ImageStorage().Save(tapeName, pack.Images);
+
+            // Mutate library after packing.
+            image.SetPixel(2, 2, 14);
+
+            var loaded = new ImageAssetStore();
+            new ImageStorage().Load(tapeName, loaded);
+            var ok = loaded.Contains("SHIP") &&
+                     loaded.Find("SHIP")!.GetFrame(0).Pixels[2, 2] == 5 &&
+                     library.Find("SHIP")!.GetFrame(0).Pixels[2, 2] == 14;
+
+            return Expect("library edits do not alter saved tape images", ok);
+        }
+        finally
+        {
+            CleanupTape(tapeName);
+        }
+    }
+
+    private static int MissingAssetPackReports()
+    {
+        var library = new ImageAssetStore();
+        var sprites = new SpriteAssetStore();
+        var includes = new TapeAssetIncludes();
+        var listing = "10 SPRITE 0,\"MISSING\"\n20 IMAGE \"GONE\",0,0\n";
+        var pack = TapeAssetPacker.Pack(listing, library, sprites, includes);
+        var ok = pack.MissingSprites.Contains("MISSING") &&
+                 pack.MissingImages.Contains("GONE");
+        return Expect("pack reports missing listing assets", ok);
+    }
+
+    private static void CleanupTape(string tapeName)
+    {
+        var root = TapeFolder.Location;
+        foreach (var ext in new[] { ".bas", ".sprites", ".images", ".assets", ".label", ".cover", ".maps" })
+        {
+            var path = Path.Combine(root, tapeName + ext);
+            if (File.Exists(path))
+                File.Delete(path);
+        }
     }
 
     private static string? FindListing(string name)

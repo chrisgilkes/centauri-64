@@ -37,6 +37,7 @@ public sealed partial class BasicMachine
         _programId = NewProgramId();
         _programVersion = TapeLabel.DefaultProgramVersion;
         _tapeName = null;
+        _assetIncludes = new TapeAssetIncludes();
         SyncProgramIdentity();
 
         _console.WriteLine("");

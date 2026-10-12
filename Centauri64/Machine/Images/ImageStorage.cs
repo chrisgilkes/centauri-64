@@ -9,17 +9,33 @@ namespace Centauri64.Machine.Images;
 
 /// <summary>
 /// Tape sidecar format (.images).
-/// Legacy files (no CATEGORY/FRAME headers) load as one frame;
-/// full-screen legacy images are categorised BACKGROUND.
+/// Legacy CATEGORY lines are ignored. Legacy files without FRAME headers
+/// load as a single frame.
 /// </summary>
 public sealed class ImageStorage
 {
     private readonly string _programDirectory;
 
     public ImageStorage()
+        : this(null)
     {
-        TapeFolder.EnsureExists();
-        _programDirectory = TapeFolder.Location;
+    }
+
+    /// <param name="directory">
+    /// Folder for .images files. Null = tape folder.
+    /// </param>
+    public ImageStorage(string? directory)
+    {
+        if (directory == null)
+        {
+            TapeFolder.EnsureExists();
+            _programDirectory = TapeFolder.Location;
+        }
+        else
+        {
+            Directory.CreateDirectory(directory);
+            _programDirectory = directory;
+        }
     }
 
     public void Save(string name, ImageAssetStore assets)
@@ -40,13 +56,15 @@ public sealed class ImageStorage
             writer.WriteLine($"IMAGE {image.Name}");
             writer.WriteLine($"MODE {ToFileMode(image.Mode)}");
             writer.WriteLine($"SIZE {image.Width} {image.Height}");
-            writer.WriteLine($"CATEGORY {(int)image.Category}");
             writer.WriteLine($"FRAMES {image.FrameCount}");
 
             for (var f = 0; f < image.FrameCount; f++)
             {
+                var frame = image.GetFrame(f);
                 writer.WriteLine($"FRAME {f}");
-                WriteFrame(writer, image.GetFrame(f).Pixels, image.Width, image.Height);
+                writer.WriteLine(
+                    $"DURATION {frame.DurationSeconds.ToString("0.###", CultureInfo.InvariantCulture)}");
+                WriteFrame(writer, frame.Pixels, image.Width, image.Height);
             }
         }
     }
@@ -61,12 +79,11 @@ public sealed class ImageStorage
 
         string? pendingName = null;
         var pendingMode = CentauriDisplayMode.HighResolution;
-        var pendingCategory = ImageCategory.General;
         var pendingWidth = 0;
         var pendingHeight = 0;
-        var hasCategory = false;
-        var frameBuffers = new List<int[,]>();
+        var frameBuffers = new List<(int[,] Pixels, float Duration)>();
         int[,]? building = null;
+        var buildingDuration = ImageFrame.DefaultDurationSeconds;
         var row = 0;
 
         void FlushPending()
@@ -79,8 +96,9 @@ public sealed class ImageStorage
 
             if (building != null)
             {
-                frameBuffers.Add(building);
+                frameBuffers.Add((building, buildingDuration));
                 building = null;
+                buildingDuration = ImageFrame.DefaultDurationSeconds;
             }
 
             if (frameBuffers.Count == 0)
@@ -89,31 +107,24 @@ public sealed class ImageStorage
                 return;
             }
 
-            var category = pendingCategory;
-            if (!hasCategory &&
-                width == ImageAsset.ModeWidth(pendingMode) &&
-                height == ImageAsset.ModeHeight(pendingMode))
-            {
-                category = ImageCategory.Background;
-            }
-
             var image = new ImageAsset(
                 pendingName,
                 pendingMode,
                 width,
                 height,
-                category,
                 ImageAsset.Transparent,
                 1);
 
             // Replace first frame, then add remaining.
-            CopyPixels(frameBuffers[0], image.GetFrame(0).Pixels, width, height);
+            CopyPixels(frameBuffers[0].Pixels, image.GetFrame(0).Pixels, width, height);
+            image.GetFrame(0).DurationSeconds = frameBuffers[0].Duration;
             image.GetFrame(0).MarkChanged();
 
             for (var i = 1; i < frameBuffers.Count; i++)
             {
                 var frame = image.AddFrame();
-                CopyPixels(frameBuffers[i], frame.Pixels, width, height);
+                CopyPixels(frameBuffers[i].Pixels, frame.Pixels, width, height);
+                frame.DurationSeconds = frameBuffers[i].Duration;
                 frame.MarkChanged();
             }
 
@@ -122,12 +133,11 @@ public sealed class ImageStorage
 
             pendingName = null;
             pendingMode = CentauriDisplayMode.HighResolution;
-            pendingCategory = ImageCategory.General;
             pendingWidth = 0;
             pendingHeight = 0;
-            hasCategory = false;
             frameBuffers.Clear();
             building = null;
+            buildingDuration = ImageFrame.DefaultDurationSeconds;
             row = 0;
         }
 
@@ -154,14 +164,9 @@ public sealed class ImageStorage
                 continue;
             }
 
-            if (line.StartsWith("CATEGORY ", StringComparison.OrdinalIgnoreCase) &&
-                int.TryParse(line["CATEGORY ".Length..].Trim(), out var catValue) &&
-                Enum.IsDefined(typeof(ImageCategory), catValue))
-            {
-                pendingCategory = (ImageCategory)catValue;
-                hasCategory = true;
+            // Legacy CATEGORY lines are ignored — images are untyped.
+            if (line.StartsWith("CATEGORY ", StringComparison.OrdinalIgnoreCase))
                 continue;
-            }
 
             if (line.StartsWith("SIZE ", StringComparison.OrdinalIgnoreCase))
             {
@@ -185,7 +190,10 @@ public sealed class ImageStorage
             if (line.StartsWith("FRAME ", StringComparison.OrdinalIgnoreCase))
             {
                 if (building != null)
-                    frameBuffers.Add(building);
+                {
+                    frameBuffers.Add((building, buildingDuration));
+                    buildingDuration = ImageFrame.DefaultDurationSeconds;
+                }
 
                 var width = pendingWidth > 0 ? pendingWidth : ImageAsset.ModeWidth(pendingMode);
                 var height = pendingHeight > 0 ? pendingHeight : ImageAsset.ModeHeight(pendingMode);
@@ -197,6 +205,18 @@ public sealed class ImageStorage
                 }
 
                 row = 0;
+                continue;
+            }
+
+            if (line.StartsWith("DURATION ", StringComparison.OrdinalIgnoreCase) &&
+                float.TryParse(
+                    line["DURATION ".Length..].Trim(),
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out var duration) &&
+                duration > 0f)
+            {
+                buildingDuration = duration;
                 continue;
             }
 

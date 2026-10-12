@@ -350,8 +350,6 @@ public sealed partial class CentauriMachine
 
     public void UpdateSprites(GameTime gameTime)
     {
-        const float frameTime = 0.125f;
-
         var deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
         for (var i = 0; i < _sprites.Length;i++)
@@ -376,8 +374,16 @@ public sealed partial class CentauriMachine
 
             sprite.AnimationTimer += deltaTime;
 
-            while (sprite.AnimationTimer >=frameTime)
+            while (true)
             {
+                var current = animation.Frames[sprite.AnimationFrame];
+                var frameTime = current.DurationSeconds > 0f
+                    ? current.DurationSeconds
+                    : Images.ImageFrame.DefaultDurationSeconds;
+
+                if (sprite.AnimationTimer < frameTime)
+                    break;
+
                 sprite.AnimationTimer -= frameTime;
 
                 sprite.AnimationFrame++;
@@ -421,6 +427,9 @@ public sealed partial class CentauriMachine
                     animation.Frames[
                         sprite.AnimationFrame],
                     sprite);
+
+                if (!sprite.AnimationPlaying)
+                    break;
             }
         }
 

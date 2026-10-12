@@ -7,6 +7,7 @@ namespace Centauri64.Machine.Sprites;
 /// <summary>
 /// Issue #3 bridge: eligible ImageAsset artwork → baked SpriteAnimation frames.
 /// Playback uses baked pixels only; image name is optional authoring metadata.
+/// Eligibility is size only — any 16×16 image can be bound as hardware sprite art.
 /// </summary>
 public static class SpriteArtwork
 {
@@ -15,8 +16,7 @@ public static class SpriteArtwork
         if (image == null)
             return false;
 
-        return image.Category == ImageCategory.Sprite &&
-               image.Width == CentauriSprite.WIDTH &&
+        return image.Width == CentauriSprite.WIDTH &&
                image.Height == CentauriSprite.HEIGHT;
     }
 
@@ -24,9 +24,6 @@ public static class SpriteArtwork
     {
         if (image == null)
             return "IMAGE NOT FOUND";
-
-        if (image.Category != ImageCategory.Sprite)
-            return "IMAGE MUST BE SPRITE CATEGORY";
 
         if (image.Width != CentauriSprite.WIDTH ||
             image.Height != CentauriSprite.HEIGHT)

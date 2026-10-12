@@ -315,10 +315,11 @@ public sealed class SimpleDialog
         if (key is >= Keys.NumPad0 and <= Keys.NumPad9)
             return ((char)('0' + (key - Keys.NumPad0))).ToString();
 
+        // Names allow underscore; hyphen is rejected by asset naming rules.
         if (key == Keys.OemMinus || key == Keys.Subtract)
-            return shift ? null : "-";
+            return shift ? null : "_";
 
-        return key == Keys.OemComma ? null : null;
+        return null;
     }
 
     private static bool WasPressed(

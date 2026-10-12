@@ -49,9 +49,12 @@ public sealed partial class BasicMachine
         _mapStorage.Load(name, _machine.MapAssets);
         _machine.MapEditor.MarkSaved();
 
+        // Tape .images are runtime copies — do not overwrite the local artwork library.
         _imageStorage.Load(name, _machine.ImageAssets);
-        _machine.ImageEditor.MarkSaved();
         _machine.ClearImageLayers();
+
+        _assetIncludes = TapeAssetIncludes.Load(name);
+        _tapeName = name;
 
         var label = _storage.LoadLabel(name);
         EnsureLabelIdentity(label);
@@ -59,7 +62,6 @@ public sealed partial class BasicMachine
 
         _programId = label.ProgramId;
         _programVersion = label.ProgramVersion;
-        _tapeName = name;
         SyncProgramIdentity();
         _network.Leave();
 
@@ -82,16 +84,44 @@ public sealed partial class BasicMachine
 
         var name = argument[1..^1];
 
+        // Ensure library edits are on disk before packing.
+        _machine.PersistArtworkLibrary();
+
+        var listing = GetProgramSourceText();
+        var pack = TapeAssetPacker.Pack(
+            listing,
+            _machine.LocalArtwork,
+            _machine.SpriteAssets,
+            _assetIncludes);
+
+        if (pack.MissingImages.Count > 0 || pack.MissingSprites.Count > 0)
+        {
+            _console.WriteLine("");
+            foreach (var missing in pack.MissingImages)
+                _console.WriteLine($"MISSING IMAGE {missing}");
+            foreach (var missing in pack.MissingSprites)
+                _console.WriteLine($"MISSING SPRITE {missing}");
+            _console.WriteLine("FIX REFERENCES OR INCLUDE ARTWORK, THEN SAVE AGAIN.");
+            _console.WriteLine("");
+            _console.WriteLine("READY.");
+            return;
+        }
+
         _storage.Save(name, _program);
 
-        _spriteStorage.Save(name,_machine.SpriteAssets);
+        // Portable baked sprites + packed images (library clones) — not live library files.
+        _spriteStorage.Save(name, pack.Sprites);
         _machine.SpriteEditor.MarkSaved();
+
+        _machine.ImageAssets.Clear();
+        foreach (var image in pack.Images.Images)
+            _machine.ImageAssets.Add(image);
+        _imageStorage.Save(name, pack.Images);
 
         _mapStorage.Save(name, _machine.MapAssets);
         _machine.MapEditor.MarkSaved();
 
-        _imageStorage.Save(name, _machine.ImageAssets);
-        _machine.ImageEditor.MarkSaved();
+        _assetIncludes.Save(name);
 
         var label = _storage.LoadLabel(name);
         var sameTape = _tapeName != null &&
@@ -201,6 +231,14 @@ public sealed partial class BasicMachine
         _spriteStorage.Delete(name);
         _mapStorage.Delete(name);
         _imageStorage.Delete(name);
+        TapeAssetIncludes.Delete(name);
+
+        if (_tapeName != null &&
+            string.Equals(_tapeName, name, StringComparison.OrdinalIgnoreCase))
+        {
+            _tapeName = null;
+            _assetIncludes = new TapeAssetIncludes();
+        }
 
         _console.WriteLine("");
         _console.WriteLine(

@@ -32,6 +32,8 @@ public sealed partial class ImageEditor
 
         if (WasPressed(keyboard, previous, Keys.G))
             ToggleGrid();
+        else if (WasPressed(keyboard, previous, Keys.T) && !control)
+            ToggleSelectedInclude();
         else if (WasPressed(keyboard, previous, Keys.S) && !control)
             ToggleShapeFilled();
         else if (WasPressed(keyboard, previous, Keys.OemPlus) ||
@@ -44,24 +46,49 @@ public sealed partial class ImageEditor
                  WasPressed(keyboard, previous, Keys.NumPad0))
             FitZoom();
         else if (WasPressed(keyboard, previous, Keys.P))
-            _tool = DrawTool.Pencil;
+            SelectTool(DrawTool.Pencil);
         else if (WasPressed(keyboard, previous, Keys.E))
-            _tool = DrawTool.Eraser;
+            SelectTool(DrawTool.Eraser);
         else if (WasPressed(keyboard, previous, Keys.F))
-            _tool = DrawTool.Fill;
+            SelectTool(DrawTool.Fill);
         else if (WasPressed(keyboard, previous, Keys.L))
-            _tool = DrawTool.Line;
+            SelectTool(DrawTool.Line);
         else if (WasPressed(keyboard, previous, Keys.R) && !control)
-            _tool = DrawTool.Rectangle;
+            SelectTool(DrawTool.Rectangle);
         else if (WasPressed(keyboard, previous, Keys.C))
-            _tool = DrawTool.Circle;
+            SelectTool(DrawTool.Circle);
         else if (WasPressed(keyboard, previous, Keys.I))
-            _tool = DrawTool.Pick;
+            SelectTool(DrawTool.Pick);
         else if (WasPressed(keyboard, previous, Keys.OemOpenBrackets))
             PreviousFrame();
         else if (WasPressed(keyboard, previous, Keys.OemCloseBrackets))
             NextFrame();
+        else if (WasPressed(keyboard, previous, Keys.N) && !control)
+            NewFrame();
+        else if (WasPressed(keyboard, previous, Keys.D) && !control)
+            DuplicateFrame();
+        else if (WasPressed(keyboard, previous, Keys.Space))
+            ToggleAnimPlay();
+        else if (WasPressed(keyboard, previous, Keys.OemComma) && IsAnimMode)
+            AdjustFrameDuration(-0.025f);
+        else if (WasPressed(keyboard, previous, Keys.OemPeriod) && IsAnimMode)
+            AdjustFrameDuration(0.025f);
+        else if (WasPressed(keyboard, previous, Keys.H) && !control)
+            FlipHorizontal();
+        else if (WasPressed(keyboard, previous, Keys.V) && !control)
+            FlipVertical();
+        else if (ShiftDown(keyboard) && WasPressed(keyboard, previous, Keys.Left))
+            NudgeFrame(-1, 0);
+        else if (ShiftDown(keyboard) && WasPressed(keyboard, previous, Keys.Right))
+            NudgeFrame(1, 0);
+        else if (ShiftDown(keyboard) && WasPressed(keyboard, previous, Keys.Up))
+            NudgeFrame(0, -1);
+        else if (ShiftDown(keyboard) && WasPressed(keyboard, previous, Keys.Down))
+            NudgeFrame(0, 1);
     }
+
+    private static bool ShiftDown(KeyboardState keyboard) =>
+        keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift);
 
     private void HandleZoomAndPan(MouseState mouse, KeyboardState keyboard)
     {
@@ -128,39 +155,34 @@ public sealed partial class ImageEditor
         if (!rect.Contains(mouse.X, mouse.Y))
             return false;
 
-        _statusTip = "IMAGES — FILTER + CLICK TO SELECT";
+        _statusTip = "ART STUDIO — CLICK SELECT  T INCLUDE";
 
         if (mouse.LeftButton != ButtonState.Pressed ||
             _previousMouse.LeftButton != ButtonState.Released)
             return true;
 
-        // Filter chips (full editor only)
-        if (!IsSpriteArtworkMode)
-        {
-            var filterY = top + 18;
-            if (mouse.Y >= filterY && mouse.Y < filterY + 14)
-            {
-                var filters = new[]
-                {
-                    BrowserFilter.All,
-                    BrowserFilter.General,
-                    BrowserFilter.Sprite,
-                    BrowserFilter.Tileset,
-                    BrowserFilter.Background
-                };
-                var chip = (mouse.X - 4) / 22;
-                if (chip >= 0 && chip < filters.Length)
-                    _browserFilter = filters[chip];
-                return true;
-            }
-        }
-
+        var listTop = top + 20;
         var visible = GetFilteredImages();
-        var listTop = IsSpriteArtworkMode ? top + 20 : top + 36;
         var index = (mouse.Y - listTop) / 56;
         if (index >= 0 && index < visible.Count)
         {
             var asset = visible[index];
+            // Click the include marker column to toggle INCLUDE.
+            if (mouse.X < 22)
+            {
+                for (var i = 0; i < _assets.Count; i++)
+                {
+                    if (ReferenceEquals(_assets.Images[i], asset))
+                    {
+                        SelectIndex(i);
+                        ToggleSelectedInclude();
+                        break;
+                    }
+                }
+
+                return true;
+            }
+
             for (var i = 0; i < _assets.Count; i++)
             {
                 if (ReferenceEquals(_assets.Images[i], asset))
@@ -220,9 +242,8 @@ public sealed partial class ImageEditor
         {
             if (IsSpriteArtworkMode)
             {
-                // Issue #3: only 16×16 Sprite-category artwork.
-                if (image.Category == ImageCategory.Sprite &&
-                    image.Width == CentauriSprite.WIDTH &&
+                // Issue #3: only 16×16 artwork is bindable as hardware sprites.
+                if (image.Width == CentauriSprite.WIDTH &&
                     image.Height == CentauriSprite.HEIGHT)
                 {
                     list.Add(image);
@@ -231,17 +252,7 @@ public sealed partial class ImageEditor
                 continue;
             }
 
-            var match = _browserFilter switch
-            {
-                BrowserFilter.All => true,
-                BrowserFilter.General => image.Category == ImageCategory.General,
-                BrowserFilter.Sprite => image.Category == ImageCategory.Sprite,
-                BrowserFilter.Tileset => image.Category == ImageCategory.Tileset,
-                BrowserFilter.Background => image.Category == ImageCategory.Background,
-                _ => true
-            };
-            if (match)
-                list.Add(image);
+            list.Add(image);
         }
 
         return list;
@@ -293,6 +304,10 @@ public sealed partial class ImageEditor
     private void HandleCanvasMouse(MouseState mouse)
     {
         if (_image == null || _panning)
+            return;
+
+        // Preview playback is read-only — Space to stop, then paint.
+        if (_animPlaying)
             return;
 
         LayoutCanvas();
@@ -478,40 +493,11 @@ public sealed partial class ImageEditor
         spriteBatch.Draw(pixel, new Rectangle(0, top, BrowserWidth, height), CreativeUiTheme.Panel);
         font.Draw(
             spriteBatch,
-            IsSpriteArtworkMode ? "ARTWORK" : "IMAGES",
+            IsSpriteArtworkMode ? "16X16" : "IMAGES",
             new Vector2(8, top + 4),
             CreativeUiTheme.Accent);
 
         var listTop = top + 20;
-        if (!IsSpriteArtworkMode)
-        {
-            var filters = new[] { "A", "G", "S", "T", "B" };
-            var filterEnums = new[]
-            {
-                BrowserFilter.All,
-                BrowserFilter.General,
-                BrowserFilter.Sprite,
-                BrowserFilter.Tileset,
-                BrowserFilter.Background
-            };
-            for (var i = 0; i < filters.Length; i++)
-            {
-                var x = 4 + i * 22;
-                var selected = _browserFilter == filterEnums[i];
-                spriteBatch.Draw(
-                    pixel,
-                    new Rectangle(x, top + 18, 20, 12),
-                    selected ? CreativeUiTheme.MenuHot : CreativeUiTheme.PanelLight);
-                font.Draw(
-                    spriteBatch,
-                    filters[i],
-                    new Vector2(x + 6, top + 18),
-                    selected ? CreativeUiTheme.Highlight : CreativeUiTheme.Text);
-            }
-
-            listTop = top + 36;
-        }
-
         var device = pixel.GraphicsDevice;
         var visible = GetFilteredImages();
         for (var i = 0; i < visible.Count; i++)
@@ -530,24 +516,42 @@ public sealed partial class ImageEditor
                     CreativeUiTheme.MenuHot);
             }
 
+            var included = IsIncludedOnTape?.Invoke(image.Name) == true;
+            var mark = included ? "[+]" : "[ ]";
+            font.Draw(
+                spriteBatch,
+                mark,
+                new Vector2(4, y + 8),
+                included ? CreativeUiTheme.Accent : CreativeUiTheme.Muted);
+
+            var thumbSlot = new Rectangle(28, y + 4, 32, 32);
+            spriteBatch.Draw(pixel, thumbSlot, CreativeUiTheme.PanelLight);
             var thumb = GetThumbnail(device, image, 0);
             if (thumb != null)
             {
                 spriteBatch.Draw(
                     thumb,
-                    new Rectangle(8, y + 4, 40, 30),
+                    FitWithinPixel(thumbSlot, thumb.Width, thumb.Height),
                     Color.White);
             }
 
             font.Draw(
                 spriteBatch,
-                Truncate(image.Name, 10),
-                new Vector2(52, y + 8),
+                Truncate(image.Name, 9),
+                new Vector2(64, y + 4),
                 selected ? CreativeUiTheme.Highlight : CreativeUiTheme.Text);
             font.Draw(
                 spriteBatch,
-                Truncate(image.Category.ToString().ToUpperInvariant(), 8),
-                new Vector2(52, y + 22),
+                $"{image.Width}X{image.Height}",
+                new Vector2(64, y + 18),
+                CreativeUiTheme.Muted);
+            var frameLabel = image.FrameCount == 1
+                ? "1 FRAME"
+                : $"{image.FrameCount} FRAMES";
+            font.Draw(
+                spriteBatch,
+                frameLabel,
+                new Vector2(64, y + 32),
                 CreativeUiTheme.Muted);
         }
     }
@@ -560,38 +564,96 @@ public sealed partial class ImageEditor
             ScreenW - BrowserWidth - PaletteWidth,
             FrameStripHeight);
         spriteBatch.Draw(pixel, strip, CreativeUiTheme.Panel);
-        font.Draw(spriteBatch, "FRAMES", new Vector2(strip.X + 8, strip.Y + 2), CreativeUiTheme.Accent);
+        var stripLabel = IsAnimMode
+            ? (_animPlaying ? "ANIM PLAY" : "ANIM MODE")
+            : "FRAME 1";
+        font.Draw(spriteBatch, stripLabel, new Vector2(strip.X + 8, strip.Y + 2), CreativeUiTheme.Accent);
 
         if (_image == null)
             return;
+
+        if (IsAnimMode)
+        {
+            font.Draw(
+                spriteBatch,
+                $"DUR {FormatDuration(_image.CurrentFrame.DurationSeconds)}S",
+                new Vector2(strip.Right - 88, strip.Y + 2),
+                CreativeUiTheme.Muted);
+        }
 
         var device = pixel.GraphicsDevice;
         var x = strip.X + 8;
         for (var i = 0; i < _image.FrameCount; i++)
         {
-            var cell = new Rectangle(x, strip.Y + 14, 36, 36);
-            var selected = i == _image.CurrentFrameIndex;
+            var cell = new Rectangle(x, strip.Y + 12, 36, 42);
+            var selected = i == (_animPlaying ? _previewFrameIndex : _image.CurrentFrameIndex);
             spriteBatch.Draw(
                 pixel,
                 cell,
                 selected ? CreativeUiTheme.MenuHot : CreativeUiTheme.PanelLight);
 
+            var thumbSlot = new Rectangle(cell.X + 2, cell.Y + 2, 32, 32);
+            spriteBatch.Draw(pixel, thumbSlot, CreativeUiTheme.PanelLight);
             var thumb = GetThumbnail(device, _image, i);
             if (thumb != null)
-                spriteBatch.Draw(thumb, new Rectangle(cell.X + 2, cell.Y + 2, 32, 24), Color.White);
+            {
+                spriteBatch.Draw(
+                    thumb,
+                    FitWithinPixel(thumbSlot, thumb.Width, thumb.Height),
+                    Color.White);
+            }
 
             font.Draw(
                 spriteBatch,
                 (i + 1).ToString(),
-                new Vector2(cell.X + 14, cell.Y + 26),
+                new Vector2(cell.X + 14, cell.Y + 34),
                 selected ? CreativeUiTheme.Highlight : CreativeUiTheme.Muted);
 
             x += 40;
         }
 
-        var add = new Rectangle(x, strip.Y + 14, 36, 36);
+        var add = new Rectangle(x, strip.Y + 12, 36, 42);
         spriteBatch.Draw(pixel, add, CreativeUiTheme.PanelLight);
-        font.Draw(spriteBatch, "+", new Vector2(add.X + 14, add.Y + 12), CreativeUiTheme.Accent);
+        font.Draw(spriteBatch, "+", new Vector2(add.X + 14, add.Y + 14), CreativeUiTheme.Accent);
+    }
+
+    /// <summary>
+    /// Actual-size (or fitted) animation preview in the empty corner under the colour palette.
+    /// </summary>
+    private void DrawAnimPreview(SpriteBatch spriteBatch, BitmapFont font, Texture2D pixel)
+    {
+        var panel = new Rectangle(
+            ScreenW - PaletteWidth,
+            ScreenH - 16 - FrameStripHeight,
+            PaletteWidth,
+            FrameStripHeight);
+        spriteBatch.Draw(pixel, panel, CreativeUiTheme.Panel);
+        font.Draw(
+            spriteBatch,
+            IsAnimMode ? "PREVIEW" : "VIEW",
+            new Vector2(panel.X + 8, panel.Y + 2),
+            CreativeUiTheme.Accent);
+
+        if (_image == null)
+            return;
+
+        // Leave room for the title; fit image into remaining panel.
+        var thumbSlot = new Rectangle(panel.X + 12, panel.Y + 14, panel.Width - 24, panel.Height - 18);
+        spriteBatch.Draw(pixel, thumbSlot, CreativeUiTheme.PanelLight);
+        DrawChecker(spriteBatch, pixel, thumbSlot);
+
+        var frameIndex = IsAnimMode
+            ? Math.Clamp(_previewFrameIndex, 0, _image.FrameCount - 1)
+            : _image.CurrentFrameIndex;
+
+        var thumb = GetThumbnail(pixel.GraphicsDevice, _image, frameIndex);
+        if (thumb != null)
+        {
+            spriteBatch.Draw(
+                thumb,
+                FitWithinPixel(thumbSlot, thumb.Width, thumb.Height),
+                Color.White);
+        }
     }
 
     private void DrawPalette(SpriteBatch spriteBatch, BitmapFont font, Texture2D pixel)
@@ -643,7 +705,7 @@ public sealed partial class ImageEditor
         {
             font.Draw(
                 spriteBatch,
-                "IMAGE > NEW IMAGE TO CREATE",
+                "STUDIO > NEW IMAGE TO CREATE",
                 new Vector2(area.X + 40, area.Y + area.Height / 2),
                 CreativeUiTheme.Muted);
             return;
@@ -654,7 +716,7 @@ public sealed partial class ImageEditor
         if (visible.Width <= 0 || visible.Height <= 0)
             return;
 
-        DrawChecker(spriteBatch, pixel, visible);
+        DrawCanvasChecker(spriteBatch, pixel, visible);
 
         var srcX = (visible.X - _canvasX) / _zoom;
         var srcY = (visible.Y - _canvasY) / _zoom;
@@ -672,7 +734,7 @@ public sealed partial class ImageEditor
         var texture = _canvasCache.GetTexture(
             pixel.GraphicsDevice,
             _image,
-            _image.CurrentFrameIndex);
+            DisplayFrameIndex);
         if (source.Width > 0 && source.Height > 0)
         {
             spriteBatch.Draw(
@@ -689,12 +751,47 @@ public sealed partial class ImageEditor
             DrawPixelGrid(spriteBatch, pixel, visible);
     }
 
+    /// <summary>
+    /// Transparency checker aligned to image pixels — one square per pixel when zoomed,
+    /// so the background does not fill with tiny screen-space cells.
+    /// </summary>
+    private void DrawCanvasChecker(SpriteBatch spriteBatch, Texture2D pixel, Rectangle clip)
+    {
+        if (_image == null)
+            return;
+
+        var startX = Math.Max(0, (int)MathF.Floor((clip.X - _canvasX) / _zoom));
+        var endX = Math.Min(_image.Width, (int)MathF.Ceiling((clip.Right - _canvasX) / _zoom));
+        var startY = Math.Max(0, (int)MathF.Floor((clip.Y - _canvasY) / _zoom));
+        var endY = Math.Min(_image.Height, (int)MathF.Ceiling((clip.Bottom - _canvasY) / _zoom));
+        var cell = Math.Max(1, (int)MathF.Ceiling(_zoom));
+
+        for (var py = startY; py < endY; py++)
+        {
+            for (var px = startX; px < endX; px++)
+            {
+                var odd = ((px + py) & 1) != 0;
+                var colour = odd ? new Color(50, 50, 60) : new Color(35, 35, 45);
+                var dest = Rectangle.Intersect(
+                    clip,
+                    new Rectangle(
+                        _canvasX + (int)(px * _zoom),
+                        _canvasY + (int)(py * _zoom),
+                        cell,
+                        cell));
+                if (dest.Width > 0 && dest.Height > 0)
+                    spriteBatch.Draw(pixel, dest, colour);
+            }
+        }
+    }
+
     private void DrawPixelGrid(SpriteBatch spriteBatch, Texture2D pixel, Rectangle clip)
     {
         if (_image == null)
             return;
 
-        var colour = new Color(255, 255, 255, 40);
+        // Black, semi-transparent — readable on light and dark pixels.
+        var colour = new Color(0, 0, 0, 110);
         var startX = Math.Max(0, (int)MathF.Floor((clip.X - _canvasX) / _zoom));
         var endX = Math.Min(_image.Width, (int)MathF.Ceiling((clip.Right - _canvasX) / _zoom));
         var startY = Math.Max(0, (int)MathF.Floor((clip.Y - _canvasY) / _zoom));
@@ -703,25 +800,17 @@ public sealed partial class ImageEditor
         for (var x = startX; x <= endX; x++)
         {
             var sx = _canvasX + (int)(x * _zoom);
-            if (sx < clip.X || sx >= clip.Right)
-                continue;
-
-            spriteBatch.Draw(
-                pixel,
-                new Rectangle(sx, clip.Y, 1, clip.Height),
-                colour);
+            var line = Rectangle.Intersect(clip, new Rectangle(sx, clip.Y, 1, clip.Height));
+            if (line.Width > 0 && line.Height > 0)
+                spriteBatch.Draw(pixel, line, colour);
         }
 
         for (var y = startY; y <= endY; y++)
         {
             var sy = _canvasY + (int)(y * _zoom);
-            if (sy < clip.Y || sy >= clip.Bottom)
-                continue;
-
-            spriteBatch.Draw(
-                pixel,
-                new Rectangle(clip.X, sy, clip.Width, 1),
-                colour);
+            var line = Rectangle.Intersect(clip, new Rectangle(clip.X, sy, clip.Width, 1));
+            if (line.Width > 0 && line.Height > 0)
+                spriteBatch.Draw(pixel, line, colour);
         }
     }
 
@@ -848,22 +937,33 @@ public sealed partial class ImageEditor
             _thumbnails[key] = entry;
         }
 
-        if (entry.Texture == null)
-            entry.Texture = new Texture2D(device, 32, 24);
+        var (tw, th) = ThumbnailPixelSize(image.Width, image.Height);
+        if (entry.Texture == null ||
+            entry.SourceWidth != image.Width ||
+            entry.SourceHeight != image.Height ||
+            entry.Texture.Width != tw ||
+            entry.Texture.Height != th)
+        {
+            entry.Texture?.Dispose();
+            entry.Texture = new Texture2D(device, tw, th);
+            entry.SourceWidth = image.Width;
+            entry.SourceHeight = image.Height;
+            entry.Revision = int.MinValue;
+        }
 
         var frame = image.GetFrame(frameIndex);
         if (entry.Revision == frame.Revision)
             return entry.Texture;
 
-        var buffer = new Color[32 * 24];
-        for (var y = 0; y < 24; y++)
+        var buffer = new Color[tw * th];
+        for (var y = 0; y < th; y++)
         {
-            for (var x = 0; x < 32; x++)
+            for (var x = 0; x < tw; x++)
             {
-                var srcX = x * image.Width / 32;
-                var srcY = y * image.Height / 24;
+                var srcX = x * image.Width / tw;
+                var srcY = y * image.Height / th;
                 var c = frame.Pixels[srcY, srcX];
-                buffer[y * 32 + x] = c < 0
+                buffer[y * tw + x] = c < 0
                     ? (((x / 4) + (y / 4)) % 2 == 0
                         ? new Color(50, 50, 60)
                         : new Color(35, 35, 45))
@@ -874,6 +974,53 @@ public sealed partial class ImageEditor
         entry.Texture.SetData(buffer);
         entry.Revision = frame.Revision;
         return entry.Texture;
+    }
+
+    /// <summary>
+    /// Thumbnail texture size preserving image aspect, capped at 32×32.
+    /// </summary>
+    private static (int Width, int Height) ThumbnailPixelSize(int imageWidth, int imageHeight)
+    {
+        imageWidth = Math.Max(1, imageWidth);
+        imageHeight = Math.Max(1, imageHeight);
+        const int max = 32;
+        if (imageWidth <= max && imageHeight <= max)
+            return (imageWidth, imageHeight);
+
+        var scale = Math.Min((float)max / imageWidth, (float)max / imageHeight);
+        return (
+            Math.Max(1, (int)Math.Round(imageWidth * scale)),
+            Math.Max(1, (int)Math.Round(imageHeight * scale)));
+    }
+
+    /// <summary>
+    /// Letterbox pixel art inside <paramref name="slot"/> using integer upscale when possible
+    /// (avoids uneven pixel widths from fractional scaling).
+    /// </summary>
+    private static Rectangle FitWithinPixel(Rectangle slot, int srcW, int srcH)
+    {
+        srcW = Math.Max(1, srcW);
+        srcH = Math.Max(1, srcH);
+        var raw = Math.Min(slot.Width / (float)srcW, slot.Height / (float)srcH);
+        int w;
+        int h;
+        if (raw >= 1f)
+        {
+            var scale = Math.Max(1, (int)Math.Floor(raw));
+            w = srcW * scale;
+            h = srcH * scale;
+        }
+        else
+        {
+            w = Math.Max(1, (int)Math.Floor(srcW * raw));
+            h = Math.Max(1, (int)Math.Floor(srcH * raw));
+        }
+
+        return new Rectangle(
+            slot.X + (slot.Width - w) / 2,
+            slot.Y + (slot.Height - h) / 2,
+            w,
+            h);
     }
 
     private void SelectIndex(int index)

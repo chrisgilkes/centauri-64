@@ -195,7 +195,7 @@ public static class CareerProgressOverride
             rows.Add((label, career.HasFeature(id) ? "UNLOCKED" : "LOCKED"));
 
         Feature("SPRITE EDITOR", FeatureId.Sprites);
-        Feature("IMAGE EDITOR", FeatureId.Images);
+        Feature("ART STUDIO", FeatureId.Images);
         Feature("MAP EDITOR", FeatureId.Maps);
         Feature("GRAPHICS BASIC", FeatureId.Graphics);
         Feature("NETWORKING", FeatureId.Networking);

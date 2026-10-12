@@ -1768,13 +1768,13 @@ public class Game1 : Microsoft.Xna.Framework.Game
     {
         var parts = new System.Collections.Generic.List<string>();
         if (FeatureGate.Current.IsAvailable(FeatureId.Sprites))
-            parts.Add("F5 SPRITES");
+            parts.Add("F5 SPRITE BIND");
         if (FeatureGate.Current.IsAvailable(FeatureId.Maps))
             parts.Add("F6 MAPS");
         if (FeatureGate.CanOpenFullImageEditor())
-            parts.Add("F7 IMAGES");
+            parts.Add("F7 ART STUDIO");
         else if (FeatureGate.CanOpenSpriteArtworkEditor())
-            parts.Add("F7 ARTWORK");
+            parts.Add("F7 ART STUDIO");
         return string.Join("  ", parts);
     }
 

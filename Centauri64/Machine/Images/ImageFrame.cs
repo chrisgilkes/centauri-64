@@ -4,13 +4,18 @@ namespace Centauri64.Machine.Images;
 
 /// <summary>
 /// One raster frame inside an ImageAsset. All frames share the parent size/mode.
-/// Animation timing belongs to the future Sprite Builder — not here.
+/// DurationSeconds is used when the image has 2+ frames (Animation Mode).
 /// </summary>
 public sealed class ImageFrame
 {
+    public const float DefaultDurationSeconds = 0.125f;
+
     public int[,] Pixels { get; }
 
     public int Revision { get; private set; }
+
+    /// <summary>How long this frame is shown during animation playback.</summary>
+    public float DurationSeconds { get; set; } = DefaultDurationSeconds;
 
     public ImageFrame(int width, int height, int fillColour = ImageAsset.Transparent)
     {
@@ -29,13 +34,18 @@ public sealed class ImageFrame
     {
         var height = Pixels.GetLength(0);
         var width = Pixels.GetLength(1);
-        var copy = new ImageFrame(width, height);
+        var copy = new ImageFrame(width, height)
+        {
+            DurationSeconds = DurationSeconds
+        };
         for (var y = 0; y < height; y++)
         {
             for (var x = 0; x < width; x++)
                 copy.Pixels[y, x] = Pixels[y, x];
         }
 
+        // Bump revision so texture/thumbnail caches treat this as fresh pixel data.
+        copy.MarkChanged();
         return copy;
     }
 

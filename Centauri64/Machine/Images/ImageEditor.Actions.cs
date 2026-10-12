@@ -39,19 +39,19 @@ public sealed partial class ImageEditor
             {
                 if (!TryNormalizeName(name, out var valid, out var error))
                 {
-                    Notice?.Invoke(error);
+                    _statusTip = error;
                     return;
                 }
 
                 if (!string.Equals(valid, current.Name, StringComparison.Ordinal) &&
                     _assets.Contains(valid))
                 {
-                    Notice?.Invoke("IMAGE NAME ALREADY EXISTS");
+                    _statusTip = "IMAGE NAME ALREADY EXISTS";
                     return;
                 }
 
                 current.Name = valid;
-                _dirty = true;
+                CommitLibraryNow(valid);
                 _statusTip = $"RENAMED {valid}";
             });
     }
@@ -73,13 +73,13 @@ public sealed partial class ImageEditor
 
                 if (!TryNormalizeName(name, out var valid, out var error))
                 {
-                    Notice?.Invoke(error);
+                    _statusTip = error;
                     return;
                 }
 
                 if (_assets.Contains(valid))
                 {
-                    Notice?.Invoke("IMAGE NAME ALREADY EXISTS");
+                    _statusTip = "IMAGE NAME ALREADY EXISTS";
                     return;
                 }
 
@@ -88,7 +88,7 @@ public sealed partial class ImageEditor
                 _selectedIndex = _assets.Count - 1;
                 _image = copy;
                 ClearHistory();
-                _dirty = true;
+                CommitLibraryNow(valid);
                 FitZoom();
                 _statusTip = $"DUPLICATED {valid}";
             });
@@ -125,6 +125,9 @@ public sealed partial class ImageEditor
 
                 ClearHistory();
                 _dirty = true;
+                PersistToLibrary?.Invoke();
+                _dirty = false;
+                OnImageDeleted?.Invoke(name);
                 _statusTip = $"DELETED {name}";
             });
     }
@@ -155,11 +158,14 @@ public sealed partial class ImageEditor
             _image.AddFrame();
             ClearHistory();
             _dirty = true;
-            _statusTip = $"FRAME {_image.CurrentFrameIndex + 1}";
+            SelectFrame(_image.CurrentFrameIndex);
+            _statusTip = IsAnimMode
+                ? $"ANIM MODE — FRAME {_image.CurrentFrameIndex + 1}/{_image.FrameCount}"
+                : $"FRAME {_image.CurrentFrameIndex + 1}/{_image.FrameCount}";
         }
         catch (Exception ex)
         {
-            Notice?.Invoke(ex.Message.ToUpperInvariant());
+            _statusTip = ex.Message.ToUpperInvariant();
         }
     }
 
@@ -170,14 +176,17 @@ public sealed partial class ImageEditor
 
         try
         {
-            _image.DuplicateFrame(_image.CurrentFrameIndex);
+            var sourceIndex = _image.CurrentFrameIndex;
+            _image.DuplicateFrame(sourceIndex);
             ClearHistory();
             _dirty = true;
-            _statusTip = $"DUPLICATED FRAME {_image.CurrentFrameIndex + 1}";
+            SelectFrame(_image.CurrentFrameIndex);
+            _statusTip =
+                $"DUPLICATED FRAME {sourceIndex + 1} → {_image.CurrentFrameIndex + 1}/{_image.FrameCount}";
         }
         catch (Exception ex)
         {
-            Notice?.Invoke(ex.Message.ToUpperInvariant());
+            _statusTip = ex.Message.ToUpperInvariant();
         }
     }
 
@@ -188,7 +197,7 @@ public sealed partial class ImageEditor
 
         if (_image.FrameCount <= 1)
         {
-            Notice?.Invoke("CANNOT DELETE LAST FRAME");
+            _statusTip = "CANNOT DELETE LAST FRAME";
             return;
         }
 
@@ -206,7 +215,7 @@ public sealed partial class ImageEditor
                 }
                 catch (Exception ex)
                 {
-                    Notice?.Invoke(ex.Message.ToUpperInvariant());
+                    _statusTip = ex.Message.ToUpperInvariant();
                 }
             });
     }
@@ -236,9 +245,12 @@ public sealed partial class ImageEditor
             return;
 
         EndStrokeIfNeeded();
+        StopAnimPlay();
         _image.SelectFrame(index);
         ClearHistory();
-        _statusTip = $"FRAME {index + 1}/{_image.FrameCount}";
+        _statusTip = IsAnimMode
+            ? $"ANIM FRAME {index + 1}/{_image.FrameCount}  DUR {FormatDuration(_image.CurrentFrame.DurationSeconds)}S"
+            : $"FRAME {index + 1}/{_image.FrameCount}";
     }
 
     private static bool NameReferenced(string? listing, string name)
@@ -346,7 +358,11 @@ public sealed partial class ImageEditor
         }
 
         foreach (var key in keys)
+        {
+            if (_thumbnails.TryGetValue(key, out var entry))
+                entry.Texture?.Dispose();
             _thumbnails.Remove(key);
+        }
     }
 
     private static int[,] ClonePixels(ImageAsset image)

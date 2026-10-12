@@ -5,8 +5,8 @@ namespace Centauri64.Machine.Images;
 
 /// <summary>
 /// General-purpose raster/pixel-art asset for a tape.
-/// Used for illustrations, sprite artwork, tilesets, and backgrounds.
-/// The Image Editor draws frames; Sprite Builder / Map Editor consume them later.
+/// Size and mode define how it can be used; usage (blit, sprite bake, etc.)
+/// is decided by the consumer, not a stored category.
 /// </summary>
 public sealed class ImageAsset
 {
@@ -22,8 +22,6 @@ public sealed class ImageAsset
     public int Width { get; }
 
     public int Height { get; }
-
-    public ImageCategory Category { get; set; }
 
     public IReadOnlyList<ImageFrame> Frames => _frames;
 
@@ -44,7 +42,6 @@ public sealed class ImageAsset
         CentauriDisplayMode mode,
         int width,
         int height,
-        ImageCategory category = ImageCategory.General,
         int fillColour = Transparent,
         int frameCount = 1)
     {
@@ -52,7 +49,6 @@ public sealed class ImageAsset
         Mode = mode;
         Width = width;
         Height = height;
-        Category = category;
 
         ValidateSize(mode, width, height);
 
@@ -70,14 +66,12 @@ public sealed class ImageAsset
         CentauriDisplayMode mode,
         int width,
         int height,
-        ImageCategory category,
         bool emptyFrames)
     {
         Name = name.Trim().ToUpperInvariant();
         Mode = mode;
         Width = width;
         Height = height;
-        Category = category;
         ValidateSize(mode, width, height);
         if (!emptyFrames)
             _frames.Add(new ImageFrame(width, height));
@@ -165,7 +159,7 @@ public sealed class ImageAsset
 
     public ImageAsset Clone(string newName)
     {
-        var copy = new ImageAsset(newName, Mode, Width, Height, Category, emptyFrames: true);
+        var copy = new ImageAsset(newName, Mode, Width, Height, emptyFrames: true);
         foreach (var frame in _frames)
             copy._frames.Add(frame.Clone());
 

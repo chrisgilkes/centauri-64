@@ -51,10 +51,7 @@ public static class AnalysisReportFormatter
         lines.Add("");
         lines.Add("IMAGES");
         lines.Add($"TOTAL               {analysis.ImageCount}");
-        lines.Add($"GENERAL             {analysis.GeneralImageCount}");
-        lines.Add($"SPRITE              {analysis.SpriteImageCount}");
-        lines.Add($"TILESET             {analysis.TilesetImageCount}");
-        lines.Add($"BACKGROUND          {analysis.BackgroundImageCount}");
+        lines.Add($"SPRITE-SIZED 16X16  {analysis.SpriteSizedImageCount}");
         lines.Add($"IMAGE FRAMES        {analysis.ImageFrameCount}");
         lines.Add("");
         lines.Add("COVER");

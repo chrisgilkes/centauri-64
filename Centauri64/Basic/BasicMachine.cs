@@ -48,6 +48,8 @@ public sealed partial class BasicMachine
 
     private string? _tapeName;
 
+    private TapeAssetIncludes _assetIncludes = new();
+
     public BasicMachine(
         TextConsole console,
         CentauriMachine machine,
@@ -80,6 +82,7 @@ public sealed partial class BasicMachine
         _imageStorage   = new ImageStorage();
 
         _machine.ImageEditor.SetListingLookup(GetProgramSourceText);
+        WireAssetPersistence();
 
         _console.LineEntered += OnLineEntered;
         _console.InputChanged += UpdateInputHighlighting;
@@ -100,6 +103,52 @@ public sealed partial class BasicMachine
     private string GetProgramSourceText()
     {
         return string.Join('\n', _program.SourceLines);
+    }
+
+    public string? CurrentTapeName => _tapeName;
+
+    private void WireAssetPersistence()
+    {
+        _machine.ImageEditor.GetTapeName = () => _tapeName;
+        _machine.ImageEditor.PersistToLibrary = () =>
+            _machine.PersistArtworkLibrary();
+        _machine.ImageEditor.IsIncludedOnTape = name =>
+            _tapeName != null && _assetIncludes.Contains(name);
+        _machine.ImageEditor.ToggleIncludeOnTape = name =>
+        {
+            if (_tapeName == null)
+                return null;
+
+            var included = _assetIncludes.Toggle(name);
+            _assetIncludes.Save(_tapeName);
+            return included;
+        };
+        _machine.ImageEditor.OnImageCommitted = name =>
+        {
+            // Session dep: when a tape is loaded, new/edited artwork is auto-included.
+            if (_tapeName == null || string.IsNullOrWhiteSpace(name))
+                return;
+
+            _assetIncludes.Add(name);
+            _assetIncludes.Save(_tapeName);
+        };
+        _machine.ImageEditor.OnImageDeleted = name =>
+        {
+            if (_tapeName == null || string.IsNullOrWhiteSpace(name))
+                return;
+
+            _assetIncludes.Remove(name);
+            _assetIncludes.Save(_tapeName);
+        };
+
+        _machine.SpriteEditor.GetTapeName = () => _tapeName;
+        _machine.SpriteEditor.PersistToTape = name =>
+        {
+            // Binder still writes session sprites to the open tape so work is not lost
+            // before SAVE packing; SAVE rewrites with the packed portable set.
+            _spriteStorage.Save(name, _machine.SpriteAssets);
+            _machine.SpriteEditor.MarkSaved();
+        };
     }
 
     private void EnsureLabelIdentity(TapeLabel label, bool forceNewId = false)

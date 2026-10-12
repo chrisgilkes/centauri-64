@@ -43,7 +43,12 @@ public sealed class SpriteAnimation
         for (var i = 0; i < image.FrameCount; i++)
         {
             var source = image.GetFrame(i);
-            var frame = new SpriteFrame();
+            var frame = new SpriteFrame
+            {
+                DurationSeconds = source.DurationSeconds > 0f
+                    ? source.DurationSeconds
+                    : ImageFrame.DefaultDurationSeconds
+            };
 
             for (var y = 0; y < CentauriSprite.HEIGHT; y++)
             {

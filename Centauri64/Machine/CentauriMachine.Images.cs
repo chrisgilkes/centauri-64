@@ -13,6 +13,7 @@ namespace Centauri64.Machine;
 public sealed partial class CentauriMachine
 {
     private readonly ImageAssetStore _imageAssets = new();
+    private readonly ImageAssetStore _artworkLibrary = new();
     private readonly ImageLayers _imageLayers = new();
     private readonly ImageTextureCache _imageTextureCache = new();
     private readonly List<ImageBlit> _imageBlits = new();
@@ -36,13 +37,20 @@ public sealed partial class CentauriMachine
 
     public ImageAssetStore ImageAssets => _imageAssets;
 
+    /// <summary>
+    /// Persistent local Art Studio library (independent of tapes).
+    /// </summary>
+    public ImageAssetStore LocalArtwork => _artworkLibrary;
+
     public ImageEditor ImageEditor => _imageEditor;
 
     public ImageLayers ImageLayers => _imageLayers;
 
     private void CreateImageEditor()
     {
-        _imageEditor = new ImageEditor(_imageAssets);
+        ArtworkLibrary.Load(_artworkLibrary);
+        _imageEditor = new ImageEditor(_artworkLibrary);
+        _spriteEditor.SetImageStore(_artworkLibrary);
     }
 
     private void WireSpriteArtworkBridge()
@@ -55,6 +63,12 @@ public sealed partial class CentauriMachine
             _spriteEditor.Close();
             _imageEditor.OpenSpriteArtwork();
         };
+    }
+
+    public void PersistArtworkLibrary()
+    {
+        ArtworkLibrary.Save(_artworkLibrary);
+        _imageEditor.MarkSaved();
     }
 
     public void OpenSpriteArtworkEditor()

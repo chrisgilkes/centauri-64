@@ -92,22 +92,11 @@ public sealed partial class ImageEditor
     private int _canvasW;
     private int _canvasH;
 
-    private const int BrowserWidth = 120;
+    private const int BrowserWidth = 132;
     private const int PaletteWidth = 88;
-    private const int FrameStripHeight = 52;
+    private const int FrameStripHeight = 58;
     private const int ScreenW = CentauriMachine.DEVELOPMENT_WIDTH;
     private const int ScreenH = CentauriMachine.DEVELOPMENT_HEIGHT;
-
-    private enum BrowserFilter
-    {
-        All,
-        General,
-        Sprite,
-        Tileset,
-        Background
-    }
-
-    private BrowserFilter _browserFilter = BrowserFilter.All;
 
     public bool IsActive { get; private set; }
 
@@ -118,10 +107,34 @@ public sealed partial class ImageEditor
 
     public event Action<string>? Notice;
 
+    /// <summary>Current tape name if a program/tape is loaded.</summary>
+    public Func<string?>? GetTapeName { get; set; }
+
+    /// <summary>Persist the local artwork library to disk.</summary>
+    public Action? PersistToLibrary { get; set; }
+
+    /// <summary>Whether the named image is explicitly included on the current tape.</summary>
+    public Func<string, bool>? IsIncludedOnTape { get; set; }
+
+    /// <summary>
+    /// Toggle INCLUDE for an image on the current tape.
+    /// Returns true if now included, false if excluded.
+    /// Null/throws messaging handled by caller via Notice when no tape.
+    /// </summary>
+    public Func<string, bool?>? ToggleIncludeOnTape { get; set; }
+
+    /// <summary>Called after an image is created/renamed so the host can auto-include.</summary>
+    public Action<string>? OnImageCommitted { get; set; }
+
+    /// <summary>Called after an image is deleted so the host can drop INCLUDE.</summary>
+    public Action<string>? OnImageDeleted { get; set; }
+
     private sealed class Thumbnail
     {
         public Texture2D? Texture;
         public int Revision = int.MinValue;
+        public int SourceWidth;
+        public int SourceHeight;
     }
 
     public ImageEditor(ImageAssetStore assets)
@@ -154,9 +167,6 @@ public sealed partial class ImageEditor
 
         if (_settings != null)
             _showGrid = _settings.Grid;
-
-        if (IsSpriteArtworkMode)
-            _browserFilter = BrowserFilter.Sprite;
 
         var visible = GetFilteredImages();
         if (visible.Count == 0)
@@ -210,8 +220,41 @@ public sealed partial class ImageEditor
         _strokeActive = false;
         _shapeDragging = false;
 
+        StopAnimPlay();
         if (_dirty)
-            Notice?.Invoke("SAVE TAPE TO KEEP IMAGES");
+            PersistLibraryChanges("ART STUDIO");
+    }
+
+    /// <summary>
+    /// Writes dirty artwork to the local library (not the tape).
+    /// </summary>
+    private void PersistLibraryChanges(string? noticeLabel = null)
+    {
+        if (!_dirty)
+            return;
+
+        PersistToLibrary?.Invoke();
+        _dirty = false;
+
+        if (_image != null)
+            OnImageCommitted?.Invoke(_image.Name);
+
+        if (!string.IsNullOrWhiteSpace(noticeLabel))
+            Notice?.Invoke($"SAVED {noticeLabel} TO LOCAL LIBRARY");
+    }
+
+    /// <summary>
+    /// Force-persist after create/rename/delete commits.
+    /// </summary>
+    private void CommitLibraryNow(string? imageName = null)
+    {
+        _dirty = true;
+        PersistToLibrary?.Invoke();
+        _dirty = false;
+
+        var name = imageName ?? _image?.Name;
+        if (!string.IsNullOrWhiteSpace(name))
+            OnImageCommitted?.Invoke(name);
     }
 
     public void MarkSaved() => _dirty = false;
@@ -269,6 +312,7 @@ public sealed partial class ImageEditor
             return;
         }
 
+        UpdateAnimPreview(gameTime);
         HandleShortcuts(keyboard, previousKeyboard);
         HandleZoomAndPan(mouse, keyboard);
 
@@ -308,6 +352,8 @@ public sealed partial class ImageEditor
 
     public void Draw(SpriteBatch spriteBatch, BitmapFont font, Texture2D pixel)
     {
+        CreativeUiTheme.UseImageTool();
+
         spriteBatch.Draw(
             pixel,
             new Rectangle(0, 0, ScreenW, ScreenH),
@@ -317,6 +363,7 @@ public sealed partial class ImageEditor
         DrawCanvas(spriteBatch, font, pixel);
         DrawPalette(spriteBatch, font, pixel);
         DrawFrameStrip(spriteBatch, font, pixel);
+        DrawAnimPreview(spriteBatch, font, pixel);
 
         _toolBar.Draw(spriteBatch, font, pixel, ScreenW);
         _menuBar.Draw(spriteBatch, font, pixel, ScreenW);
@@ -333,33 +380,43 @@ public sealed partial class ImageEditor
     {
         _menuBar.SetMenus(new[]
         {
-            new MenuDefinition("FILE",
-                new MenuItem("EXIT", Close, "ESC")),
-            new MenuDefinition("EDIT",
-                new MenuItem("UNDO", Undo, "CTRL+Z", () => _undo.Count > 0),
-                new MenuItem("REDO", Redo, "CTRL+Y", () => _redo.Count > 0),
-                new MenuItem("CLEAR IMAGE", ConfirmClear, "", () => _image != null)),
-            new MenuDefinition("IMAGE",
+            new MenuDefinition("STUDIO",
                 new MenuItem("NEW IMAGE", BeginNewImage),
                 new MenuItem("PROPERTIES", BeginProperties, "", () => _image != null),
                 new MenuItem("RENAME IMAGE", BeginRename, "", () => _image != null),
                 new MenuItem("DUPLICATE IMAGE", BeginDuplicate, "", () => _image != null),
                 new MenuItem("DELETE IMAGE", BeginDelete, "", () => _image != null),
-                new MenuItem("NEW FRAME", NewFrame, "", () => _image != null),
-                new MenuItem("DUPLICATE FRAME", DuplicateFrame, "", () => _image != null),
+                new MenuItem("INCLUDE ON TAPE", ToggleSelectedInclude, "T", () => _image != null),
+                new MenuItem("NEW FRAME", NewFrame, "N", () => _image != null),
+                new MenuItem("DUPLICATE FRAME", DuplicateFrame, "D", () => _image != null),
                 new MenuItem("DELETE FRAME", DeleteFrame, "", () => _image != null),
                 new MenuItem("PREV FRAME", PreviousFrame, "[", () => _image != null),
-                new MenuItem("NEXT FRAME", NextFrame, "]", () => _image != null)),
+                new MenuItem("NEXT FRAME", NextFrame, "]", () => _image != null),
+                new MenuItem("EXIT", Close, "ESC")),
+            new MenuDefinition("ANIM",
+                new MenuItem("PLAY / STOP", ToggleAnimPlay, "SPACE", () => IsAnimMode),
+                new MenuItem("FASTER (SHORTER)", () => AdjustFrameDuration(-0.025f), ",", () => IsAnimMode),
+                new MenuItem("SLOWER (LONGER)", () => AdjustFrameDuration(0.025f), ".", () => IsAnimMode)),
+            new MenuDefinition("EDIT",
+                new MenuItem("UNDO", Undo, "CTRL+Z", () => _undo.Count > 0),
+                new MenuItem("REDO", Redo, "CTRL+Y", () => _redo.Count > 0),
+                new MenuItem("FLIP HORIZONTAL", FlipHorizontal, "H", () => _image != null),
+                new MenuItem("FLIP VERTICAL", FlipVertical, "V", () => _image != null),
+                new MenuItem("NUDGE LEFT", () => NudgeFrame(-1, 0), "SHIFT+LEFT", () => _image != null),
+                new MenuItem("NUDGE RIGHT", () => NudgeFrame(1, 0), "SHIFT+RIGHT", () => _image != null),
+                new MenuItem("NUDGE UP", () => NudgeFrame(0, -1), "SHIFT+UP", () => _image != null),
+                new MenuItem("NUDGE DOWN", () => NudgeFrame(0, 1), "SHIFT+DOWN", () => _image != null),
+                new MenuItem("CLEAR IMAGE", ConfirmClear, "", () => _image != null)),
             new MenuDefinition("DRAW",
-                new MenuItem("PENCIL", () => _tool = DrawTool.Pencil, "P"),
-                new MenuItem("ERASER", () => _tool = DrawTool.Eraser, "E"),
-                new MenuItem("FILL", () => _tool = DrawTool.Fill, "F"),
-                new MenuItem("LINE", () => _tool = DrawTool.Line, "L"),
+                new MenuItem("PENCIL", () => SelectTool(DrawTool.Pencil), "P"),
+                new MenuItem("ERASER", () => SelectTool(DrawTool.Eraser), "E"),
+                new MenuItem("FILL", () => SelectTool(DrawTool.Fill), "F"),
+                new MenuItem("LINE", () => SelectTool(DrawTool.Line), "L"),
                 new MenuItem("RECTANGLE", () => SelectShape(DrawTool.Rectangle, filled: false), "R"),
                 new MenuItem("FILLED RECT", () => SelectShape(DrawTool.Rectangle, filled: true)),
                 new MenuItem("CIRCLE", () => SelectShape(DrawTool.Circle, filled: false), "C"),
                 new MenuItem("FILLED CIRCLE", () => SelectShape(DrawTool.Circle, filled: true)),
-                new MenuItem("PICK COLOUR", () => _tool = DrawTool.Pick, "I"),
+                new MenuItem("PICK COLOUR", () => SelectTool(DrawTool.Pick), "I"),
                 new MenuItem("OUTLINE SHAPES", () => SetShapeFilled(false), "", () => _shapeFilled),
                 new MenuItem("FILLED SHAPES", () => SetShapeFilled(true), "S", () => !_shapeFilled)),
             new MenuDefinition("VIEW",
@@ -382,27 +439,52 @@ public sealed partial class ImageEditor
     {
         _toolBar.SetButtons(new[]
         {
-            new ToolButton("pencil", "PEN", "PENCIL — DRAW USING THE SELECTED COLOUR", () => _tool = DrawTool.Pencil, () => _tool == DrawTool.Pencil),
-            new ToolButton("erase", "ERASE", "ERASER — ERASE TO TRANSPARENT", () => _tool = DrawTool.Eraser, () => _tool == DrawTool.Eraser),
-            new ToolButton("fill", "FILL", "FILL — FILL A CONNECTED AREA", () => _tool = DrawTool.Fill, () => _tool == DrawTool.Fill),
-            new ToolButton("line", "LINE", "LINE — DRAW A LINE", () => _tool = DrawTool.Line, () => _tool == DrawTool.Line),
-            new ToolButton("rect", "RECT", "RECTANGLE — OUTLINE OR FILLED (SEE SOLID)", () => _tool = DrawTool.Rectangle, () => _tool == DrawTool.Rectangle),
-            new ToolButton("circ", "CIRC", "CIRCLE — OUTLINE OR FILLED (SEE SOLID)", () => _tool = DrawTool.Circle, () => _tool == DrawTool.Circle),
-            new ToolButton("solid", "SOLID", "SOLID — TOGGLE FILLED SHAPES FOR RECT/CIRCLE", ToggleShapeFilled, () => _shapeFilled),
-            new ToolButton("pick", "PICK", "PICK — SELECT A COLOUR FROM THE IMAGE", () => _tool = DrawTool.Pick, () => _tool == DrawTool.Pick),
-            new ToolButton("zoomin", "Z+", "ZOOM IN — MORE DETAIL (MOUSE WHEEL)", ZoomIn),
-            new ToolButton("zoomout", "Z-", "ZOOM OUT — SEE MORE OF THE IMAGE", ZoomOut),
-            new ToolButton("frdup", "F+", "DUPLICATE FRAME", DuplicateFrame),
-            new ToolButton("frnew", "NEWF", "NEW FRAME", NewFrame),
-            new ToolButton("undo", "UNDO", "UNDO — UNDO LAST ACTION", Undo),
-            new ToolButton("redo", "REDO", "REDO — REDO LAST UNDO", Redo),
-            new ToolButton("grid", "GRID", "GRID — TOGGLE PIXEL GRID", ToggleGrid, () => _showGrid)
+            new ToolButton("pencil", "PEN", "PENCIL — DRAW WITH THE SELECTED COLOUR", () => SelectTool(DrawTool.Pencil), () => _tool == DrawTool.Pencil, "P"),
+            new ToolButton("erase", "ERASE", "ERASER — ERASE TO TRANSPARENT", () => SelectTool(DrawTool.Eraser), () => _tool == DrawTool.Eraser, "E"),
+            new ToolButton("fill", "FILL", "FILL — FILL A CONNECTED AREA", () => SelectTool(DrawTool.Fill), () => _tool == DrawTool.Fill, "F"),
+            new ToolButton("line", "LINE", "LINE — DRAW A LINE", () => SelectTool(DrawTool.Line), () => _tool == DrawTool.Line, "L"),
+            new ToolButton("rect", "RECT", "RECTANGLE — OUTLINE OR FILLED (SEE SOLID)", () => SelectTool(DrawTool.Rectangle), () => _tool == DrawTool.Rectangle, "R"),
+            new ToolButton("circ", "CIRC", "CIRCLE — OUTLINE OR FILLED (SEE SOLID)", () => SelectTool(DrawTool.Circle), () => _tool == DrawTool.Circle, "C"),
+            new ToolButton("solid", "SOLID", "SOLID — TOGGLE FILLED SHAPES FOR RECT/CIRCLE", ToggleShapeFilled, () => _shapeFilled, "S"),
+            new ToolButton("pick", "PICK", "PICK — SAMPLE A COLOUR FROM THE IMAGE", () => SelectTool(DrawTool.Pick), () => _tool == DrawTool.Pick, "I"),
+            ToolButton.Separator(),
+            new ToolButton("zoomin", "Z+", "ZOOM IN (MOUSE WHEEL)", ZoomIn),
+            new ToolButton("zoomout", "Z-", "ZOOM OUT (MOUSE WHEEL)", ZoomOut),
+            new ToolButton("grid", "GRID", "TOGGLE PIXEL GRID", ToggleGrid, () => _showGrid, "G"),
+            ToolButton.Separator(),
+            new ToolButton("frnew", "NEW", "NEW EMPTY FRAME — ADDING FRAME 2 ENTERS ANIM MODE", NewFrame, shortcut: "N"),
+            new ToolButton("frdup", "DUP", "DUPLICATE CURRENT FRAME", DuplicateFrame, shortcut: "D"),
+            new ToolButton("play", "PLAY", "PLAY / STOP ANIMATION PREVIEW (ANIM MODE)", ToggleAnimPlay, () => _animPlaying, "SPACE"),
+            new ToolButton("dur-", "DUR-", "SHORTER FRAME DURATION (FASTER)", () => AdjustFrameDuration(-0.025f), shortcut: ","),
+            new ToolButton("dur+", "DUR+", "LONGER FRAME DURATION (SLOWER)", () => AdjustFrameDuration(0.025f), shortcut: "."),
+            ToolButton.Separator(),
+            new ToolButton("fliph", "FLIPH", "FLIP FRAME HORIZONTAL", FlipHorizontal, shortcut: "H"),
+            new ToolButton("flipv", "FLIPV", "FLIP FRAME VERTICAL", FlipVertical, shortcut: "V"),
+            ToolButton.Separator(),
+            new ToolButton("undo", "UNDO", "UNDO LAST ACTION (CTRL+Z)", Undo),
+            new ToolButton("redo", "REDO", "REDO LAST UNDO (CTRL+Y)", Redo)
         });
+    }
+
+    private void SelectTool(DrawTool tool)
+    {
+        _tool = tool;
+        _statusTip = tool switch
+        {
+            DrawTool.Pencil => "TOOL: PENCIL (P)",
+            DrawTool.Eraser => "TOOL: ERASER (E)",
+            DrawTool.Fill => "TOOL: FILL (F)",
+            DrawTool.Line => "TOOL: LINE (L)",
+            DrawTool.Rectangle => "TOOL: RECTANGLE (R)",
+            DrawTool.Circle => "TOOL: CIRCLE (C)",
+            DrawTool.Pick => "TOOL: PICK (I)",
+            _ => "TOOL: " + tool.ToString().ToUpperInvariant()
+        };
     }
 
     private void SelectShape(DrawTool tool, bool filled)
     {
-        _tool = tool;
+        SelectTool(tool);
         SetShapeFilled(filled);
     }
 
@@ -552,44 +634,72 @@ public sealed partial class ImageEditor
         _statusTip = _showGrid ? "GRID ON" : "GRID OFF";
     }
 
+    private void ToggleSelectedInclude()
+    {
+        if (_image == null)
+            return;
+
+        if (ToggleIncludeOnTape == null)
+        {
+            Notice?.Invoke("LOAD OR CREATE A TAPE TO INCLUDE ARTWORK");
+            _statusTip = "NO TAPE LOADED";
+            return;
+        }
+
+        var result = ToggleIncludeOnTape(_image.Name);
+        if (result == null)
+        {
+            Notice?.Invoke("LOAD OR CREATE A TAPE TO INCLUDE ARTWORK");
+            _statusTip = "NO TAPE LOADED";
+            return;
+        }
+
+        _statusTip = result.Value
+            ? $"[+] {_image.Name} INCLUDED ON TAPE"
+            : $"[ ] {_image.Name} NOT ON TAPE";
+    }
+
     private void ShowHelp()
     {
         if (IsSpriteArtworkMode)
         {
             _dialog.ShowHelp(
-                "SPRITE ARTWORK",
-                "ISSUE #3 — 16X16 SPRITE IMAGES ONLY\n" +
+                "ART STUDIO",
+                "ISSUE #3 — 16X16 SPRITE ARTWORK\n" +
                 "MOUSE DRAW  WHEEL ZOOM  ALT-DRAG PAN\n" +
-                "FRAME STRIP: SELECT / + ADD FRAMES\n" +
-                "SAVE TAPE TO KEEP ARTWORK\n" +
-                "THEN BIND IN SPRITE EDITOR (B)\n" +
-                "CTRL+Z UNDO  0 FIT  ESC EXIT");
+                "FRAME 1 ALWAYS — ADD FRAME 2 FOR ANIM MODE\n" +
+                "SPACE PLAY  ,/. DURATION  H/V FLIP\n" +
+                "T INCLUDE ON TAPE  LIBRARY AUTOSAVES\n" +
+                "SAVE \"NAME\" PACKS TAPE  ESC EXIT");
             return;
         }
 
         _dialog.ShowHelp(
-            "IMAGE EDITOR",
-            "DRAW ARTWORK HERE — SPRITES/TILES/BG\n" +
+            "ART STUDIO",
+            "ONE PAINT TOOL — ANY SIZE\n" +
             "MOUSE DRAW  WHEEL ZOOM  ALT-DRAG PAN\n" +
-            "FRAME STRIP: SELECT / + ADD FRAMES\n" +
-            "FILTERS: ALL GENERAL SPRITE TILE BG\n" +
-            "SOLID: FILLED RECT/CIRCLE\n" +
+            "FRAME 1 ALWAYS — ADD FRAME 2 FOR ANIM MODE\n" +
+            "SPACE PLAY  ,/. FRAME DURATION  H/V FLIP\n" +
+            "T INCLUDE ON TAPE  LIBRARY AUTOSAVES\n" +
+            "SHIFT+ARROWS NUDGE  SOLID: FILLED SHAPES\n" +
+            "P PEN  E ERASE  F FILL  L LINE  R RECT  C CIRCLE\n" +
             "CTRL+Z UNDO  0 FIT  ESC EXIT");
     }
 
     private string BuildStatusText()
     {
-        var title = IsSpriteArtworkMode ? "SPRITE ARTWORK" : "IMAGE EDITOR";
-
         if (_image == null)
-            return $"{title}  —  NEW IMAGE TO BEGIN";
+            return "ART STUDIO — NEW IMAGE TO BEGIN";
 
-        var colourLabel = _colour < 0 ? "TRANSPARENT" : _colour.ToString();
-        var mode = _image.Mode == CentauriDisplayMode.Arcade ? "ARCADE" : "STANDARD";
+        var colourLabel = _colour < 0 ? "T" : _colour.ToString();
         var zoom = _fitZoom ? "FIT" : $"{FormatZoom(_zoom)}X";
-        var shape = UsesFilledShapes() ? "FILLED" : "OUTLINE";
-        var cat = _image.Category.ToString().ToUpperInvariant();
-        return $"{title}:{_image.Name}  {cat}  {mode}  {_image.Width}X{_image.Height}  FR:{_image.CurrentFrameIndex + 1}/{_image.FrameCount}  TOOL:{_tool.ToString().ToUpperInvariant()}  {shape}  C:{colourLabel}  Z:{zoom}";
+        if (IsAnimMode)
+        {
+            var play = _animPlaying ? " PLAY" : "";
+            return $"{_image.Name}  {_image.Width}X{_image.Height}  FR {_image.CurrentFrameIndex + 1}/{_image.FrameCount}  DUR {FormatDuration(_image.CurrentFrame.DurationSeconds)}S{play}  C:{colourLabel}  Z:{zoom}";
+        }
+
+        return $"{_image.Name}  {_image.Width}X{_image.Height}  C:{colourLabel}  Z:{zoom}";
     }
 
     private static string FormatZoom(float zoom)

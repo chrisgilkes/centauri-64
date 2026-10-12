@@ -53,7 +53,7 @@ public static class FeatureGate
         {
             FeatureId.Sprites => "SPRITE DESIGNER",
             FeatureId.Maps => "MAP EDITOR",
-            FeatureId.Images => "IMAGE EDITOR",
+            FeatureId.Images => "ART STUDIO",
             _ => "THIS TOOL"
         };
 

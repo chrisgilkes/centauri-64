@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 using Centauri64.CreativeTools;
 using Centauri64.Graphics;
@@ -22,50 +21,20 @@ public sealed partial class ImageEditor
     private WizardKind _wizard;
     private string _wizardName = "";
     private int _wizardModeIndex;
-    private int _wizardTemplateIndex;
-    private int _wizardCategoryIndex;
     private string _wizardWidth = "16";
     private string _wizardHeight = "16";
-    private int _wizardField; // 0 name, 1 width, 2 height for custom
-
-    private static readonly string[] CategoryLabels =
-    {
-        "GENERAL", "SPRITE", "TILESET", "BACKGROUND"
-    };
+    private int _wizardField; // NewImage: 0 name, 1 width, 2 height, 3 mode — Properties: 0 name
+    private string _wizardError = "";
 
     private void BeginNewImage()
     {
         _wizard = WizardKind.NewImage;
         _wizardName = "";
         _wizardModeIndex = 0;
-        _wizardTemplateIndex = 1; // 16x16 sprite default
-        _wizardCategoryIndex = (int)ImageCategory.Sprite;
         _wizardWidth = "16";
         _wizardHeight = "16";
         _wizardField = 0;
-
-        if (IsSpriteArtworkMode)
-        {
-            // Issue #3: only 16×16 Sprite artwork may be created.
-            _wizardTemplateIndex = FindTemplateIndex("16x16 SPRITE");
-            _wizardCategoryIndex = (int)ImageCategory.Sprite;
-            _wizardWidth = "16";
-            _wizardHeight = "16";
-        }
-
-        SyncTemplateDefaults();
-    }
-
-    private int FindTemplateIndex(string label)
-    {
-        var templates = CurrentTemplates();
-        for (var i = 0; i < templates.Count; i++)
-        {
-            if (templates[i].Label == label)
-                return i;
-        }
-
-        return 1;
+        _wizardError = "";
     }
 
     private void BeginProperties()
@@ -76,39 +45,24 @@ public sealed partial class ImageEditor
         _wizard = WizardKind.Properties;
         _wizardName = _image.Name;
         _wizardModeIndex = _image.Mode == CentauriDisplayMode.Arcade ? 1 : 0;
-        _wizardCategoryIndex = (int)_image.Category;
         _wizardWidth = _image.Width.ToString();
         _wizardHeight = _image.Height.ToString();
         _wizardField = 0;
+        _wizardError = "";
     }
 
     private void CloseWizard()
     {
         _wizard = WizardKind.None;
+        _wizardError = "";
     }
 
     private bool WizardOpen => _wizard != WizardKind.None;
 
-    private IReadOnlyList<ImageTemplate> CurrentTemplates()
-    {
-        var mode = _wizardModeIndex == 1
-            ? CentauriDisplayMode.Arcade
-            : CentauriDisplayMode.HighResolution;
-        return ImageTemplate.ForMode(mode);
-    }
-
-    private void SyncTemplateDefaults()
-    {
-        var templates = CurrentTemplates();
-        _wizardTemplateIndex = Math.Clamp(_wizardTemplateIndex, 0, templates.Count - 1);
-        var template = templates[_wizardTemplateIndex];
-        _wizardCategoryIndex = (int)template.Category;
-        if (!template.IsCustom)
-        {
-            _wizardWidth = template.Width.ToString();
-            _wizardHeight = template.Height.ToString();
-        }
-    }
+    private int WizardFieldCount =>
+        _wizard == WizardKind.Properties
+            ? 1
+            : IsSpriteArtworkMode ? 1 : 4;
 
     private bool HandleWizardKeyboard(KeyboardState keyboard, KeyboardState previous)
     {
@@ -127,46 +81,24 @@ public sealed partial class ImageEditor
             return true;
         }
 
-        var templates = CurrentTemplates();
-
         if (WasPressed(keyboard, previous, Keys.Up))
             _wizardField = Math.Max(0, _wizardField - 1);
         if (WasPressed(keyboard, previous, Keys.Down))
-            _wizardField = Math.Min(4, _wizardField + 1);
+            _wizardField = Math.Min(WizardFieldCount - 1, _wizardField + 1);
 
         if (WasPressed(keyboard, previous, Keys.Left) ||
             WasPressed(keyboard, previous, Keys.Right))
         {
-            var dir = WasPressed(keyboard, previous, Keys.Right) ? 1 : -1;
-            if (_wizard == WizardKind.NewImage)
+            if (_wizard == WizardKind.NewImage &&
+                !IsSpriteArtworkMode &&
+                _wizardField == 3)
             {
-                if (IsSpriteArtworkMode)
-                {
-                    // Template / category / size locked in Sprite Artwork mode.
-                }
-                else if (_wizardField == 1)
-                {
-                    _wizardTemplateIndex =
-                        (_wizardTemplateIndex + dir + templates.Count) % templates.Count;
-                    SyncTemplateDefaults();
-                }
-                else if (_wizardField == 2)
-                {
-                    _wizardCategoryIndex =
-                        (_wizardCategoryIndex + dir + CategoryLabels.Length) % CategoryLabels.Length;
-                }
-                else if (_wizardField == 3)
-                {
-                    _wizardModeIndex = 1 - _wizardModeIndex;
-                    SyncTemplateDefaults();
-                }
-            }
-            else if (_wizardField == 1 && !IsSpriteArtworkMode)
-            {
-                _wizardCategoryIndex =
-                    (_wizardCategoryIndex + dir + CategoryLabels.Length) % CategoryLabels.Length;
+                _wizardModeIndex = 1 - _wizardModeIndex;
             }
         }
+
+        if (WasPressed(keyboard, previous, Keys.Tab))
+            _wizardField = (_wizardField + 1) % WizardFieldCount;
 
         foreach (var key in keyboard.GetPressedKeys())
         {
@@ -176,12 +108,27 @@ public sealed partial class ImageEditor
             if (key == Keys.Back)
             {
                 if (_wizardField == 0 && _wizardName.Length > 0)
+                {
                     _wizardName = _wizardName[..^1];
-                else if (_wizardField == 4 && _wizardWidth.Length > 0)
+                    _wizardError = "";
+                }
+                else if (_wizard == WizardKind.NewImage &&
+                         !IsSpriteArtworkMode &&
+                         _wizardField == 1 &&
+                         _wizardWidth.Length > 0)
+                {
                     _wizardWidth = _wizardWidth[..^1];
-                else if (_wizardField == 5 && _wizardHeight.Length > 0)
+                    _wizardError = "";
+                }
+                else if (_wizard == WizardKind.NewImage &&
+                         !IsSpriteArtworkMode &&
+                         _wizardField == 2 &&
+                         _wizardHeight.Length > 0)
+                {
                     _wizardHeight = _wizardHeight[..^1];
-                // Custom width/height use fields 4/5 when template is custom — remap:
+                    _wizardError = "";
+                }
+
                 continue;
             }
 
@@ -190,31 +137,31 @@ public sealed partial class ImageEditor
                 continue;
 
             if (_wizardField == 0 && _wizardName.Length < 16)
+            {
                 _wizardName += ch;
-            else if (IsCustomTemplate() && _wizardField == 4 && _wizardWidth.Length < 4 && char.IsDigit(ch[0]))
+                _wizardError = "";
+            }
+            else if (_wizard == WizardKind.NewImage &&
+                     !IsSpriteArtworkMode &&
+                     _wizardField == 1 &&
+                     _wizardWidth.Length < 4 &&
+                     char.IsDigit(ch[0]))
+            {
                 _wizardWidth += ch;
-            else if (IsCustomTemplate() && _wizardField == 5 && _wizardHeight.Length < 4 && char.IsDigit(ch[0]))
+                _wizardError = "";
+            }
+            else if (_wizard == WizardKind.NewImage &&
+                     !IsSpriteArtworkMode &&
+                     _wizardField == 2 &&
+                     _wizardHeight.Length < 4 &&
+                     char.IsDigit(ch[0]))
+            {
                 _wizardHeight += ch;
-        }
-
-        // Remap field indices: 0 name, 1 template, 2 category, 3 mode, 4 width, 5 height
-        if (WasPressed(keyboard, previous, Keys.Tab))
-        {
-            var max = _wizard == WizardKind.Properties
-                ? 1
-                : IsCustomTemplate() ? 5 : 3;
-            _wizardField = (_wizardField + 1) % (max + 1);
+                _wizardError = "";
+            }
         }
 
         return true;
-    }
-
-    private bool IsCustomTemplate()
-    {
-        if (_wizard != WizardKind.NewImage)
-            return false;
-        var templates = CurrentTemplates();
-        return templates[_wizardTemplateIndex].IsCustom;
     }
 
     private bool HandleWizardMouse(MouseState mouse, MouseState previous)
@@ -241,36 +188,34 @@ public sealed partial class ImageEditor
             return true;
         }
 
-        // Cycle hit zones for template/category/mode rows.
-        var rowY = box.Y + 70;
-        for (var row = 0; row < 4; row++)
+        if (_wizard == WizardKind.NewImage)
         {
-            var left = new Rectangle(box.X + 120, rowY + row * 18, 16, 14);
-            var right = new Rectangle(box.X + 280, rowY + row * 18, 16, 14);
-            if (left.Contains(mouse.X, mouse.Y) || right.Contains(mouse.X, mouse.Y))
+            if (new Rectangle(box.X + 12, box.Y + 36, box.Width - 24, 16).Contains(mouse.X, mouse.Y))
+                _wizardField = 0;
+
+            if (!IsSpriteArtworkMode)
             {
-                var dir = right.Contains(mouse.X, mouse.Y) ? 1 : -1;
-                _wizardField = row + 1;
-                var dummyPrev = previous;
-                // reuse left/right logic via field
-                if (row == 0 && _wizard == WizardKind.NewImage)
+                if (new Rectangle(box.X + 12, box.Y + 58, 140, 16).Contains(mouse.X, mouse.Y))
+                    _wizardField = 1;
+                if (new Rectangle(box.X + 160, box.Y + 58, 140, 16).Contains(mouse.X, mouse.Y))
+                    _wizardField = 2;
+
+                var modeLeft = new Rectangle(box.X + 120, box.Y + 82, 16, 14);
+                var modeRight = new Rectangle(box.X + 280, box.Y + 82, 16, 14);
+                if (modeLeft.Contains(mouse.X, mouse.Y) || modeRight.Contains(mouse.X, mouse.Y))
                 {
-                    var templates = CurrentTemplates();
-                    _wizardTemplateIndex =
-                        (_wizardTemplateIndex + dir + templates.Count) % templates.Count;
-                    SyncTemplateDefaults();
-                }
-                else if (row == 1)
-                {
-                    _wizardCategoryIndex =
-                        (_wizardCategoryIndex + dir + CategoryLabels.Length) % CategoryLabels.Length;
-                }
-                else if (row == 2 && _wizard == WizardKind.NewImage)
-                {
+                    _wizardField = 3;
                     _wizardModeIndex = 1 - _wizardModeIndex;
-                    SyncTemplateDefaults();
+                }
+                else if (new Rectangle(box.X + 12, box.Y + 82, box.Width - 24, 16).Contains(mouse.X, mouse.Y))
+                {
+                    _wizardField = 3;
                 }
             }
+        }
+        else if (new Rectangle(box.X + 12, box.Y + 36, box.Width - 24, 16).Contains(mouse.X, mouse.Y))
+        {
+            _wizardField = 0;
         }
 
         return true;
@@ -288,50 +233,36 @@ public sealed partial class ImageEditor
     {
         if (!TryNormalizeName(_wizardName, out var valid, out var error))
         {
-            Notice?.Invoke(error);
+            _wizardError = error;
             return;
         }
 
         if (_assets.Contains(valid))
         {
-            Notice?.Invoke("IMAGE NAME ALREADY EXISTS");
+            _wizardError = "IMAGE NAME ALREADY EXISTS";
             return;
         }
 
         var mode = _wizardModeIndex == 1
             ? CentauriDisplayMode.Arcade
             : CentauriDisplayMode.HighResolution;
-        var templates = CurrentTemplates();
-        var template = templates[_wizardTemplateIndex];
-        var category = (ImageCategory)_wizardCategoryIndex;
 
         int width;
         int height;
-        int fill;
 
         if (IsSpriteArtworkMode)
         {
             width = CentauriSprite.WIDTH;
             height = CentauriSprite.HEIGHT;
-            category = ImageCategory.Sprite;
-            fill = ImageAsset.Transparent;
         }
-        else if (template.IsCustom)
+        else
         {
             if (!int.TryParse(_wizardWidth, out width) ||
                 !int.TryParse(_wizardHeight, out height))
             {
-                Notice?.Invoke("INVALID SIZE");
+                _wizardError = "INVALID SIZE";
                 return;
             }
-
-            fill = ImageAsset.Transparent;
-        }
-        else
-        {
-            width = template.Width;
-            height = template.Height;
-            fill = template.FillColour;
         }
 
         try
@@ -340,19 +271,19 @@ public sealed partial class ImageEditor
         }
         catch (Exception ex)
         {
-            Notice?.Invoke(ex.Message.ToUpperInvariant());
+            _wizardError = ex.Message.ToUpperInvariant();
             return;
         }
 
-        var image = new ImageAsset(valid, mode, width, height, category, fill);
+        var image = new ImageAsset(valid, mode, width, height, ImageAsset.Transparent);
         _assets.Add(image);
         _selectedIndex = _assets.Count - 1;
         _image = image;
         ClearHistory();
-        _dirty = true;
+        CommitLibraryNow(valid);
         CloseWizard();
         FitZoom();
-        _statusTip = $"CREATED {valid}";
+        _statusTip = $"CREATED {valid}  {width}X{height}";
     }
 
     private void CommitProperties()
@@ -362,28 +293,28 @@ public sealed partial class ImageEditor
 
         if (!TryNormalizeName(_wizardName, out var valid, out var error))
         {
-            Notice?.Invoke(error);
+            _wizardError = error;
             return;
         }
 
         if (!string.Equals(valid, _image.Name, StringComparison.Ordinal) &&
             _assets.Contains(valid))
         {
-            Notice?.Invoke("IMAGE NAME ALREADY EXISTS");
+            _wizardError = "IMAGE NAME ALREADY EXISTS";
             return;
         }
 
         _image.Name = valid;
-        if (!IsSpriteArtworkMode)
-            _image.Category = (ImageCategory)_wizardCategoryIndex;
-        _dirty = true;
+        CommitLibraryNow(valid);
         CloseWizard();
         _statusTip = "PROPERTIES UPDATED";
     }
 
     private Rectangle WizardBox()
     {
-        var height = _wizard == WizardKind.NewImage ? 200 : 160;
+        var height = _wizard == WizardKind.NewImage
+            ? (IsSpriteArtworkMode ? 154 : 184)
+            : 154;
         return new Rectangle((ScreenW - 340) / 2, (ScreenH - height) / 2, 340, height);
     }
 
@@ -405,8 +336,8 @@ public sealed partial class ImageEditor
         spriteBatch.Draw(pixel, new Rectangle(box.Right - 1, box.Y, 1, box.Height), CreativeUiTheme.Border);
 
         var title = _wizard == WizardKind.NewImage
-            ? (IsSpriteArtworkMode ? "NEW SPRITE ARTWORK" : "NEW IMAGE")
-            : (IsSpriteArtworkMode ? "ARTWORK PROPERTIES" : "IMAGE PROPERTIES");
+            ? (IsSpriteArtworkMode ? "NEW 16X16 ARTWORK" : "NEW IMAGE")
+            : "IMAGE PROPERTIES";
         font.Draw(spriteBatch, title, new Vector2(box.X + 12, box.Y + 10), CreativeUiTheme.Highlight);
 
         font.Draw(spriteBatch, "NAME", new Vector2(box.X + 12, box.Y + 36), CreativeUiTheme.Muted);
@@ -418,56 +349,69 @@ public sealed partial class ImageEditor
 
         if (_wizard == WizardKind.NewImage)
         {
-            var templates = CurrentTemplates();
-            var template = templates[_wizardTemplateIndex];
-            DrawWizardRow(spriteBatch, font, box.X + 12, box.Y + 70, "TEMPLATE", template.Label, _wizardField == 1);
-            DrawWizardRow(spriteBatch, font, box.X + 12, box.Y + 88, "CATEGORY", CategoryLabels[_wizardCategoryIndex], _wizardField == 2);
-            DrawWizardRow(
-                spriteBatch,
-                font,
-                box.X + 12,
-                box.Y + 106,
-                "MODE",
-                _wizardModeIndex == 0 ? "STANDARD" : "ARCADE",
-                _wizardField == 3);
-
-            if (template.IsCustom)
+            if (IsSpriteArtworkMode)
             {
-                font.Draw(spriteBatch, "WIDTH", new Vector2(box.X + 12, box.Y + 124), CreativeUiTheme.Muted);
                 font.Draw(
                     spriteBatch,
-                    ">" + _wizardWidth + (_wizardField == 4 ? "_" : ""),
-                    new Vector2(box.X + 70, box.Y + 124),
-                    CreativeUiTheme.Text);
-                font.Draw(spriteBatch, "HEIGHT", new Vector2(box.X + 160, box.Y + 124), CreativeUiTheme.Muted);
-                font.Draw(
-                    spriteBatch,
-                    ">" + _wizardHeight + (_wizardField == 5 ? "_" : ""),
-                    new Vector2(box.X + 230, box.Y + 124),
-                    CreativeUiTheme.Text);
+                    $"SIZE {CentauriSprite.WIDTH}X{CentauriSprite.HEIGHT}  (LOCKED)",
+                    new Vector2(box.X + 12, box.Y + 66),
+                    CreativeUiTheme.Muted);
             }
             else
             {
+                font.Draw(spriteBatch, "WIDTH", new Vector2(box.X + 12, box.Y + 58), CreativeUiTheme.Muted);
                 font.Draw(
                     spriteBatch,
-                    $"SIZE {template.Width}X{template.Height}",
-                    new Vector2(box.X + 12, box.Y + 124),
+                    ">" + _wizardWidth + (_wizardField == 1 ? "_" : ""),
+                    new Vector2(box.X + 70, box.Y + 58),
+                    CreativeUiTheme.Text);
+                font.Draw(spriteBatch, "HEIGHT", new Vector2(box.X + 160, box.Y + 58), CreativeUiTheme.Muted);
+                font.Draw(
+                    spriteBatch,
+                    ">" + _wizardHeight + (_wizardField == 2 ? "_" : ""),
+                    new Vector2(box.X + 230, box.Y + 58),
+                    CreativeUiTheme.Text);
+
+                DrawWizardRow(
+                    spriteBatch,
+                    font,
+                    box.X + 12,
+                    box.Y + 82,
+                    "MODE",
+                    _wizardModeIndex == 0 ? "STANDARD" : "ARCADE",
+                    _wizardField == 3);
+
+                var mode = _wizardModeIndex == 1
+                    ? CentauriDisplayMode.Arcade
+                    : CentauriDisplayMode.HighResolution;
+                font.Draw(
+                    spriteBatch,
+                    $"MAX {ImageAsset.ModeWidth(mode)}X{ImageAsset.ModeHeight(mode)}",
+                    new Vector2(box.X + 12, box.Y + 106),
                     CreativeUiTheme.Muted);
             }
         }
         else if (_image != null)
         {
-            DrawWizardRow(spriteBatch, font, box.X + 12, box.Y + 70, "CATEGORY", CategoryLabels[_wizardCategoryIndex], _wizardField == 1);
             font.Draw(
                 spriteBatch,
                 $"SIZE {_image.Width}X{_image.Height}  MODE {(_image.Mode == CentauriDisplayMode.Arcade ? "ARCADE" : "STANDARD")}",
-                new Vector2(box.X + 12, box.Y + 96),
+                new Vector2(box.X + 12, box.Y + 66),
                 CreativeUiTheme.Muted);
             font.Draw(
                 spriteBatch,
                 $"FRAMES {_image.FrameCount}",
-                new Vector2(box.X + 12, box.Y + 114),
+                new Vector2(box.X + 12, box.Y + 84),
                 CreativeUiTheme.Muted);
+        }
+
+        if (_wizardError.Length > 0)
+        {
+            font.Draw(
+                spriteBatch,
+                _wizardError,
+                new Vector2(box.X + 12, box.Bottom - 42),
+                CreativeUiTheme.Highlight);
         }
 
         font.Draw(
@@ -503,8 +447,9 @@ public sealed partial class ImageEditor
             return ((char)('0' + (key - Keys.D0))).ToString();
         if (key is >= Keys.NumPad0 and <= Keys.NumPad9)
             return ((char)('0' + (key - Keys.NumPad0))).ToString();
+        // Underscore is a valid name character; hyphen is not.
         if (key == Keys.OemMinus || key == Keys.Subtract)
-            return "-";
+            return "_";
         return null;
     }
 }

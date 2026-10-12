@@ -1,7 +1,9 @@
 using System;
+using System.Globalization;
 using System.IO;
 
 using Centauri64.Basic;
+using Centauri64.Machine.Images;
 
 namespace Centauri64.Machine.Sprites;
 
@@ -48,6 +50,8 @@ public sealed class SpriteStorage
                 foreach (var frame in animation.Frames)
                 {
                     writer.WriteLine("FRAME");
+                    writer.WriteLine(
+                        $"DURATION {frame.DurationSeconds.ToString("0.###", CultureInfo.InvariantCulture)}");
 
                     for (var y = 0;
                          y < CentauriSprite.HEIGHT;
@@ -197,6 +201,27 @@ public sealed class SpriteStorage
                     currentAnimation.AddFrame();
 
                 lineIndex++;
+
+                // Optional DURATION line after FRAME (legacy files omit it).
+                if (lineIndex < lines.Length)
+                {
+                    var maybeDuration = lines[lineIndex].Trim();
+                    if (maybeDuration.StartsWith("DURATION ", StringComparison.OrdinalIgnoreCase) &&
+                        float.TryParse(
+                            maybeDuration["DURATION ".Length..].Trim(),
+                            NumberStyles.Float,
+                            CultureInfo.InvariantCulture,
+                            out var duration) &&
+                        duration > 0f)
+                    {
+                        frame.DurationSeconds = duration;
+                        lineIndex++;
+                    }
+                    else
+                    {
+                        frame.DurationSeconds = ImageFrame.DefaultDurationSeconds;
+                    }
+                }
 
                 for (var y = 0;
                     y < CentauriSprite.HEIGHT;

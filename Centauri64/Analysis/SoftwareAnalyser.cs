@@ -4,6 +4,7 @@ using System.Linq;
 
 using Centauri64.Basic;
 using Centauri64.Basic.Syntax;
+using Centauri64.Machine;
 using Centauri64.Machine.Images;
 using Centauri64.Machine.Maps;
 using Centauri64.Machine.Sprites;
@@ -169,10 +170,9 @@ public sealed class SoftwareAnalyser
             MapCount = maps.Maps.Count,
             ImageCount = images.Count,
             ImageFrameCount = images.Images.Sum(image => image.FrameCount),
-            GeneralImageCount = images.Images.Count(image => image.Category == ImageCategory.General),
-            SpriteImageCount = images.Images.Count(image => image.Category == ImageCategory.Sprite),
-            TilesetImageCount = images.Images.Count(image => image.Category == ImageCategory.Tileset),
-            BackgroundImageCount = images.Images.Count(image => image.Category == ImageCategory.Background),
+            SpriteSizedImageCount = images.Images.Count(image =>
+                image.Width == CentauriSprite.WIDTH &&
+                image.Height == CentauriSprite.HEIGHT),
             HasCover = coverStats.HasCover,
             HasCustomCover = coverStats.HasCustomCover,
             CoverChangedPixelCount = coverStats.ChangedPixels,

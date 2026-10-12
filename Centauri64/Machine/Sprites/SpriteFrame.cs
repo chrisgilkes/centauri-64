@@ -1,8 +1,13 @@
+using Centauri64.Machine.Images;
+
 namespace Centauri64.Machine.Sprites;
 
 public sealed class SpriteFrame
 {
     public int[,] Pixels { get; }
+
+    /// <summary>How long this frame is shown during animation playback.</summary>
+    public float DurationSeconds { get; set; } = ImageFrame.DefaultDurationSeconds;
 
     public SpriteFrame()
     {
@@ -32,7 +37,10 @@ public sealed class SpriteFrame
     public SpriteFrame Clone()
     {
         var frame =
-            new SpriteFrame();
+            new SpriteFrame
+            {
+                DurationSeconds = DurationSeconds
+            };
 
         for (var y = 0;
             y < CentauriSprite.HEIGHT;
